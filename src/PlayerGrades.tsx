@@ -57,14 +57,16 @@ export function getPositionFullName(code: string | null | undefined): string {
   return p ? p.full : code;
 }
 
-export function computeGrade(totalTrainingPresences: number, totalGoals: number = 0) {
+export function computeGrade(totalTrainingPresences: number, totalGoals: number = 0, totalMatchesPlayed: number = 0) {
   const trainingStars = Math.floor(totalTrainingPresences / 2);
-  const totalStars = trainingStars + totalGoals;
+  const goalStars = Math.max(0, totalGoals || 0);
+  const matchStars = Math.max(0, totalMatchesPlayed || 0);
+  const totalStars = trainingStars + goalStars + matchStars;
   const gradeIdx = [...GRADES].reverse().findIndex((g) => totalStars >= g.min);
   const grade = GRADES[GRADES.length - 1 - (gradeIdx === -1 ? GRADES.length - 1 : gradeIdx)];
   const starsInLevel = totalStars === 0 ? 0 : ((totalStars - grade.min) % 5) + 1;
   const isRainbow = grade.color === 'rainbow';
-  return { grade, totalStars, starsInLevel, isRainbow };
+  return { grade, totalStars, starsInLevel, isRainbow, trainingStars, goalStars, matchStars };
 }
 
 /** OVR (Overall) FIFA-style : 50 (débutant) → 99 (max). */
@@ -85,22 +87,13 @@ type Player = {
 };
 
 // ─── Helpers de style partagés (carte FIFA) ──────────────────────────────────
-function getCardStyle(grade: Grade, isRainbow: boolean) {
-  const mainColor = isRainbow ? '#a855f7' : grade.color;
-  const cardBg = isRainbow
-    ? 'linear-gradient(160deg, #fde68a 0%, #fbbf24 25%, #f472b6 50%, #a78bfa 75%, #60a5fa 100%)'
-    : grade.name === 'Rookie'
-      ? 'linear-gradient(160deg, #f1f5f9 0%, #cbd5e1 50%, #f1f5f9 100%)'
-      : grade.name === 'Bronze'
-        ? 'linear-gradient(160deg, #fde68a 0%, #b45309 50%, #fcd34d 100%)'
-        : grade.name === 'Argent'
-          ? 'linear-gradient(160deg, #f8fafc 0%, #94a3b8 50%, #e2e8f0 100%)'
-          : `linear-gradient(160deg, ${mainColor}EE 0%, ${mainColor}CC 50%, ${mainColor}EE 100%)`;
-  const lightGrades = ['Rookie', 'Argent', 'Bronze', 'Or'];
-  const isLight = lightGrades.includes(grade.name);
-  const textColor = isLight ? '#1e293b' : 'white';
-  const subtleText = isLight ? 'rgba(30,41,59,0.7)' : 'rgba(255,255,255,0.85)';
-  const borderColor = `${textColor === 'white' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.18)'}`;
+function getCardStyle(_grade: Grade, _isRainbow: boolean) {
+  const mainColor = '#b7791f';
+  const cardBg = 'linear-gradient(160deg, #fff7cc 0%, #facc15 42%, #d97706 72%, #fff2a8 100%)';
+  const textColor = '#1e293b';
+  const subtleText = 'rgba(30,41,59,0.72)';
+  const borderColor = 'rgba(120,53,15,0.28)';
+  const isLight = true;
   return { mainColor, cardBg, textColor, subtleText, borderColor, isLight };
 }
 
@@ -193,7 +186,7 @@ export function FifaPlayerCard({
   clubLogo,
   onClick,
 }: FifaPlayerCardProps) {
-  const { grade, totalStars, starsInLevel, isRainbow } = computeGrade(totalTrainingPresences, totalGoals);
+  const { grade, starsInLevel, isRainbow } = computeGrade(totalTrainingPresences, totalGoals, totalMatches);
   const initials = `${p.first_name?.[0] || ''}${p.last_name?.[0] || ''}`.toUpperCase();
   const { mainColor, cardBg, textColor, subtleText, borderColor } = getCardStyle(grade, isRainbow);
 
@@ -209,10 +202,8 @@ export function FifaPlayerCard({
         aspectRatio: '3 / 4.4',
         borderRadius: 14,
         background: cardBg,
-        boxShadow: grade.glow
-          ? `0 4px 20px ${isRainbow ? 'rgba(168,85,247,0.45)' : mainColor + '66'}, 0 2px 8px rgba(0,0,0,0.15)`
-          : '0 3px 12px rgba(6,44,93,0.18)',
-        border: isMyChild ? '3px solid #0A5FB5' : `2px solid ${isRainbow ? '#a855f7' : mainColor}`,
+        boxShadow: '0 4px 20px rgba(217,119,6,0.38), 0 2px 8px rgba(0,0,0,0.15)',
+        border: isMyChild ? '3px solid #0A5FB5' : '2px solid #b7791f',
         padding: '8px 8px 10px',
         display: 'flex',
         flexDirection: 'column',
@@ -245,8 +236,8 @@ export function FifaPlayerCard({
             <div style={{ fontSize: 22, fontWeight: 900, color: textColor, lineHeight: 1, opacity: 0.4 }}>—</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
-              <span style={{ fontSize: 9, fontWeight: 800, color: textColor, letterSpacing: 0.6, opacity: 0.85, marginBottom: 2 }}>LV</span>
-              <span style={{ fontSize: 22, fontWeight: 900, color: textColor, textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color: mainColor, letterSpacing: 0.6, opacity: 0.9, marginBottom: 2 }}>LV</span>
+              <span style={{ fontSize: 22, fontWeight: 900, color: mainColor, textShadow: '0 1px 2px rgba(255,255,255,0.35)' }}>
                 {grade.lvLabel.replace('Lv ', '')}
               </span>
             </div>
@@ -333,7 +324,7 @@ export function FifaPlayerCard({
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
           position: 'relative', zIndex: 2,
         }}>
-          <div style={{ fontSize: 8, fontWeight: 900, color: textColor, letterSpacing: 0.5, opacity: 0.95 }}>
+          <div style={{ fontSize: 8, fontWeight: 900, color: mainColor, letterSpacing: 0.5, opacity: 0.95 }}>
             {grade.lvLabel} · <span style={{ textTransform: 'uppercase' }}>{grade.name}</span>
           </div>
           <div style={{ display: 'flex', gap: 1 }}>
@@ -344,7 +335,7 @@ export function FifaPlayerCard({
                   ? (isRainbow ? RAINBOW_COLORS[i - 1] : (textColor === 'white' ? '#fde68a' : mainColor))
                   : (textColor === 'white' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'),
                 lineHeight: 1,
-                textShadow: i <= starsInLevel && grade.glow ? '0 0 4px currentColor' : 'none',
+                textShadow: i <= starsInLevel ? '0 0 4px currentColor' : 'none',
               }}>★</span>
             ))}
           </div>
@@ -503,7 +494,7 @@ export function FullScreenCard({ cards, initialIndex, onClose, clubLogo }: FullS
 // ─── Grande carte (utilisée dans la modale) ──────────────────────────────────
 function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string }) {
   const { player: p, totalTrainingPresences, totalGoals, totalShots, totalMatches, isMyChild, hideStats, age } = data;
-  const { grade, totalStars, starsInLevel, isRainbow } = computeGrade(totalTrainingPresences, totalGoals);
+  const { grade, starsInLevel, isRainbow } = computeGrade(totalTrainingPresences, totalGoals, totalMatches);
   const initials = `${p.first_name?.[0] || ''}${p.last_name?.[0] || ''}`.toUpperCase();
   const { mainColor, cardBg, textColor, subtleText, borderColor } = getCardStyle(grade, isRainbow);
   const positionLabel = p.position || '—';
@@ -516,10 +507,8 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
       aspectRatio: '3 / 4.4',
       borderRadius: 24,
       background: cardBg,
-      boxShadow: grade.glow
-        ? `0 12px 50px ${isRainbow ? 'rgba(168,85,247,0.55)' : mainColor + '99'}, 0 8px 24px rgba(0,0,0,0.4)`
-        : '0 12px 40px rgba(0,0,0,0.5)',
-      border: isMyChild ? '4px solid #0A5FB5' : `3px solid ${isRainbow ? '#a855f7' : mainColor}`,
+      boxShadow: '0 12px 50px rgba(217,119,6,0.5), 0 8px 24px rgba(0,0,0,0.4)',
+      border: isMyChild ? '4px solid #0A5FB5' : '3px solid #b7791f',
       padding: '20px 18px 22px',
       display: 'flex', flexDirection: 'column',
       overflow: 'hidden',
@@ -548,8 +537,8 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
             <div style={{ fontSize: 56, fontWeight: 900, color: textColor, lineHeight: 1, opacity: 0.35 }}>—</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: textColor, letterSpacing: 1, opacity: 0.85, marginBottom: 4 }}>LV</span>
-              <span style={{ fontSize: 56, fontWeight: 900, color: textColor, textShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: mainColor, letterSpacing: 1, opacity: 0.9, marginBottom: 4 }}>LV</span>
+              <span style={{ fontSize: 56, fontWeight: 900, color: mainColor, textShadow: '0 2px 6px rgba(255,255,255,0.35)' }}>
                 {grade.lvLabel.replace('Lv ', '')}
               </span>
             </div>
@@ -641,7 +630,7 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
           position: 'relative', zIndex: 2,
         }}>
-          <div style={{ fontSize: 13, fontWeight: 900, color: textColor, letterSpacing: 0.8 }}>
+          <div style={{ fontSize: 13, fontWeight: 900, color: mainColor, letterSpacing: 0.8 }}>
             {grade.lvLabel} · <span style={{ textTransform: 'uppercase' }}>{grade.name}</span>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -667,24 +656,23 @@ type PlayerCardProps = {
   player: Player;
   totalTrainingPresences: number;
   totalGoals?: number;
+  totalMatches?: number;
   isMyChild: boolean;
   hideGrade?: boolean;
   age: number | null;
 };
 
-export function PlayerCard({ player: p, totalTrainingPresences, totalGoals = 0, isMyChild, hideGrade = false, age }: PlayerCardProps) {
-  const { grade, starsInLevel, isRainbow } = computeGrade(totalTrainingPresences, totalGoals);
+export function PlayerCard({ player: p, totalTrainingPresences, totalGoals = 0, totalMatches = 0, isMyChild, hideGrade = false, age }: PlayerCardProps) {
+  const { grade, starsInLevel } = computeGrade(totalTrainingPresences, totalGoals, totalMatches);
   const initials = `${p.first_name?.[0] || ''}${p.last_name?.[0] || ''}`.toUpperCase();
-  const starColor = isRainbow ? undefined : grade.color;
-  const borderColor = isMyChild ? '#0A5FB5' : (grade.name !== 'Rookie' ? grade.color : '#dbe6f2');
+  const starColor = '#b7791f';
+  const borderColor = isMyChild ? '#0A5FB5' : '#b7791f';
 
   return (
     <div style={{
-      background: isMyChild ? 'linear-gradient(135deg,#eaf4ff,#dbeafe)' : 'white',
+      background: 'linear-gradient(160deg, #fff7cc 0%, #facc15 48%, #fff2a8 100%)',
       borderRadius: 16, padding: 14,
-      boxShadow: grade.glow
-        ? `0 2px 14px ${isRainbow ? 'rgba(168,85,247,0.3)' : grade.color + '44'}`
-        : '0 2px 10px rgba(6,44,93,0.08)',
+      boxShadow: '0 2px 14px rgba(217,119,6,0.28)',
       border: `2px solid ${borderColor}`,
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
       position: 'relative',
@@ -711,14 +699,14 @@ export function PlayerCard({ player: p, totalTrainingPresences, totalGoals = 0, 
         <div style={{ fontSize: 9, color: '#c4b5fd', fontWeight: 600 }}>— — —</div>
       ) : grade.name !== 'Rookie' ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, marginTop: 2 }}>
-          <div style={{ fontSize: 8, fontWeight: 900, color: isRainbow ? '#a855f7' : grade.color, letterSpacing: 0.5 }}>{grade.lvLabel}</div>
-          <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5, color: isRainbow ? '#a855f7' : grade.color, textTransform: 'uppercase' }}>{grade.name}</div>
+          <div style={{ fontSize: 8, fontWeight: 900, color: '#92400e', letterSpacing: 0.5 }}>{grade.lvLabel}</div>
+          <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5, color: '#92400e', textTransform: 'uppercase' }}>{grade.name}</div>
           <div style={{ display: 'flex', gap: 2 }}>
             {[1, 2, 3, 4, 5].map((i) => (
               <span key={i} style={{
                 fontSize: 11,
                 color: i <= starsInLevel
-                  ? (isRainbow ? RAINBOW_COLORS[i - 1] : starColor)
+                  ? starColor
                   : '#d1d5db',
                 opacity: i <= starsInLevel ? 1 : 0.25,
               }}>★</span>
@@ -754,9 +742,10 @@ export function GradeModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} style={{ border: 'none', background: '#f1f5f9', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>✕</button>
         </div>
         <p style={{ margin: '0 0 16px 0', fontSize: 13, color: '#5b6472' }}>
-          Les étoiles ★ viennent de <strong>deux sources</strong> :<br/>
+          Les étoiles ★ viennent de <strong>trois sources</strong> :<br/>
           🏃 <strong>1 étoile tous les 2 entraînements</strong> présents<br/>
-          ⚽ <strong>1 étoile par but</strong> marqué en match<br/>
+          🎯 <strong>1 étoile par but</strong> marqué<br/>
+          ⚽ <strong>1 étoile par match joué</strong><br/>
           Après <strong>5 étoiles</strong> cumulées, tu passes au niveau suivant !
         </p>
         {GRADES.map((g, idx) => {
@@ -801,7 +790,7 @@ export function GradeModal({ onClose }: { onClose: () => void }) {
           );
         })}
         <div style={{ marginTop: 16, padding: '12px 14px', background: '#f0fdf4', borderRadius: 12, border: '1px solid #bbf7d0', fontSize: 12, color: '#166534' }}>
-          💡 Étoiles grises = ce qu'il reste pour passer au niveau suivant. Tu peux progresser même sans marquer de but en venant à l'entraînement !
+          💡 Étoiles grises = ce qu'il reste pour passer au niveau suivant. Tu progresses avec les entraînements et les matchs joués.
         </div>
       </div>
     </div>
