@@ -885,6 +885,7 @@ export default function App() {
   const [onlinePresence, setOnlinePresence] = useState<UserPresence[]>([]);
   const [connectionHistory, setConnectionHistory] = useState<ConnectionHistory[]>([]);
   const [showHeaderOnline, setShowHeaderOnline] = useState(false);
+  const [presenceTick, setPresenceTick] = useState(Date.now());
 
   // ── Sondages ──
   const [polls, setPolls] = useState<Poll[]>([]);
@@ -948,7 +949,10 @@ export default function App() {
       if (efrData) setEventFormResponses(efrData as EventFormResponse[]);
     } catch (e) { console.warn('Event forms load failed (table missing?)', e); }
 
-    // Online presence (admin only - but always load for stats)
+    await refreshPresenceData();
+  }
+
+  async function refreshPresenceData() {
     try {
       const { data: prData } = await supabase.from('user_presence').select('*').order('last_seen', { ascending: false }).limit(500);
       if (prData) setOnlinePresence(prData as UserPresence[]);
@@ -959,6 +963,7 @@ export default function App() {
       if (historyData) setConnectionHistory(historyData as ConnectionHistory[]);
       await supabase.from('user_presence_history').delete().lt('seen_at', sevenDaysAgo);
     } catch (e) { /* optional history table may not exist yet */ }
+    setPresenceTick(Date.now());
   }
 
   // ── Computed visibilité ──
@@ -1052,6 +1057,14 @@ export default function App() {
     return () => clearInterval(interval);
   }, [loggedIn]);
 
+  // Rafraîchissement léger de la présence pour le header et l'admin.
+  useEffect(() => {
+    if (!loggedIn) return;
+    refreshPresenceData();
+    const interval = setInterval(() => { refreshPresenceData(); }, 15000);
+    return () => clearInterval(interval);
+  }, [loggedIn]);
+
   // Heartbeat de présence — mise à jour toutes les 60s
   useEffect(() => {
     if (!loggedIn) return;
@@ -1077,6 +1090,7 @@ export default function App() {
             seen_at: now,
           });
         } catch (e) { /* optional history table may not exist yet */ }
+        refreshPresenceData();
       } catch (e) { /* table may not exist yet */ }
     };
     upsertPresence();
@@ -1607,7 +1621,7 @@ export default function App() {
 
   // ────────────── HELPERS PRÉSENCE EN LIGNE ──────────────
   function getOnlineCounts() {
-    const cutoff = Date.now() - PRESENCE_ONLINE_WINDOW_MS;
+    const cutoff = presenceTick - PRESENCE_ONLINE_WINDOW_MS;
     const fresh = onlinePresence.filter((p) => new Date(p.last_seen).getTime() >= cutoff);
     return {
       total: fresh.length,
@@ -1627,7 +1641,7 @@ export default function App() {
       seen_at: p.last_seen,
     }));
     const source = connectionHistory.length > 0 ? connectionHistory : fallbackHistory;
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const cutoff = presenceTick - 7 * 24 * 60 * 60 * 1000;
     const recent = source
       .filter((p) => new Date(p.seen_at).getTime() >= cutoff)
       .sort((a, b) => new Date(b.seen_at).getTime() - new Date(a.seen_at).getTime());
