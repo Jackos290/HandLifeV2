@@ -6223,21 +6223,11 @@ export default function App() {
             </div>
 
             {(() => {
-              const linkedPlayer = linkedPlayerId ? players.find((p) => p.id === linkedPlayerId) : null;
-              const profileButtons: { key: string; label: string; photoUrl?: string | null; kind: 'child' | 'player' }[] = [
-                ...parentPlayers.map((child) => ({
-                  key: child.id,
-                  label: child.first_name || getPlayerName(child),
-                  photoUrl: child.photo_url,
-                  kind: 'child' as const,
-                })),
-                ...(hasPlayerRole && linkedPlayer ? [{
-                  key: linkedPlayer.id,
-                  label: 'Moi joueur',
-                  photoUrl: linkedPlayer.photo_url,
-                  kind: 'player' as const,
-                }] : []),
-              ];
+              const profileButtons = parentPlayers.map((child) => ({
+                key: child.id,
+                label: child.first_name || getPlayerName(child),
+                photoUrl: child.photo_url,
+              }));
               if (profileButtons.length <= 1) return null;
               return (
                 <div style={{
@@ -6256,19 +6246,13 @@ export default function App() {
                   backdropFilter: 'blur(8px)',
                 }}>
                   {profileButtons.map((profile) => {
-                    const isActive = profile.kind === 'player'
-                      ? parentTab === 'player'
-                      : parentTab === 'home' && profile.key === (parentChildTab || parentPlayers[0]?.id);
+                    const isActive = parentTab === 'home' && profile.key === (parentChildTab || parentPlayers[0]?.id);
                     return (
                       <button
-                        key={`${profile.kind}-${profile.key}`}
+                        key={profile.key}
                         onClick={() => {
-                          if (profile.kind === 'player') {
-                            setParentTab('player');
-                          } else {
-                            setParentTab('home');
-                            setParentChildTab(profile.key);
-                          }
+                          setParentTab('home');
+                          setParentChildTab(profile.key);
                         }}
                         style={{
                           display: 'flex',
@@ -6286,10 +6270,10 @@ export default function App() {
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
                         }}
-                      >
+                        >
                         {profile.photoUrl
                           ? <img src={profile.photoUrl} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                          : <span style={{ fontSize: 18 }}>{profile.kind === 'player' ? '🤾' : '👤'}</span>}
+                          : <span style={{ fontSize: 18 }}>👤</span>}
                         <span>{profile.label}</span>
                       </button>
                     );
