@@ -34,6 +34,17 @@ export const GRADES: Grade[] = [
   { name: 'Cosmique',     lvLabel: 'Lv 18', min: 85,  color: '#8b5cf6', glow: true  },
   { name: 'Universel',    lvLabel: 'Lv 19', min: 90,  color: '#14b8a6', glow: true  },
   { name: 'HANDBALL GOD', lvLabel: 'Lv 20', min: 95,  color: 'rainbow', glow: true  },
+  { name: 'Elite',        lvLabel: 'Lv 21', min: 100, color: '#2563eb', glow: true  },
+  { name: 'Champion',     lvLabel: 'Lv 22', min: 105, color: '#16a34a', glow: true  },
+  { name: 'Titan',        lvLabel: 'Lv 23', min: 110, color: '#9333ea', glow: true  },
+  { name: 'Galactique',   lvLabel: 'Lv 24', min: 115, color: '#0891b2', glow: true  },
+  { name: 'Supreme',      lvLabel: 'Lv 25', min: 120, color: '#be123c', glow: true  },
+  { name: 'Icone',        lvLabel: 'Lv 26', min: 125, color: '#ca8a04', glow: true  },
+  { name: 'Prodige',      lvLabel: 'Lv 27', min: 130, color: '#7c2d12', glow: true  },
+  { name: 'Invincible',   lvLabel: 'Lv 28', min: 135, color: '#0f766e', glow: true  },
+  { name: 'Eternel',      lvLabel: 'Lv 29', min: 140, color: '#4f46e5', glow: true  },
+  { name: 'Hall of Fame', lvLabel: 'Lv 30', min: 145, color: '#db2777', glow: true  },
+  { name: 'Legende 150',  lvLabel: 'Lv 31', min: 150, color: 'rainbow', glow: true  },
 ];
 
 const RAINBOW_COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ef4444'];
@@ -71,8 +82,8 @@ export function computeGrade(totalTrainingPresences: number, totalGoals: number 
 
 /** OVR (Overall) FIFA-style : 50 (débutant) → 99 (max). */
 export function computeOverall(totalStars: number): number {
-  const capped = Math.min(totalStars, 100);
-  return Math.min(99, Math.max(50, Math.floor(50 + capped * 0.5)));
+  const capped = Math.min(totalStars, 150);
+  return Math.min(99, Math.max(50, Math.floor(50 + capped * (49 / 150))));
 }
 
 // ─── Type joueur partagé ─────────────────────────────────────────────────────
