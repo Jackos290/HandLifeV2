@@ -6151,14 +6151,33 @@ export default function App() {
         })()}
         {activeRole === 'parent' && (
           <div style={styles.contentCard}>
-            <h2 style={styles.blockTitle}>Espace Parent</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <h2 style={{ ...styles.blockTitle, margin: 0 }}>Espace Parent</h2>
+              <button
+                onClick={() => setParentTab('password')}
+                title="Changer le mot de passe"
+                aria-label="Changer le mot de passe"
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: '50%',
+                  border: '1px solid #dbe6f2',
+                  background: parentTab === 'password' ? '#eaf4ff' : '#f8fbff',
+                  color: '#0A5FB5',
+                  fontSize: 17,
+                  cursor: 'pointer',
+                  boxShadow: parentTab === 'password' ? '0 4px 12px rgba(10,95,181,0.12)' : 'none',
+                }}
+              >
+                🔑
+              </button>
+            </div>
 
             {/* Onglets parent */}
             <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid #e5e7eb', paddingBottom: 0, overflowX: 'auto' }}>
               {(() => {
-                const tabs: { key: 'home' | 'team' | 'password' | 'player' | 'polls'; label: string }[] = [
+                const tabs: { key: 'home' | 'team' | 'polls'; label: string }[] = [
                   { key: 'home', label: '👪 Mon espace' },
-                  ...(hasPlayerRole ? [{ key: 'player' as const, label: '🤾 Mon profil joueur' }] : []),
                   { key: 'team', label: '👕 Mon équipe' },
                 ];
                 // Onglet sondages si au moins un sondage me concerne
@@ -6169,7 +6188,6 @@ export default function App() {
                 }
                 const visiblePolls = getPollsVisibleFor([...new Set(myTeamIds)]);
                 if (visiblePolls.length > 0) tabs.push({ key: 'polls', label: '📊 Sondages' });
-                tabs.push({ key: 'password', label: '🔑 Mot de passe' });
                 return tabs.map(({ key: tab, label }) => {
                   const convId = parentConvId;
                   const hasUnread = tab === 'home' && convId && (() => {
@@ -6203,6 +6221,82 @@ export default function App() {
                 });
               })()}
             </div>
+
+            {(() => {
+              const linkedPlayer = linkedPlayerId ? players.find((p) => p.id === linkedPlayerId) : null;
+              const profileButtons: { key: string; label: string; photoUrl?: string | null; kind: 'child' | 'player' }[] = [
+                ...parentPlayers.map((child) => ({
+                  key: child.id,
+                  label: child.first_name || getPlayerName(child),
+                  photoUrl: child.photo_url,
+                  kind: 'child' as const,
+                })),
+                ...(hasPlayerRole && linkedPlayer ? [{
+                  key: linkedPlayer.id,
+                  label: 'Moi joueur',
+                  photoUrl: linkedPlayer.photo_url,
+                  kind: 'player' as const,
+                }] : []),
+              ];
+              if (profileButtons.length <= 1) return null;
+              return (
+                <div style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 20,
+                  display: 'flex',
+                  gap: 8,
+                  margin: '0 0 18px 0',
+                  padding: '8px',
+                  borderRadius: 18,
+                  background: 'rgba(255,255,255,0.96)',
+                  border: '1px solid #dbe6f2',
+                  boxShadow: '0 8px 20px rgba(16,35,59,0.08)',
+                  overflowX: 'auto',
+                  backdropFilter: 'blur(8px)',
+                }}>
+                  {profileButtons.map((profile) => {
+                    const isActive = profile.kind === 'player'
+                      ? parentTab === 'player'
+                      : parentTab === 'home' && profile.key === (parentChildTab || parentPlayers[0]?.id);
+                    return (
+                      <button
+                        key={`${profile.kind}-${profile.key}`}
+                        onClick={() => {
+                          if (profile.kind === 'player') {
+                            setParentTab('player');
+                          } else {
+                            setParentTab('home');
+                            setParentChildTab(profile.key);
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          minWidth: 116,
+                          padding: '9px 12px',
+                          borderRadius: 14,
+                          border: isActive ? '2px solid #0A5FB5' : '1px solid #d8e5f2',
+                          background: isActive ? '#eaf4ff' : '#f8fbff',
+                          color: isActive ? '#0A5FB5' : '#475569',
+                          fontWeight: 900,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {profile.photoUrl
+                          ? <img src={profile.photoUrl} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                          : <span style={{ fontSize: 18 }}>{profile.kind === 'player' ? '🤾' : '👤'}</span>}
+                        <span>{profile.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* ── MON ÉQUIPE côté parent ── */}
             {parentTab === 'team' && (() => {
@@ -6496,23 +6590,6 @@ export default function App() {
               ? <div style={styles.emptyState}>{"Aucun enfant lié à ce compte parent."}</div>
               : (
                 <>
-
-                  {parentPlayers.length > 1 && (
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 18, borderBottom: '2px solid #e5e7eb', paddingBottom: 0 }}>
-                      {parentPlayers.map((child) => {
-                        const activeId = parentChildTab || parentPlayers[0].id;
-                        return (
-                          <button key={child.id} onClick={() => setParentChildTab(child.id)}
-                            style={{ padding: '10px 22px', border: 'none', background: 'none', fontWeight: 800, fontSize: 15, cursor: 'pointer', color: activeId === child.id ? '#0A5FB5' : '#94a3b8', borderBottom: activeId === child.id ? '3px solid #0A5FB5' : '3px solid transparent', marginBottom: -2, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {child.photo_url
-                              ? <img src={child.photo_url} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover' }} />
-                              : <span>👤</span>}
-                            {child.first_name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
                   <div style={{ display: 'grid', gap: 18 }}>
                   {parentPlayers
                     .filter((child) => parentPlayers.length <= 1 || child.id === (parentChildTab || parentPlayers[0].id))
