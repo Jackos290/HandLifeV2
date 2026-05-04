@@ -157,6 +157,14 @@ type UserPresence = {
   last_seen: string;
 };
 
+type ConnectionHistory = {
+  id?: string;
+  auth_id: string;
+  role: string;
+  display_name: string | null;
+  seen_at: string;
+};
+
 type Poll = {
   id: string;
   question: string;
@@ -875,6 +883,7 @@ export default function App() {
 
   // ── Présence en ligne (admin) ──
   const [onlinePresence, setOnlinePresence] = useState<UserPresence[]>([]);
+  const [connectionHistory, setConnectionHistory] = useState<ConnectionHistory[]>([]);
   const [showHeaderOnline, setShowHeaderOnline] = useState(false);
 
   // ── Sondages ──
@@ -941,10 +950,15 @@ export default function App() {
 
     // Online presence (admin only - but always load for stats)
     try {
-      const cutoff = new Date(Date.now() - PRESENCE_ONLINE_WINDOW_MS).toISOString();
-      const { data: prData } = await supabase.from('user_presence').select('*').gte('last_seen', cutoff);
+      const { data: prData } = await supabase.from('user_presence').select('*').order('last_seen', { ascending: false }).limit(500);
       if (prData) setOnlinePresence(prData as UserPresence[]);
     } catch (e) { /* table may not exist yet */ }
+    try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: historyData } = await supabase.from('user_presence_history').select('*').gte('seen_at', sevenDaysAgo).order('seen_at', { ascending: false }).limit(700);
+      if (historyData) setConnectionHistory(historyData as ConnectionHistory[]);
+      await supabase.from('user_presence_history').delete().lt('seen_at', sevenDaysAgo);
+    } catch (e) { /* optional history table may not exist yet */ }
   }
 
   // ── Computed visibilité ──
@@ -1048,12 +1062,21 @@ export default function App() {
         const role = isAdmin ? 'admin' : activeRole;
         const me = users.find((u) => (u as any).auth_id === session.user.id);
         const displayName = me ? `${me.first_name || ''} ${me.last_name || ''}`.trim() : (session.user.email || '');
+        const now = new Date().toISOString();
         await supabase.from('user_presence').upsert({
           auth_id: session.user.id,
           role,
           display_name: displayName,
-          last_seen: new Date().toISOString(),
+          last_seen: now,
         }, { onConflict: 'auth_id' });
+        try {
+          await supabase.from('user_presence_history').insert({
+            auth_id: session.user.id,
+            role,
+            display_name: displayName,
+            seen_at: now,
+          });
+        } catch (e) { /* optional history table may not exist yet */ }
       } catch (e) { /* table may not exist yet */ }
     };
     upsertPresence();
@@ -1457,11 +1480,11 @@ export default function App() {
   }
 
   async function handleLogout() {
-    // Supprimer la présence en ligne
+    // Conserver la dernière activité pour l'historique admin.
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        await supabase.from('user_presence').delete().eq('auth_id', session.user.id);
+        await supabase.from('user_presence').update({ last_seen: new Date().toISOString() }).eq('auth_id', session.user.id);
       }
     } catch (e) { /* ignore */ }
     await supabase.auth.signOut();
@@ -1593,6 +1616,31 @@ export default function App() {
       admins: fresh.filter((p) => p.role === 'admin').length,
       players: fresh.filter((p) => p.role === 'player').length,
       list: fresh,
+    };
+  }
+
+  function getConnectionStats() {
+    const fallbackHistory: ConnectionHistory[] = onlinePresence.map((p) => ({
+      auth_id: p.auth_id,
+      role: p.role,
+      display_name: p.display_name,
+      seen_at: p.last_seen,
+    }));
+    const source = connectionHistory.length > 0 ? connectionHistory : fallbackHistory;
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const recent = source
+      .filter((p) => new Date(p.seen_at).getTime() >= cutoff)
+      .sort((a, b) => new Date(b.seen_at).getTime() - new Date(a.seen_at).getTime());
+    const byDay = recent.reduce<Record<string, { total: number; users: Set<string> }>>((acc, item) => {
+      const day = new Date(item.seen_at).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+      if (!acc[day]) acc[day] = { total: 0, users: new Set<string>() };
+      acc[day].total += 1;
+      acc[day].users.add(item.auth_id);
+      return acc;
+    }, {});
+    return {
+      history: recent,
+      daily: Object.entries(byDay).map(([day, data]) => ({ day, total: data.total, users: data.users.size })),
     };
   }
 
@@ -3893,15 +3941,15 @@ export default function App() {
       <div style={styles.container}>
         {/* Header */}
         <div style={styles.header}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0, flex: '1 1 300px' }}>
             <img src={CLUB_LOGO} alt="CA Gorcy Handball"
               style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.4)', flexShrink: 0 }} />
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div style={styles.headerBadge}>CA Gorcy Handball</div>
-              <h1 style={{ margin: '8px 0 6px 0' }}>
+              <h1 style={{ margin: '8px 0 6px 0', fontSize: 'clamp(28px, 8vw, 46px)', lineHeight: 1.05 }}>
                 {activeRole === 'coach' ? (isAdmin ? '👑 Admin' : '🏆 Espace Coach') : '👪 Espace Parent'}
               </h1>
-              <p style={{ margin: 0, opacity: 0.92 }}>
+              <p style={{ margin: 0, opacity: 0.92, overflowWrap: 'anywhere' }}>
                 {activeRole === 'coach'
                   ? isAdmin ? 'Accès complet à toutes les équipes' : `Vos équipes : ${allowedTeamIds.map(getTeamName).join(', ')}`
                   : 'Présences et infos équipe'}
@@ -3911,7 +3959,7 @@ export default function App() {
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
             {/* Photo de profil du coach connecté */}
             {activeRole === 'coach' && !isAdmin && connectedCoachId && (() => {
               const me = coachAccessList.find((c) => c.id === connectedCoachId);
@@ -3934,19 +3982,19 @@ export default function App() {
                 </div>
               );
             })()}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', minWidth: 0 }}>
               {activeRole === 'coach' && (() => {
                 const online = getOnlineCounts();
                 return (
                   <div style={{ position: 'relative' }}>
                     <button onClick={() => setShowHeaderOnline((p) => !p)}
-                      style={{ position: 'relative', padding: '10px 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}
+                      style={{ position: 'relative', minWidth: 54, height: 48, padding: '8px 10px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                       title="Voir les personnes en ligne">
                       <span style={{ width: 9, height: 9, borderRadius: '50%', background: online.total > 0 ? '#22c55e' : '#94a3b8', boxShadow: online.total > 0 ? '0 0 0 3px rgba(34,197,94,0.20)' : 'none', display: 'inline-block' }} />
-                      En ligne ({online.total})
+                      {online.total}
                     </button>
                     {showHeaderOnline && (
-                      <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 280, maxWidth: '80vw', background: 'white', color: '#10233b', borderRadius: 16, boxShadow: '0 18px 40px rgba(15,23,42,0.22)', border: '1px solid #d8e5f2', padding: 12, zIndex: 50 }}>
+                      <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: 'min(320px, calc(100vw - 32px))', maxWidth: 'calc(100vw - 32px)', background: 'white', color: '#10233b', borderRadius: 16, boxShadow: '0 18px 40px rgba(15,23,42,0.22)', border: '1px solid #d8e5f2', padding: 12, zIndex: 50, boxSizing: 'border-box' }}>
                         <div style={{ fontWeight: 900, color: '#062C5D', marginBottom: 8 }}>Personnes en ligne</div>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                           <span style={{ fontSize: 12, fontWeight: 800, color: '#1e40af', background: '#dbeafe', borderRadius: 999, padding: '4px 8px' }}>{online.coaches + online.admins} coach/admin</span>
@@ -4005,8 +4053,8 @@ export default function App() {
                   </button>
                 );
               })()}
-              <button onClick={() => setShowCalendar(true)} style={{ padding: '10px 16px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: 14 }}>📅 Calendrier</button>
-              <button onClick={handleLogout} style={styles.logoutButton}>{"Déconnexion"}</button>
+              <button onClick={() => setShowCalendar(true)} title="Calendrier" aria-label="Calendrier" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>📅</button>
+              <button onClick={handleLogout} title="Déconnexion" aria-label="Déconnexion" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'white', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>🚪</button>
             </div>
           </div>
         </div>
@@ -6071,8 +6119,9 @@ export default function App() {
                 {/* ── EN LIGNE ── */}
                 {adminSubTab === 'online' && (() => {
                   const counts = getOnlineCounts();
+                  const connectionStats = getConnectionStats();
                   return <>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 18 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(118px,1fr))', gap: 10, marginBottom: 18 }}>
                       {[
                         { label: '🟢 Total connectés', value: counts.total, bg: '#dcfce7', color: '#166534' },
                         { label: '👪 Parents', value: counts.parents, bg: '#dbeafe', color: '#1e40af' },
@@ -6080,13 +6129,31 @@ export default function App() {
                         { label: '🏆 Coachs', value: counts.coaches, bg: '#fef3c7', color: '#92400e' },
                         { label: '⚙️ Admins', value: counts.admins, bg: '#fee2e2', color: '#991b1b' },
                       ].map((s) => (
-                        <div key={s.label} style={{ background: s.bg, borderRadius: 16, padding: 14, textAlign: 'center', border: '1px solid rgba(0,0,0,0.04)' }}>
-                          <div style={{ fontSize: 30, fontWeight: 900, color: s.color }}>{s.value}</div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: s.color, marginTop: 4, opacity: 0.85 }}>{s.label}</div>
+                        <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: 12, textAlign: 'center', border: '1px solid rgba(0,0,0,0.04)', minWidth: 0 }}>
+                          <div style={{ fontSize: 26, fontWeight: 900, color: s.color }}>{s.value}</div>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: s.color, marginTop: 4, opacity: 0.85, lineHeight: 1.2 }}>{s.label}</div>
                         </div>
                       ))}
                     </div>
-                    <div style={styles.panelCard}>
+                    <div style={{ ...styles.panelCard, marginBottom: 16 }}>
+                      <h3 style={styles.panelTitle}>📈 Connexions sur 7 jours</h3>
+                      {connectionStats.daily.length === 0 ? (
+                        <div style={styles.emptyState}>Pas encore d'historique de connexion.</div>
+                      ) : (
+                        <div style={{ display: 'grid', gap: 8 }}>
+                          {connectionStats.daily.map((day) => (
+                            <div key={day.day} style={{ display: 'grid', gridTemplateColumns: '88px 1fr auto', gap: 10, alignItems: 'center', padding: '10px 12px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                              <div style={{ fontWeight: 900, color: '#10233b', fontSize: 12, textTransform: 'capitalize' }}>{day.day}</div>
+                              <div style={{ height: 10, borderRadius: 999, background: '#e2e8f0', overflow: 'hidden' }}>
+                                <div style={{ width: `${Math.max(8, Math.min(100, day.total * 12))}%`, height: '100%', background: '#0A5FB5', borderRadius: 999 }} />
+                              </div>
+                              <div style={{ fontWeight: 900, color: '#0A5FB5', fontSize: 12, whiteSpace: 'nowrap' }}>{day.users} pers.</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ ...styles.panelCard, marginBottom: 16 }}>
                       <h3 style={styles.panelTitle}>👥 Utilisateurs actuellement connectés</h3>
                       <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#94a3b8' }}>Considéré "en ligne" si vu il y a moins de 2 minutes.</p>
                       {counts.list.length === 0
@@ -6108,6 +6175,29 @@ export default function App() {
                               );
                             })}
                           </div>}
+                    </div>
+                    <div style={styles.panelCard}>
+                      <h3 style={styles.panelTitle}>🕘 Historique récent</h3>
+                      <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#94a3b8' }}>Conservé sur les derniers jours. Si la table d'historique existe, chaque passage est listé; sinon l'app affiche la dernière activité connue par personne.</p>
+                      {connectionStats.history.length === 0 ? (
+                        <div style={styles.emptyState}>Aucune activité récente.</div>
+                      ) : (
+                        <div style={{ display: 'grid', gap: 6, maxHeight: 360, overflowY: 'auto', paddingRight: 2 }}>
+                          {connectionStats.history.slice(0, 120).map((p, idx) => {
+                            const roleColor = p.role === 'admin' ? '#dc2626' : p.role === 'coach' ? '#92400e' : p.role === 'player' ? '#5b21b6' : '#1e40af';
+                            const roleBg = p.role === 'admin' ? '#fee2e2' : p.role === 'coach' ? '#fef3c7' : p.role === 'player' ? '#ede9fe' : '#dbeafe';
+                            return (
+                              <div key={`${p.auth_id}-${p.seen_at}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center', padding: '10px 12px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, minWidth: 0 }}>
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontWeight: 900, fontSize: 13, color: '#10233b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name || 'Utilisateur sans nom'}</div>
+                                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{new Date(p.seen_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
+                                </div>
+                                <span style={{ background: roleBg, color: roleColor, padding: '4px 9px', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{p.role}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </>;
                 })()}
@@ -7265,8 +7355,8 @@ export default function App() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
   page: { minHeight: '100vh', background: 'linear-gradient(180deg, #edf4ff 0%, #dbeaff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Arial, sans-serif' },
-  appPage: { minHeight: '100vh', background: '#edf4ff', padding: 20, fontFamily: 'Arial, sans-serif' },
-  container: { maxWidth: 1150, margin: '0 auto' },
+  appPage: { minHeight: '100vh', background: '#edf4ff', padding: 20, fontFamily: 'Arial, sans-serif', overflowX: 'hidden', boxSizing: 'border-box' },
+  container: { maxWidth: 1150, width: '100%', margin: '0 auto', boxSizing: 'border-box' },
   loginCard: { width: '100%', maxWidth: 560, background: 'rgba(255,255,255,0.95)', borderRadius: 28, padding: 28, boxShadow: '0 18px 40px rgba(6,44,93,0.15)' },
   loadingCard: { width: '100%', maxWidth: 420, background: 'white', borderRadius: 24, padding: 30, textAlign: 'center', boxShadow: '0 16px 40px rgba(0,0,0,0.10)' },
   loadingBadge: { display: 'inline-block', background: '#0A5FB5', color: 'white', padding: '8px 14px', borderRadius: 999, fontWeight: 700, fontSize: 14 },
@@ -7282,7 +7372,7 @@ const styles: Record<string, React.CSSProperties> = {
   roleText: { fontSize: 14, color: '#5b6472', lineHeight: 1.4 },
   select: { padding: '14px 16px', paddingRight: 42, borderRadius: 14, border: '1px solid #cfd8e3', fontSize: 16, lineHeight: 1.35, minHeight: 56, outline: 'none', background: 'white', color: '#1b2430', width: '100%', boxSizing: 'border-box', WebkitAppearance: 'none', MozAppearance: 'none', appearance: 'none' },
   input: { padding: '14px 16px', borderRadius: 14, border: '1px solid #cfd8e3', fontSize: 16, lineHeight: 1.35, minHeight: 56, outline: 'none', background: 'white', color: '#1b2430', caretColor: '#0A5FB5', width: '100%', boxSizing: 'border-box' },
-  header: { background: 'linear-gradient(135deg, #0A5FB5, #062C5D)', color: 'white', borderRadius: 28, padding: 24, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
+  header: { background: 'linear-gradient(135deg, #0A5FB5, #062C5D)', color: 'white', borderRadius: 28, padding: 24, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', width: '100%', boxSizing: 'border-box', overflow: 'visible' },
   headerBadge: { display: 'inline-block', padding: '6px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.16)', fontSize: 13, fontWeight: 700 },
   logoutButton: { padding: '12px 16px', borderRadius: 14, border: 'none', background: 'white', color: '#062C5D', fontWeight: 800, cursor: 'pointer' },
   coachMenu: { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 },
