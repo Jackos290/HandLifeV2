@@ -1956,7 +1956,7 @@ export default function App() {
         : matchPlayerStats.filter((s) => s.player_id === p.id);
       const goals = playerStats.reduce((sum, s) => sum + (s.goals || 0), 0);
       const shots = playerStats.reduce((sum, s) => sum + (s.shots || 0), 0);
-      const matchesPlayed = new Set(playerStats.map((s) => s.match_id)).size;
+      const matchesPlayed = getMatchPresentCount(p.id, seasonId);
       const hideStats = forParent ? !isPlayerStatsVisibleForParent(p, isMyChild) : false;
       return {
         player: p,
@@ -6568,7 +6568,8 @@ export default function App() {
                             {!childTeam?.stats_hidden_for_parents && (() => {
                               const childPresences = getTrainingPresentCount(child.id);
                               const childGoals = matchPlayerStats.filter((s) => s.player_id === child.id).reduce((sum, s) => sum + (s.goals || 0), 0);
-                              const { grade, starsInLevel, isRainbow } = computeGrade(childPresences, childGoals);
+                              const childMatchesPlayed = getMatchPresentCount(child.id);
+                              const { grade, starsInLevel, isRainbow } = computeGrade(childPresences, childGoals, childMatchesPlayed);
                               const rainbowColors = ['#f59e0b','#10b981','#3b82f6','#a855f7','#ef4444'];
                               const starColor = isRainbow ? undefined : grade.color;
                               return (
@@ -6601,7 +6602,7 @@ export default function App() {
                                   </div>
                                   {/* Mini stats source */}
                                   <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>
-                                    🏃{childPresences} · ⚽{childGoals}
+                                    🏃{childPresences} · ⚽{childMatchesPlayed} match{childMatchesPlayed > 1 ? 's' : ''} · {childGoals} but{childGoals > 1 ? 's' : ''}
                                   </span>
                                 </div>
                               );
