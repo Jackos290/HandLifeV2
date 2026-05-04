@@ -1,0 +1,2424 @@
+import { useEffect, useMemo, useState } from 'react';
+import { supabase } from './supabase';
+
+type Team = {
+  id: string;
+  name: string;
+};
+
+type Player = {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  team_id?: string;
+};
+
+type MatchItem = {
+  id: string;
+  opponent?: string;
+  match_date?: string;
+  location?: string;
+  home_away?: string;
+  team_id?: string;
+};
+
+type MatchAttendance = {
+  id: string;
+  match_id?: string;
+  player_id?: string;
+  status?: 'present' | 'absent' | 'unknown';
+};
+
+type PlayerStat = {
+  id: string;
+  player_id?: string;
+  goals?: number;
+  assists?: number;
+  saves?: number;
+  matches_played?: number;
+};
+
+type UserItem = {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  role?: string;
+};
+
+type ParentPlayerLink = {
+  id: string;
+  parent_id?: string;
+  player_id?: string;
+};
+
+type TrainingTemplate = {
+  id: string;
+  team_id?: string;
+  title?: string;
+  weekday: number;
+  start_time: string;
+  end_time: string;
+  location?: string;
+  active?: boolean;
+};
+
+type TrainingAttendance = {
+  id: string;
+  training_template_id?: string;
+  player_id?: string;
+  training_date?: string;
+  status?: 'present' | 'absent' | 'unknown';
+};
+
+type UpcomingTraining = {
+  templateId: string;
+  teamId?: string;
+  title?: string;
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  date: string;
+};
+
+type CoachTab = 'trainings' | 'matches' | 'stats' | 'players';
+
+export default function App() {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [matches, setMatches] = useState<MatchItem[]>([]);
+  const [matchAttendance, setMatchAttendance] = useState<MatchAttendance[]>([]);
+  const [stats, setStats] = useState<PlayerStat[]>([]);
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [parentLinks, setParentLinks] = useState<ParentPlayerLink[]>([]);
+  const [trainingTemplates, setTrainingTemplates] = useState<TrainingTemplate[]>([]);
+  const [trainingAttendance, setTrainingAttendance] = useState<TrainingAttendance[]>([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const [loginRole, setLoginRole] = useState<'coach' | 'parent'>('parent');
+  const [selectedParentId, setSelectedParentId] = useState('');
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [activeRole, setActiveRole] = useState<'coach' | 'parent'>('parent');
+
+  const [coachTab, setCoachTab] = useState<CoachTab>('trainings');
+
+  const [newTrainingTeamId, setNewTrainingTeamId] = useState('');
+  const [newTrainingTitle, setNewTrainingTitle] = useState('Entraînement');
+  const [newTrainingWeekday, setNewTrainingWeekday] = useState('3');
+  const [newTrainingStart, setNewTrainingStart] = useState('18:30');
+  const [newTrainingEnd, setNewTrainingEnd] = useState('20:00');
+  const [newTrainingLocation, setNewTrainingLocation] = useState('Gymnase de Gorcy');
+
+  const [selectedCoachTeamId, setSelectedCoachTeamId] = useState('');
+  const [selectedTrainingTemplateId, setSelectedTrainingTemplateId] = useState('');
+  const [selectedTrainingDate, setSelectedTrainingDate] = useState('');
+
+  const [showCreateChildForm, setShowCreateChildForm] = useState(false);
+  const [newChildFirstName, setNewChildFirstName] = useState('');
+  const [newChildLastName, setNewChildLastName] = useState('');
+  const [newChildTeamId, setNewChildTeamId] = useState('');
+  const [newParentFirstName, setNewParentFirstName] = useState('');
+  const [newParentLastName, setNewParentLastName] = useState('');
+  const [newParentEmail, setNewParentEmail] = useState('');
+  const [creatingChildAccount, setCreatingChildAccount] = useState(false);
+
+  const [playerFormFirstName, setPlayerFormFirstName] = useState('');
+  const [playerFormLastName, setPlayerFormLastName] = useState('');
+  const [playerFormTeamId, setPlayerFormTeamId] = useState('');
+  const [editingPlayerId, setEditingPlayerId] = useState('');
+  const [savingPlayer, setSavingPlayer] = useState(false);
+
+  const [selectedLinkParentId, setSelectedLinkParentId] = useState('');
+  const [selectedLinkPlayerId, setSelectedLinkPlayerId] = useState('');
+  const [linkingPlayer, setLinkingPlayer] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (teams.length > 0 && !newChildTeamId) {
+      setNewChildTeamId(teams[0].id);
+    }
+    if (teams.length > 0 && !playerFormTeamId) {
+      setPlayerFormTeamId(teams[0].id);
+    }
+  }, [teams, newChildTeamId, playerFormTeamId]);
+
+  async function loadData() {
+    setLoading(true);
+
+    const [
+      teamsRes,
+      playersRes,
+      matchesRes,
+      matchAttendanceRes,
+      statsRes,
+      usersRes,
+      linksRes,
+      templatesRes,
+      attendanceRes,
+    ] = await Promise.all([
+      supabase.from('teams').select('*').order('name', { ascending: true }),
+      supabase.from('players').select('*').order('last_name', { ascending: true }),
+      supabase.from('matches').select('*').order('match_date', { ascending: true }),
+      supabase.from('match_attendance').select('*'),
+      supabase.from('player_stats').select('*'),
+      supabase.from('users').select('*').order('last_name', { ascending: true }),
+      supabase.from('parent_player').select('*'),
+      supabase.from('training_templates').select('*').order('weekday', { ascending: true }),
+      supabase.from('training_attendance').select('*'),
+    ]);
+
+    const teamsData = teamsRes.data || [];
+    const templatesData = templatesRes.data || [];
+
+    setTeams(teamsData);
+    setPlayers(playersRes.data || []);
+    setMatches(matchesRes.data || []);
+    setMatchAttendance(matchAttendanceRes.data || []);
+    setStats(statsRes.data || []);
+    setUsers(usersRes.data || []);
+    setParentLinks(linksRes.data || []);
+    setTrainingTemplates(templatesData);
+    setTrainingAttendance(attendanceRes.data || []);
+
+    if (teamsData.length > 0 && !newTrainingTeamId) {
+      setNewTrainingTeamId(teamsData[0].id);
+    }
+
+    if (teamsData.length > 0 && !selectedCoachTeamId) {
+      setSelectedCoachTeamId(teamsData[0].id);
+    }
+
+    if (templatesData.length > 0 && !selectedTrainingTemplateId) {
+      setSelectedTrainingTemplateId(templatesData[0].id);
+      const nextDate = getNextDatesForWeekday(templatesData[0].weekday, 1)[0] || '';
+      setSelectedTrainingDate(nextDate);
+    }
+
+    setLoading(false);
+  }
+
+  const parentUsers = useMemo(
+    () => users.filter((u) => u.role === 'parent'),
+    [users]
+  );
+
+  useEffect(() => {
+    if (parentUsers.length > 0 && !selectedParentId) {
+      setSelectedParentId(parentUsers[0].id);
+    }
+  }, [parentUsers, selectedParentId]);
+
+  useEffect(() => {
+    if (parentUsers.length > 0 && !selectedLinkParentId) {
+      setSelectedLinkParentId(parentUsers[0].id);
+    }
+  }, [parentUsers, selectedLinkParentId]);
+
+  useEffect(() => {
+    if (players.length > 0 && !selectedLinkPlayerId) {
+      setSelectedLinkPlayerId(players[0].id);
+    }
+  }, [players, selectedLinkPlayerId]);
+
+  useEffect(() => {
+    if (!selectedTrainingTemplateId) return;
+    const template = trainingTemplates.find((t) => t.id === selectedTrainingTemplateId);
+    if (!template) return;
+    const nextDate = getNextDatesForWeekday(template.weekday, 1)[0] || '';
+    setSelectedTrainingDate(nextDate);
+  }, [selectedTrainingTemplateId, trainingTemplates]);
+
+  function getPlayerName(player: Partial<Player>) {
+    return `${player.first_name ?? ''} ${player.last_name ?? ''}`.trim();
+  }
+
+  function getUserName(user: Partial<UserItem>) {
+    return `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim();
+  }
+
+  function formatDate(date?: string) {
+    if (!date) return '-';
+    try {
+      return new Date(date).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    } catch {
+      return date;
+    }
+  }
+
+  function formatTime(date?: string) {
+    if (!date) return '';
+    try {
+      return new Date(date).toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '';
+    }
+  }
+
+  function getWeekdayLabel(weekday: number) {
+    const days = [
+      'Dimanche',
+      'Lundi',
+      'Mardi',
+      'Mercredi',
+      'Jeudi',
+      'Vendredi',
+      'Samedi',
+    ];
+    return days[weekday] || '-';
+  }
+
+  function getTeamName(teamId?: string) {
+    return teams.find((t) => t.id === teamId)?.name || 'Équipe inconnue';
+  }
+
+  function getPlayersForTeam(teamId: string) {
+    return players.filter((p) => p.team_id === teamId);
+  }
+
+  function getStatForPlayer(playerId: string) {
+    return stats.find((s) => s.player_id === playerId);
+  }
+
+  function getNextDatesForWeekday(weekday: number, count = 6) {
+    const result: string[] = [];
+    const today = new Date();
+    const current = new Date(today);
+    current.setHours(0, 0, 0, 0);
+
+    for (let i = 0; result.length < count && i < 90; i++) {
+      const test = new Date(current);
+      test.setDate(current.getDate() + i);
+      if (test.getDay() === weekday) {
+        result.push(test.toISOString().slice(0, 10));
+      }
+    }
+
+    return result;
+  }
+
+  function isFutureOrToday(date?: string) {
+    if (!date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const test = new Date(date);
+    test.setHours(0, 0, 0, 0);
+
+    return test >= today;
+  }
+
+  const linkedPlayerIds = parentLinks
+    .filter((link) => link.parent_id === selectedParentId)
+    .map((link) => link.player_id)
+    .filter(Boolean) as string[];
+
+  const parentPlayers = players.filter((p) => linkedPlayerIds.includes(p.id));
+
+  function getAttendanceStatus(templateId: string, playerId: string, date: string) {
+    const found = trainingAttendance.find(
+      (a) =>
+        a.training_template_id === templateId &&
+        a.player_id === playerId &&
+        a.training_date === date
+    );
+    return found?.status || 'unknown';
+  }
+
+  function getTrainingCounts(templateId: string, teamId: string, date: string) {
+    const teamPlayers = getPlayersForTeam(teamId);
+    let present = 0;
+    let absent = 0;
+    let unknown = 0;
+
+    for (const player of teamPlayers) {
+      const status = getAttendanceStatus(templateId, player.id, date);
+      if (status === 'present') present++;
+      else if (status === 'absent') absent++;
+      else unknown++;
+    }
+
+    return { present, absent, unknown, total: teamPlayers.length };
+  }
+
+  function getMatchAttendanceStatus(matchId: string, playerId: string) {
+    const found = matchAttendance.find(
+      (a) => a.match_id === matchId && a.player_id === playerId
+    );
+    return found?.status || 'unknown';
+  }
+
+  function getMatchCounts(matchId: string, teamId: string) {
+    const teamPlayers = getPlayersForTeam(teamId);
+    let present = 0;
+    let absent = 0;
+    let unknown = 0;
+
+    for (const player of teamPlayers) {
+      const status = getMatchAttendanceStatus(matchId, player.id);
+      if (status === 'present') present++;
+      else if (status === 'absent') absent++;
+      else unknown++;
+    }
+
+    return { present, absent, unknown, total: teamPlayers.length };
+  }
+
+  function getLinkedParentsForPlayer(playerId: string) {
+    const linkedParentIds = parentLinks
+      .filter((link) => link.player_id === playerId)
+      .map((link) => link.parent_id);
+
+    return users.filter(
+      (user) => user.role === 'parent' && linkedParentIds.includes(user.id)
+    );
+  }
+
+  async function saveAttendance(
+    templateId: string,
+    playerId: string,
+    trainingDate: string,
+    status: 'present' | 'absent'
+  ) {
+    const { error } = await supabase.from('training_attendance').upsert(
+      {
+        training_template_id: templateId,
+        player_id: playerId,
+        training_date: trainingDate,
+        status,
+      },
+      {
+        onConflict: 'training_template_id,player_id,training_date',
+      }
+    );
+
+    if (error) {
+      alert("Erreur lors de l'enregistrement de la présence");
+      return;
+    }
+
+    await loadData();
+  }
+
+  async function saveMatchAttendance(
+    matchId: string,
+    playerId: string,
+    status: 'present' | 'absent'
+  ) {
+    const { error } = await supabase.from('match_attendance').upsert(
+      {
+        match_id: matchId,
+        player_id: playerId,
+        status,
+      },
+      {
+        onConflict: 'match_id,player_id',
+      }
+    );
+
+    if (error) {
+      alert("Erreur lors de l'enregistrement de la présence au match");
+      return;
+    }
+
+    await loadData();
+  }
+
+  async function addTrainingTemplate() {
+    if (!newTrainingTeamId || !newTrainingStart || !newTrainingEnd) {
+      alert('Merci de remplir les champs obligatoires');
+      return;
+    }
+
+    const { error } = await supabase.from('training_templates').insert({
+      team_id: newTrainingTeamId,
+      title: newTrainingTitle,
+      weekday: Number(newTrainingWeekday),
+      start_time: newTrainingStart,
+      end_time: newTrainingEnd,
+      location: newTrainingLocation,
+      active: true,
+    });
+
+    if (error) {
+      alert("Erreur lors de la création de l'entraînement");
+      return;
+    }
+
+    setNewTrainingTitle('Entraînement');
+    setNewTrainingWeekday('3');
+    setNewTrainingStart('18:30');
+    setNewTrainingEnd('20:00');
+    setNewTrainingLocation('Gymnase de Gorcy');
+
+    await loadData();
+  }
+
+  async function toggleTemplateActive(template: TrainingTemplate) {
+    const { error } = await supabase
+      .from('training_templates')
+      .update({ active: !template.active })
+      .eq('id', template.id);
+
+    if (error) {
+      alert('Erreur lors de la mise à jour');
+      return;
+    }
+
+    await loadData();
+  }
+
+  function openTrainingDetail(templateId: string, weekday: number, teamId?: string) {
+    setCoachTab('trainings');
+    setSelectedTrainingTemplateId(templateId);
+    const nextDate = getNextDatesForWeekday(weekday, 1)[0] || '';
+    setSelectedTrainingDate(nextDate);
+    if (teamId) {
+      setSelectedCoachTeamId(teamId);
+    }
+  }
+
+  function handleLogin() {
+    if (loginRole === 'parent' && !selectedParentId) return;
+    setActiveRole(loginRole);
+    setLoggedIn(true);
+  }
+
+  function handleLogout() {
+    setLoggedIn(false);
+  }
+
+  async function createChildAccount() {
+    if (
+      !newChildFirstName.trim() ||
+      !newChildLastName.trim() ||
+      !newChildTeamId ||
+      !newParentFirstName.trim() ||
+      !newParentLastName.trim()
+    ) {
+      alert('Merci de remplir les champs obligatoires');
+      return;
+    }
+
+    setCreatingChildAccount(true);
+
+    try {
+      let parentId = '';
+
+      if (newParentEmail.trim()) {
+        const existingParentRes = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', newParentEmail.trim())
+          .eq('role', 'parent')
+          .maybeSingle();
+
+        if (existingParentRes.error) {
+          throw existingParentRes.error;
+        }
+
+        if (existingParentRes.data) {
+          parentId = existingParentRes.data.id;
+        }
+      }
+
+      if (!parentId) {
+        const parentInsertRes = await supabase
+          .from('users')
+          .insert({
+            first_name: newParentFirstName.trim(),
+            last_name: newParentLastName.trim(),
+            email: newParentEmail.trim() || null,
+            role: 'parent',
+          })
+          .select()
+          .single();
+
+        if (parentInsertRes.error || !parentInsertRes.data) {
+          throw parentInsertRes.error || new Error('Impossible de créer le parent');
+        }
+
+        parentId = parentInsertRes.data.id;
+      }
+
+      const playerInsertRes = await supabase
+        .from('players')
+        .insert({
+          first_name: newChildFirstName.trim(),
+          last_name: newChildLastName.trim(),
+          team_id: newChildTeamId,
+        })
+        .select()
+        .single();
+
+      if (playerInsertRes.error || !playerInsertRes.data) {
+        throw playerInsertRes.error || new Error("Impossible de créer l'enfant");
+      }
+
+      const playerId = playerInsertRes.data.id;
+
+      const linkRes = await supabase.from('parent_player').insert({
+        parent_id: parentId,
+        player_id: playerId,
+      });
+
+      if (linkRes.error) {
+        throw linkRes.error;
+      }
+
+      const statsRes = await supabase.from('player_stats').insert({
+        player_id: playerId,
+        goals: 0,
+        assists: 0,
+        saves: 0,
+        matches_played: 0,
+      });
+
+      if (statsRes.error) {
+        throw statsRes.error;
+      }
+
+      setNewChildFirstName('');
+      setNewChildLastName('');
+      setNewParentFirstName('');
+      setNewParentLastName('');
+      setNewParentEmail('');
+      setNewChildTeamId(teams[0]?.id || '');
+
+      await loadData();
+
+      setLoginRole('parent');
+      setSelectedParentId(parentId);
+      setShowCreateChildForm(false);
+
+      alert('Compte enfant créé avec succès');
+    } catch (error) {
+      console.error(error);
+      alert("Erreur lors de la création du compte enfant");
+    } finally {
+      setCreatingChildAccount(false);
+    }
+  }
+
+  function resetPlayerForm() {
+    setEditingPlayerId('');
+    setPlayerFormFirstName('');
+    setPlayerFormLastName('');
+    setPlayerFormTeamId(teams[0]?.id || '');
+  }
+
+  function startEditPlayer(player: Player) {
+    setEditingPlayerId(player.id);
+    setPlayerFormFirstName(player.first_name || '');
+    setPlayerFormLastName(player.last_name || '');
+    setPlayerFormTeamId(player.team_id || teams[0]?.id || '');
+  }
+
+  async function savePlayer() {
+    if (!playerFormFirstName.trim() || !playerFormLastName.trim() || !playerFormTeamId) {
+      alert('Merci de remplir prénom, nom et équipe');
+      return;
+    }
+
+    setSavingPlayer(true);
+
+    try {
+      if (editingPlayerId) {
+        const { error } = await supabase
+          .from('players')
+          .update({
+            first_name: playerFormFirstName.trim(),
+            last_name: playerFormLastName.trim(),
+            team_id: playerFormTeamId,
+          })
+          .eq('id', editingPlayerId);
+
+        if (error) throw error;
+
+        alert('Joueur modifié avec succès');
+      } else {
+        const insertRes = await supabase
+          .from('players')
+          .insert({
+            first_name: playerFormFirstName.trim(),
+            last_name: playerFormLastName.trim(),
+            team_id: playerFormTeamId,
+          })
+          .select()
+          .single();
+
+        if (insertRes.error || !insertRes.data) {
+          throw insertRes.error || new Error('Impossible de créer le joueur');
+        }
+
+        const { error: statsError } = await supabase.from('player_stats').insert({
+          player_id: insertRes.data.id,
+          goals: 0,
+          assists: 0,
+          saves: 0,
+          matches_played: 0,
+        });
+
+        if (statsError) throw statsError;
+
+        alert('Joueur ajouté avec succès');
+      }
+
+      resetPlayerForm();
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      alert("Erreur lors de l'enregistrement du joueur");
+    } finally {
+      setSavingPlayer(false);
+    }
+  }
+
+  async function deletePlayer(player: Player) {
+    const confirmed = window.confirm(
+      `Supprimer ${getPlayerName(player)} ? Cette action supprimera aussi ses liens parent/enfant, stats et présences.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { error: attendanceError } = await supabase
+        .from('training_attendance')
+        .delete()
+        .eq('player_id', player.id);
+      if (attendanceError) throw attendanceError;
+
+      const { error: matchAttendanceError } = await supabase
+        .from('match_attendance')
+        .delete()
+        .eq('player_id', player.id);
+      if (matchAttendanceError) throw matchAttendanceError;
+
+      const { error: linkError } = await supabase
+        .from('parent_player')
+        .delete()
+        .eq('player_id', player.id);
+      if (linkError) throw linkError;
+
+      const { error: statsError } = await supabase
+        .from('player_stats')
+        .delete()
+        .eq('player_id', player.id);
+      if (statsError) throw statsError;
+
+      const { error: playerError } = await supabase
+        .from('players')
+        .delete()
+        .eq('id', player.id);
+      if (playerError) throw playerError;
+
+      if (editingPlayerId === player.id) {
+        resetPlayerForm();
+      }
+
+      await loadData();
+      alert('Joueur supprimé');
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de la suppression du joueur');
+    }
+  }
+
+  async function linkPlayerToParent() {
+    if (!selectedLinkParentId || !selectedLinkPlayerId) {
+      alert('Merci de sélectionner un parent et un joueur');
+      return;
+    }
+
+    const alreadyLinked = parentLinks.some(
+      (link) =>
+        link.parent_id === selectedLinkParentId &&
+        link.player_id === selectedLinkPlayerId
+    );
+
+    if (alreadyLinked) {
+      alert('Ce parent est déjà lié à cet enfant');
+      return;
+    }
+
+    setLinkingPlayer(true);
+
+    try {
+      const { error } = await supabase.from('parent_player').insert({
+        parent_id: selectedLinkParentId,
+        player_id: selectedLinkPlayerId,
+      });
+
+      if (error) throw error;
+
+      await loadData();
+      alert('Lien parent / enfant ajouté');
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de la création du lien');
+    } finally {
+      setLinkingPlayer(false);
+    }
+  }
+
+  async function removeParentLink(linkId: string) {
+    const confirmed = window.confirm('Supprimer ce lien parent / enfant ?');
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('parent_player')
+        .delete()
+        .eq('id', linkId);
+
+      if (error) throw error;
+
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de la suppression du lien');
+    }
+  }
+
+  const selectedCoachTemplate =
+    trainingTemplates.find((t) => t.id === selectedTrainingTemplateId) || null;
+
+  const coachTemplateDates = selectedCoachTemplate
+    ? getNextDatesForWeekday(selectedCoachTemplate.weekday, 8)
+    : [];
+
+  const coachTeamPlayers = selectedCoachTeamId
+    ? getPlayersForTeam(selectedCoachTeamId)
+    : players;
+
+  const coachMatches = selectedCoachTeamId
+    ? matches.filter((m) => m.team_id === selectedCoachTeamId)
+    : matches;
+
+  const coachTemplates = selectedCoachTeamId
+    ? trainingTemplates.filter((t) => t.team_id === selectedCoachTeamId)
+    : trainingTemplates;
+
+  const coachPlayersForSelectedTraining =
+    selectedCoachTemplate?.team_id
+      ? players.filter((p) => p.team_id === selectedCoachTemplate.team_id)
+      : [];
+
+  const selectedTrainingPresentCount = coachPlayersForSelectedTraining.filter(
+    (player) =>
+      selectedCoachTemplate &&
+      selectedTrainingDate &&
+      getAttendanceStatus(selectedCoachTemplate.id, player.id, selectedTrainingDate) === 'present'
+  ).length;
+
+  const selectedTrainingAbsentCount = coachPlayersForSelectedTraining.filter(
+    (player) =>
+      selectedCoachTemplate &&
+      selectedTrainingDate &&
+      getAttendanceStatus(selectedCoachTemplate.id, player.id, selectedTrainingDate) === 'absent'
+  ).length;
+
+  const selectedTrainingUnknownCount = coachPlayersForSelectedTraining.filter(
+    (player) =>
+      selectedCoachTemplate &&
+      selectedTrainingDate &&
+      getAttendanceStatus(selectedCoachTemplate.id, player.id, selectedTrainingDate) === 'unknown'
+  ).length;
+
+  if (loading) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.loadingCard}>
+          <div style={styles.loadingBadge}>CA Gorcy Handball</div>
+          <h2 style={{ margin: '18px 0 8px 0' }}>Chargement...</h2>
+          <p style={{ margin: 0, color: '#5b6472' }}>Récupération des données</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!loggedIn) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.loginCard}>
+          <div style={styles.topBanner}>
+            <div style={styles.logoCircle}>🤾</div>
+            <h1 style={styles.appTitle}>CA Gorcy Handball</h1>
+            <p style={styles.appSubtitle}>Connexion interne de démonstration</p>
+          </div>
+
+          <div style={{ marginTop: 24 }}>
+            <p style={styles.sectionLabel}>Choisir un espace</p>
+
+            <div style={styles.roleGrid}>
+              <button
+                onClick={() => setLoginRole('parent')}
+                style={{
+                  ...styles.roleButton,
+                  ...(loginRole === 'parent' ? styles.roleButtonActive : {}),
+                }}
+              >
+                <div style={styles.roleEmoji}>👨‍👩‍👧</div>
+                <div style={styles.roleTitle}>Parent</div>
+                <div style={styles.roleText}>
+                  Voir les entraînements, matchs et déclarer la présence
+                </div>
+              </button>
+
+              <button
+                onClick={() => setLoginRole('coach')}
+                style={{
+                  ...styles.roleButton,
+                  ...(loginRole === 'coach' ? styles.roleButtonActive : {}),
+                }}
+              >
+                <div style={styles.roleEmoji}>🧑‍🏫</div>
+                <div style={styles.roleTitle}>Coach</div>
+                <div style={styles.roleText}>
+                  Gérer les entraînements, matchs, stats et joueurs
+                </div>
+              </button>
+            </div>
+
+            {loginRole === 'parent' && (
+              <div style={styles.selectBlock}>
+                <label style={styles.sectionLabel}>Sélectionner le parent</label>
+                <select
+                  value={selectedParentId}
+                  onChange={(e) => setSelectedParentId(e.target.value)}
+                  style={styles.select}
+                >
+                  {parentUsers.length === 0 ? (
+                    <option value="">Aucun parent disponible</option>
+                  ) : (
+                    parentUsers.map((parent) => (
+                      <option key={parent.id} value={parent.id}>
+                        {getUserName(parent)}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            )}
+
+            <button onClick={handleLogin} style={styles.loginButton}>
+              Se connecter
+            </button>
+
+            <div style={styles.createAccountCard}>
+              <div style={styles.createAccountHeader}>
+                <div>
+                  <h3 style={{ margin: 0 }}>Nouveau compte enfant</h3>
+                  <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>
+                    Ajouter un enfant et son parent directement depuis l’accueil
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setShowCreateChildForm((prev) => !prev)}
+                  style={styles.secondaryOutlineButton}
+                >
+                  {showCreateChildForm ? 'Fermer' : 'Créer'}
+                </button>
+              </div>
+
+              {showCreateChildForm && (
+                <div style={{ marginTop: 18 }}>
+                  <div style={styles.formGrid}>
+                    <div>
+                      <label style={styles.inputLabel}>Prénom enfant</label>
+                      <input
+                        value={newChildFirstName}
+                        onChange={(e) => setNewChildFirstName(e.target.value)}
+                        style={styles.input}
+                        placeholder="Prénom"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Nom enfant</label>
+                      <input
+                        value={newChildLastName}
+                        onChange={(e) => setNewChildLastName(e.target.value)}
+                        style={styles.input}
+                        placeholder="Nom"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Équipe</label>
+                      <select
+                        value={newChildTeamId}
+                        onChange={(e) => setNewChildTeamId(e.target.value)}
+                        style={styles.select}
+                      >
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Prénom parent</label>
+                      <input
+                        value={newParentFirstName}
+                        onChange={(e) => setNewParentFirstName(e.target.value)}
+                        style={styles.input}
+                        placeholder="Prénom du parent"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Nom parent</label>
+                      <input
+                        value={newParentLastName}
+                        onChange={(e) => setNewParentLastName(e.target.value)}
+                        style={styles.input}
+                        placeholder="Nom du parent"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Email parent</label>
+                      <input
+                        value={newParentEmail}
+                        onChange={(e) => setNewParentEmail(e.target.value)}
+                        style={styles.input}
+                        placeholder="email@exemple.com"
+                        type="email"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={createChildAccount}
+                    style={{
+                      ...styles.primaryButton,
+                      width: '100%',
+                      opacity: creatingChildAccount ? 0.7 : 1,
+                    }}
+                    disabled={creatingChildAccount}
+                  >
+                    {creatingChildAccount ? 'Création...' : 'Créer le compte enfant'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.appPage}>
+      <div style={styles.container}>
+        <div style={styles.header}>
+          <div>
+            <div style={styles.headerBadge}>CA Gorcy Handball</div>
+            <h1 style={{ margin: '8px 0 6px 0' }}>
+              {activeRole === 'coach' ? 'Espace Coach' : 'Espace Parent'}
+            </h1>
+            <p style={{ margin: 0, opacity: 0.92 }}>
+              {activeRole === 'coach' ? 'Gestion du club' : 'Présences et infos équipe'}
+            </p>
+          </div>
+
+          <button onClick={handleLogout} style={styles.logoutButton}>
+            Déconnexion
+          </button>
+        </div>
+
+        {activeRole === 'coach' && (
+          <>
+            <div style={styles.coachMenu}>
+              <button
+                onClick={() => setCoachTab('trainings')}
+                style={{
+                  ...styles.menuButton,
+                  ...(coachTab === 'trainings' ? styles.menuButtonActive : {}),
+                }}
+              >
+                Entraînements
+              </button>
+
+              <button
+                onClick={() => setCoachTab('matches')}
+                style={{
+                  ...styles.menuButton,
+                  ...(coachTab === 'matches' ? styles.menuButtonActive : {}),
+                }}
+              >
+                Matchs
+              </button>
+
+              <button
+                onClick={() => setCoachTab('stats')}
+                style={{
+                  ...styles.menuButton,
+                  ...(coachTab === 'stats' ? styles.menuButtonActive : {}),
+                }}
+              >
+                Stats
+              </button>
+
+              <button
+                onClick={() => setCoachTab('players')}
+                style={{
+                  ...styles.menuButton,
+                  ...(coachTab === 'players' ? styles.menuButtonActive : {}),
+                }}
+              >
+                Joueurs
+              </button>
+            </div>
+
+            {coachTab === 'trainings' && (
+              <div style={styles.contentCard}>
+                <h2 style={styles.blockTitle}>Gestion des entraînements</h2>
+                <p style={styles.blockSubtitle}>
+                  Création des entraînements récurrents et suivi détaillé des présences.
+                </p>
+
+                <div style={styles.formCard}>
+                  <h3 style={styles.panelTitle}>Ajouter un entraînement récurrent</h3>
+
+                  <div style={styles.formGrid}>
+                    <div>
+                      <label style={styles.inputLabel}>Équipe</label>
+                      <select
+                        value={newTrainingTeamId}
+                        onChange={(e) => setNewTrainingTeamId(e.target.value)}
+                        style={styles.select}
+                      >
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Titre</label>
+                      <input
+                        value={newTrainingTitle}
+                        onChange={(e) => setNewTrainingTitle(e.target.value)}
+                        style={styles.input}
+                        placeholder="Entraînement"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Jour</label>
+                      <select
+                        value={newTrainingWeekday}
+                        onChange={(e) => setNewTrainingWeekday(e.target.value)}
+                        style={styles.select}
+                      >
+                        <option value="1">Lundi</option>
+                        <option value="2">Mardi</option>
+                        <option value="3">Mercredi</option>
+                        <option value="4">Jeudi</option>
+                        <option value="5">Vendredi</option>
+                        <option value="6">Samedi</option>
+                        <option value="0">Dimanche</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Début</label>
+                      <input
+                        type="time"
+                        value={newTrainingStart}
+                        onChange={(e) => setNewTrainingStart(e.target.value)}
+                        style={styles.input}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Fin</label>
+                      <input
+                        type="time"
+                        value={newTrainingEnd}
+                        onChange={(e) => setNewTrainingEnd(e.target.value)}
+                        style={styles.input}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Lieu</label>
+                      <input
+                        value={newTrainingLocation}
+                        onChange={(e) => setNewTrainingLocation(e.target.value)}
+                        style={styles.input}
+                        placeholder="Gymnase"
+                      />
+                    </div>
+                  </div>
+
+                  <button onClick={addTrainingTemplate} style={styles.primaryButton}>
+                    Ajouter l’entraînement
+                  </button>
+                </div>
+
+                <div style={{ ...styles.panelCard, marginTop: 18 }}>
+                  <h3 style={styles.panelTitle}>Détail d’une séance</h3>
+
+                  <div style={styles.formGrid}>
+                    <div>
+                      <label style={styles.inputLabel}>Entraînement</label>
+                      <select
+                        value={selectedTrainingTemplateId}
+                        onChange={(e) => setSelectedTrainingTemplateId(e.target.value)}
+                        style={styles.select}
+                      >
+                        {trainingTemplates.length === 0 ? (
+                          <option value="">Aucun entraînement</option>
+                        ) : (
+                          trainingTemplates.map((template) => (
+                            <option key={template.id} value={template.id}>
+                              {template.title || 'Entraînement'} - {getTeamName(template.team_id)} -{' '}
+                              {getWeekdayLabel(template.weekday)}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Date</label>
+                      <select
+                        value={selectedTrainingDate}
+                        onChange={(e) => setSelectedTrainingDate(e.target.value)}
+                        style={styles.select}
+                      >
+                        {coachTemplateDates.map((date) => (
+                          <option key={date} value={date}>
+                            {formatDate(date)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {selectedCoachTemplate && selectedTrainingDate && (
+                    <>
+                      <div style={styles.summaryGrid}>
+                        <div style={styles.summaryBox}>
+                          <div style={styles.summaryValue}>{selectedTrainingPresentCount}</div>
+                          <div style={styles.summaryLabel}>Présents</div>
+                        </div>
+                        <div style={styles.summaryBox}>
+                          <div style={styles.summaryValue}>{selectedTrainingAbsentCount}</div>
+                          <div style={styles.summaryLabel}>Absents</div>
+                        </div>
+                        <div style={styles.summaryBox}>
+                          <div style={styles.summaryValue}>{selectedTrainingUnknownCount}</div>
+                          <div style={styles.summaryLabel}>Sans réponse</div>
+                        </div>
+                        <div style={styles.summaryBox}>
+                          <div style={styles.summaryValue}>
+                            {coachPlayersForSelectedTraining.length}
+                          </div>
+                          <div style={styles.summaryLabel}>Joueurs</div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+                        {coachPlayersForSelectedTraining.length === 0 ? (
+                          <div style={styles.emptyState}>Aucun joueur dans cette équipe.</div>
+                        ) : (
+                          coachPlayersForSelectedTraining.map((player) => {
+                            const status = getAttendanceStatus(
+                              selectedCoachTemplate.id,
+                              player.id,
+                              selectedTrainingDate
+                            );
+
+                            return (
+                              <div key={player.id} style={styles.playerAttendanceRow}>
+                                <div>
+                                  <strong>{getPlayerName(player)}</strong>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                  <span
+                                    style={{
+                                      ...styles.statusBadge,
+                                      ...(status === 'present'
+                                        ? styles.badgeGreen
+                                        : status === 'absent'
+                                        ? styles.badgeRed
+                                        : styles.badgeGray),
+                                    }}
+                                  >
+                                    {status === 'present'
+                                      ? 'Présent'
+                                      : status === 'absent'
+                                      ? 'Absent'
+                                      : 'Sans réponse'}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
+                  {coachTemplates.length === 0 ? (
+                    <div style={styles.emptyState}>Aucun entraînement créé pour cette équipe.</div>
+                  ) : (
+                    coachTemplates.map((template) => {
+                      const nextDates = getNextDatesForWeekday(template.weekday, 2);
+
+                      return (
+                        <div key={template.id} style={styles.teamCard}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              gap: 12,
+                              flexWrap: 'wrap',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <div>
+                              <h3 style={{ margin: 0 }}>
+                                {template.title || 'Entraînement'} — {getTeamName(template.team_id)}
+                              </h3>
+                              <p style={{ margin: '8px 0 0 0', color: '#5b6472' }}>
+                                {getWeekdayLabel(template.weekday)} • {template.start_time} -{' '}
+                                {template.end_time} • {template.location || '-'}
+                              </p>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              <button
+                                onClick={() =>
+                                  openTrainingDetail(template.id, template.weekday, template.team_id)
+                                }
+                                style={styles.secondaryButton}
+                              >
+                                Voir détail
+                              </button>
+
+                              <button
+                                onClick={() => toggleTemplateActive(template)}
+                                style={{
+                                  ...styles.smallButton,
+                                  background: template.active === false ? '#f59e0b' : '#e5eef8',
+                                  color: template.active === false ? 'white' : '#12304f',
+                                }}
+                              >
+                                {template.active === false ? 'Réactiver' : 'Désactiver'}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div style={{ marginTop: 14 }}>
+                            <div style={styles.miniTitle}>2 prochaines séances</div>
+                            {nextDates.map((date) => {
+                              const counts = getTrainingCounts(
+                                template.id,
+                                template.team_id || '',
+                                date
+                              );
+
+                              return (
+                                <div key={date} style={styles.attendanceRow}>
+                                  <strong>{formatDate(date)}</strong>
+                                  <span>Présents : {counts.present}</span>
+                                  <span>Absents : {counts.absent}</span>
+                                  <span>Sans réponse : {counts.unknown}</span>
+                                  <span>Total : {counts.total}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {coachTab === 'matches' && (
+              <div style={styles.contentCard}>
+                <h2 style={styles.blockTitle}>Matchs</h2>
+                <p style={styles.blockSubtitle}>Vue simple des matchs par équipe.</p>
+
+                <div style={styles.filterBar}>
+                  <label style={styles.inputLabel}>Équipe</label>
+                  <select
+                    value={selectedCoachTeamId}
+                    onChange={(e) => setSelectedCoachTeamId(e.target.value)}
+                    style={styles.select}
+                  >
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {coachMatches.length === 0 ? (
+                    <div style={styles.emptyState}>Aucun match pour cette équipe.</div>
+                  ) : (
+                    coachMatches.map((match) => {
+                      const counts = getMatchCounts(match.id, match.team_id || '');
+                      return (
+                        <div key={match.id} style={styles.panelCard}>
+                          <h3 style={{ margin: 0 }}>vs {match.opponent || '-'}</h3>
+                          <p style={{ margin: '8px 0 0 0', color: '#5b6472' }}>
+                            {formatDate(match.match_date)} {formatTime(match.match_date)} •{' '}
+                            {match.location || '-'} •{' '}
+                            {match.home_away === 'home' ? 'Domicile' : 'Extérieur'}
+                          </p>
+                          <div style={{ ...styles.attendanceRow, marginTop: 12, marginBottom: 0 }}>
+                            <span>Présents : {counts.present}</span>
+                            <span>Absents : {counts.absent}</span>
+                            <span>Sans réponse : {counts.unknown}</span>
+                            <span>Total : {counts.total}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {coachTab === 'stats' && (
+              <div style={styles.contentCard}>
+                <h2 style={styles.blockTitle}>Stats joueurs</h2>
+                <p style={styles.blockSubtitle}>
+                  Vue rapide des statistiques des joueurs de l’équipe sélectionnée.
+                </p>
+
+                <div style={styles.filterBar}>
+                  <label style={styles.inputLabel}>Équipe</label>
+                  <select
+                    value={selectedCoachTeamId}
+                    onChange={(e) => setSelectedCoachTeamId(e.target.value)}
+                    style={styles.select}
+                  >
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {coachTeamPlayers.length === 0 ? (
+                    <div style={styles.emptyState}>Aucun joueur dans cette équipe.</div>
+                  ) : (
+                    coachTeamPlayers.map((player) => {
+                      const playerStats = getStatForPlayer(player.id);
+
+                      return (
+                        <div key={player.id} style={styles.playerAttendanceRow}>
+                          <div>
+                            <strong>{getPlayerName(player)}</strong>
+                          </div>
+
+                          <div style={styles.inlineStats}>
+                            <span>Buts : {playerStats?.goals ?? 0}</span>
+                            <span>Passes : {playerStats?.assists ?? 0}</span>
+                            <span>Arrêts : {playerStats?.saves ?? 0}</span>
+                            <span>Matchs : {playerStats?.matches_played ?? 0}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {coachTab === 'players' && (
+              <div style={styles.contentCard}>
+                <h2 style={styles.blockTitle}>Gestion des joueurs</h2>
+                <p style={styles.blockSubtitle}>
+                  Ajouter, modifier, supprimer un joueur et lier plusieurs enfants à un même parent.
+                </p>
+
+                <div style={styles.formCard}>
+                  <h3 style={styles.panelTitle}>
+                    {editingPlayerId ? 'Modifier un joueur' : 'Ajouter un joueur'}
+                  </h3>
+
+                  <div style={styles.formGrid}>
+                    <div>
+                      <label style={styles.inputLabel}>Prénom</label>
+                      <input
+                        value={playerFormFirstName}
+                        onChange={(e) => setPlayerFormFirstName(e.target.value)}
+                        style={styles.input}
+                        placeholder="Prénom"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Nom</label>
+                      <input
+                        value={playerFormLastName}
+                        onChange={(e) => setPlayerFormLastName(e.target.value)}
+                        style={styles.input}
+                        placeholder="Nom"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Équipe</label>
+                      <select
+                        value={playerFormTeamId}
+                        onChange={(e) => setPlayerFormTeamId(e.target.value)}
+                        style={styles.select}
+                      >
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={savePlayer}
+                      style={styles.primaryButton}
+                      disabled={savingPlayer}
+                    >
+                      {savingPlayer
+                        ? 'Enregistrement...'
+                        : editingPlayerId
+                        ? 'Enregistrer les modifications'
+                        : 'Ajouter le joueur'}
+                    </button>
+
+                    <button
+                      onClick={resetPlayerForm}
+                      style={styles.secondaryOutlineButton}
+                    >
+                      Réinitialiser
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ ...styles.panelCard, marginTop: 18 }}>
+                  <h3 style={styles.panelTitle}>Lier un enfant à un parent</h3>
+                  <div style={styles.formGrid}>
+                    <div>
+                      <label style={styles.inputLabel}>Parent</label>
+                      <select
+                        value={selectedLinkParentId}
+                        onChange={(e) => setSelectedLinkParentId(e.target.value)}
+                        style={styles.select}
+                      >
+                        {parentUsers.map((parent) => (
+                          <option key={parent.id} value={parent.id}>
+                            {getUserName(parent)} {parent.email ? `(${parent.email})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={styles.inputLabel}>Enfant / joueur</label>
+                      <select
+                        value={selectedLinkPlayerId}
+                        onChange={(e) => setSelectedLinkPlayerId(e.target.value)}
+                        style={styles.select}
+                      >
+                        {players.map((player) => (
+                          <option key={player.id} value={player.id}>
+                            {getPlayerName(player)} - {getTeamName(player.team_id)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={linkPlayerToParent}
+                    style={styles.primaryButton}
+                    disabled={linkingPlayer}
+                  >
+                    {linkingPlayer ? 'Ajout du lien...' : 'Ajouter le lien parent / enfant'}
+                  </button>
+                </div>
+
+                <div style={{ ...styles.panelCard, marginTop: 18 }}>
+                  <h3 style={styles.panelTitle}>Liste des joueurs</h3>
+
+                  <div style={styles.filterBar}>
+                    <label style={styles.inputLabel}>Équipe</label>
+                    <select
+                      value={selectedCoachTeamId}
+                      onChange={(e) => setSelectedCoachTeamId(e.target.value)}
+                      style={styles.select}
+                    >
+                      {teams.map((team) => (
+                        <option key={team.id} value={team.id}>
+                          {team.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    {coachTeamPlayers.length === 0 ? (
+                      <div style={styles.emptyState}>Aucun joueur dans cette équipe.</div>
+                    ) : (
+                      coachTeamPlayers.map((player) => {
+                        const linkedParents = getLinkedParentsForPlayer(player.id);
+                        const playerLinks = parentLinks.filter((link) => link.player_id === player.id);
+
+                        return (
+                          <div key={player.id} style={styles.teamCard}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                gap: 12,
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div>
+                                <h3 style={{ margin: 0 }}>{getPlayerName(player)}</h3>
+                                <p style={{ margin: '8px 0 0 0', color: '#5b6472' }}>
+                                  Équipe : {getTeamName(player.team_id)}
+                                </p>
+                              </div>
+
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                <button
+                                  onClick={() => startEditPlayer(player)}
+                                  style={styles.secondaryButton}
+                                >
+                                  Modifier
+                                </button>
+
+                                <button
+                                  onClick={() => deletePlayer(player)}
+                                  style={{
+                                    ...styles.smallButton,
+                                    background: '#dc2626',
+                                    color: 'white',
+                                  }}
+                                >
+                                  Supprimer
+                                </button>
+                              </div>
+                            </div>
+
+                            <div style={{ marginTop: 14 }}>
+                              <div style={styles.miniTitle}>Parents liés</div>
+
+                              {linkedParents.length === 0 ? (
+                                <div style={styles.emptyStateSmall}>Aucun parent lié.</div>
+                              ) : (
+                                <div style={{ display: 'grid', gap: 8 }}>
+                                  {linkedParents.map((parent) => {
+                                    const link = playerLinks.find((item) => item.parent_id === parent.id);
+
+                                    return (
+                                      <div key={parent.id} style={styles.linkRow}>
+                                        <div>
+                                          <strong>{getUserName(parent)}</strong>
+                                          <div style={{ color: '#5b6472', fontSize: 14 }}>
+                                            {parent.email || 'Pas d’email'}
+                                          </div>
+                                        </div>
+
+                                        {link && (
+                                          <button
+                                            onClick={() => removeParentLink(link.id)}
+                                            style={styles.linkRemoveButton}
+                                          >
+                                            Retirer le lien
+                                          </button>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ ...styles.panelCard, marginTop: 18 }}>
+                  <h3 style={styles.panelTitle}>Entraînements de cette équipe</h3>
+                  {coachTemplates.length === 0 ? (
+                    <p style={styles.emptyText}>Aucun entraînement récurrent.</p>
+                  ) : (
+                    <ul style={styles.list}>
+                      {coachTemplates.map((template) => (
+                        <li key={template.id}>
+                          {template.title || 'Entraînement'} • {getWeekdayLabel(template.weekday)} •{' '}
+                          {template.start_time} - {template.end_time} • {template.location || '-'}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {activeRole === 'parent' && (
+          <div style={styles.contentCard}>
+            <h2 style={styles.blockTitle}>Vue Parent</h2>
+
+            {parentPlayers.length === 0 ? (
+              <div style={styles.emptyState}>Aucun enfant lié à ce parent.</div>
+            ) : (
+              <div style={{ display: 'grid', gap: 18 }}>
+                {parentPlayers.map((child) => {
+                  const childTeam = teams.find((t) => t.id === child.team_id) || null;
+
+                  const childMatches = matches
+                    .filter((m) => m.team_id === child.team_id)
+                    .filter((m) => isFutureOrToday(m.match_date))
+                    .sort((a, b) => (a.match_date || '').localeCompare(b.match_date || ''))
+                    .slice(0, 2);
+
+                  const childStats = stats.find((s) => s.player_id === child.id) || null;
+
+                  const childTemplates = trainingTemplates.filter(
+                    (t) => t.team_id === child.team_id && t.active !== false
+                  );
+
+                  const childUpcomingTrainings: UpcomingTraining[] = childTemplates.flatMap((template) =>
+                    getNextDatesForWeekday(template.weekday, 6).map((date) => ({
+                      templateId: template.id,
+                      teamId: template.team_id,
+                      title: template.title,
+                      weekday: template.weekday,
+                      startTime: template.start_time,
+                      endTime: template.end_time,
+                      location: template.location,
+                      date,
+                    }))
+                  );
+
+                  childUpcomingTrainings.sort((a, b) => a.date.localeCompare(b.date));
+                  const childUpcomingTrainingsLimited = childUpcomingTrainings.slice(0, 2);
+
+                  return (
+                    <div key={child.id} style={styles.childSection}>
+                      <div style={styles.profileCard}>
+                        <div style={styles.profileAvatar}>🧒</div>
+                        <div>
+                          <h3 style={{ margin: '0 0 6px 0' }}>{getPlayerName(child)}</h3>
+                          <p style={{ margin: 0, color: '#5b6472' }}>
+                            Équipe : <strong>{childTeam?.name || 'Non définie'}</strong>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={styles.panelCard}>
+                        <h3 style={styles.panelTitle}>2 prochains entraînements</h3>
+
+                        {childUpcomingTrainingsLimited.length === 0 ? (
+                          <p style={styles.emptyText}>Aucun entraînement programmé.</p>
+                        ) : (
+                          <div style={{ display: 'grid', gap: 12 }}>
+                            {childUpcomingTrainingsLimited.map((training) => {
+                              const status = getAttendanceStatus(
+                                training.templateId,
+                                child.id,
+                                training.date
+                              );
+
+                              const counts = getTrainingCounts(
+                                training.templateId,
+                                training.teamId || '',
+                                training.date
+                              );
+
+                              return (
+                                <div key={`${training.templateId}-${training.date}-${child.id}`} style={styles.trainingCard}>
+                                  <div style={{ flex: 1 }}>
+                                    <h4 style={{ margin: '0 0 6px 0' }}>
+                                      {training.title || 'Entraînement'}
+                                    </h4>
+                                    <p style={{ margin: 0, color: '#5b6472' }}>
+                                      {formatDate(training.date)} • {getWeekdayLabel(training.weekday)} •{' '}
+                                      {training.startTime} - {training.endTime}
+                                    </p>
+                                    <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>
+                                      {training.location || '-'}
+                                    </p>
+
+                                    <div style={{ ...styles.attendanceRow, marginTop: 10, marginBottom: 0 }}>
+                                      <span>Présents : {counts.present}</span>
+                                      <span>Absents : {counts.absent}</span>
+                                      <span>Sans réponse : {counts.unknown}</span>
+                                    </div>
+                                  </div>
+
+                                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    <button
+                                      onClick={() =>
+                                        saveAttendance(
+                                          training.templateId,
+                                          child.id,
+                                          training.date,
+                                          'present'
+                                        )
+                                      }
+                                      style={{
+                                        ...styles.statusButton,
+                                        background: status === 'present' ? '#16a34a' : '#e8f7ee',
+                                        color: status === 'present' ? 'white' : '#166534',
+                                      }}
+                                    >
+                                      Présent
+                                    </button>
+
+                                    <button
+                                      onClick={() =>
+                                        saveAttendance(
+                                          training.templateId,
+                                          child.id,
+                                          training.date,
+                                          'absent'
+                                        )
+                                      }
+                                      style={{
+                                        ...styles.statusButton,
+                                        background: status === 'absent' ? '#dc2626' : '#fdecec',
+                                        color: status === 'absent' ? 'white' : '#991b1b',
+                                      }}
+                                    >
+                                      Absent
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ ...styles.panelCard, marginTop: 16 }}>
+                        <h3 style={styles.panelTitle}>2 prochains matchs</h3>
+
+                        {childMatches.length === 0 ? (
+                          <p style={styles.emptyText}>Aucun match programmé.</p>
+                        ) : (
+                          <div style={{ display: 'grid', gap: 12 }}>
+                            {childMatches.map((match) => {
+                              const status = getMatchAttendanceStatus(match.id, child.id);
+                              const counts = getMatchCounts(match.id, match.team_id || '');
+
+                              return (
+                                <div key={`${match.id}-${child.id}`} style={styles.trainingCard}>
+                                  <div style={{ flex: 1 }}>
+                                    <h4 style={{ margin: '0 0 6px 0' }}>
+                                      vs {match.opponent || '-'}
+                                    </h4>
+                                    <p style={{ margin: 0, color: '#5b6472' }}>
+                                      {formatDate(match.match_date)} {formatTime(match.match_date)} •{' '}
+                                      {match.location || '-'}
+                                    </p>
+                                    <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>
+                                      {match.home_away === 'home' ? 'Domicile' : 'Extérieur'}
+                                    </p>
+
+                                    <div style={{ ...styles.attendanceRow, marginTop: 10, marginBottom: 0 }}>
+                                      <span>Présents : {counts.present}</span>
+                                      <span>Absents : {counts.absent}</span>
+                                      <span>Sans réponse : {counts.unknown}</span>
+                                    </div>
+                                  </div>
+
+                                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    <button
+                                      onClick={() =>
+                                        saveMatchAttendance(match.id, child.id, 'present')
+                                      }
+                                      style={{
+                                        ...styles.statusButton,
+                                        background: status === 'present' ? '#16a34a' : '#e8f7ee',
+                                        color: status === 'present' ? 'white' : '#166534',
+                                      }}
+                                    >
+                                      Présent
+                                    </button>
+
+                                    <button
+                                      onClick={() =>
+                                        saveMatchAttendance(match.id, child.id, 'absent')
+                                      }
+                                      style={{
+                                        ...styles.statusButton,
+                                        background: status === 'absent' ? '#dc2626' : '#fdecec',
+                                        color: status === 'absent' ? 'white' : '#991b1b',
+                                      }}
+                                    >
+                                      Absent
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ ...styles.panelCard, marginTop: 16 }}>
+                        <h3 style={styles.panelTitle}>Statistiques</h3>
+                        {!childStats ? (
+                          <p style={styles.emptyText}>Aucune statistique.</p>
+                        ) : (
+                          <div style={styles.statsGrid}>
+                            <div style={styles.statBox}>
+                              <div style={styles.statValue}>{childStats.goals ?? 0}</div>
+                              <div style={styles.statLabel}>Buts</div>
+                            </div>
+                            <div style={styles.statBox}>
+                              <div style={styles.statValue}>{childStats.assists ?? 0}</div>
+                              <div style={styles.statLabel}>Passes</div>
+                            </div>
+                            <div style={styles.statBox}>
+                              <div style={styles.statValue}>{childStats.saves ?? 0}</div>
+                              <div style={styles.statLabel}>Arrêts</div>
+                            </div>
+                            <div style={styles.statBox}>
+                              <div style={styles.statValue}>{childStats.matches_played ?? 0}</div>
+                              <div style={styles.statLabel}>Matchs joués</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    background: 'linear-gradient(180deg, #edf4ff 0%, #dbeaff 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    fontFamily: 'Arial, sans-serif',
+  },
+  appPage: {
+    minHeight: '100vh',
+    background: '#edf4ff',
+    padding: 20,
+    fontFamily: 'Arial, sans-serif',
+  },
+  container: {
+    maxWidth: 1150,
+    margin: '0 auto',
+  },
+  loginCard: {
+    width: '100%',
+    maxWidth: 560,
+    background: 'rgba(255,255,255,0.95)',
+    borderRadius: 28,
+    padding: 28,
+    boxShadow: '0 18px 40px rgba(6,44,93,0.15)',
+  },
+  loadingCard: {
+    width: '100%',
+    maxWidth: 420,
+    background: 'white',
+    borderRadius: 24,
+    padding: 30,
+    textAlign: 'center',
+    boxShadow: '0 16px 40px rgba(0,0,0,0.10)',
+  },
+  loadingBadge: {
+    display: 'inline-block',
+    background: '#0A5FB5',
+    color: 'white',
+    padding: '8px 14px',
+    borderRadius: 999,
+    fontWeight: 700,
+    fontSize: 14,
+  },
+  topBanner: {
+    background: 'linear-gradient(135deg, #0A5FB5, #062C5D)',
+    color: 'white',
+    borderRadius: 24,
+    padding: 24,
+    textAlign: 'center',
+  },
+  logoCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: '50%',
+    background: 'rgba(255,255,255,0.18)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 14px auto',
+    fontSize: 30,
+  },
+  appTitle: {
+    margin: 0,
+    fontSize: 30,
+    fontWeight: 800,
+  },
+  appSubtitle: {
+    margin: '8px 0 0 0',
+    opacity: 0.92,
+    fontSize: 15,
+  },
+  sectionLabel: {
+    margin: '0 0 10px 0',
+    fontWeight: 700,
+    fontSize: 15,
+    color: '#1b2430',
+  },
+  roleGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 14,
+  },
+  roleButton: {
+    border: '2px solid #d5dfeb',
+    borderRadius: 20,
+    padding: 18,
+    background: '#f8fbff',
+    cursor: 'pointer',
+    textAlign: 'left',
+  },
+  roleButtonActive: {
+    border: '2px solid #0A5FB5',
+    background: '#eaf4ff',
+    boxShadow: '0 10px 24px rgba(10,95,181,0.12)',
+  },
+  roleEmoji: {
+    fontSize: 28,
+    marginBottom: 10,
+  },
+  roleTitle: {
+    fontSize: 18,
+    fontWeight: 800,
+    marginBottom: 6,
+    color: '#10233b',
+  },
+  roleText: {
+    fontSize: 14,
+    color: '#5b6472',
+    lineHeight: 1.4,
+  },
+  selectBlock: {
+    marginTop: 20,
+    display: 'grid',
+    gap: 10,
+  },
+  select: {
+    padding: '14px 16px',
+    borderRadius: 14,
+    border: '1px solid #cfd8e3',
+    fontSize: 15,
+    outline: 'none',
+    background: 'white',
+    width: '100%',
+  },
+  input: {
+    padding: '14px 16px',
+    borderRadius: 14,
+    border: '1px solid #cfd8e3',
+    fontSize: 15,
+    outline: 'none',
+    background: 'white',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  loginButton: {
+    width: '100%',
+    marginTop: 22,
+    padding: '16px 18px',
+    borderRadius: 16,
+    border: 'none',
+    background: 'linear-gradient(135deg, #0A5FB5, #084a8a)',
+    color: 'white',
+    fontWeight: 800,
+    fontSize: 16,
+    cursor: 'pointer',
+  },
+  header: {
+    background: 'linear-gradient(135deg, #0A5FB5, #062C5D)',
+    color: 'white',
+    borderRadius: 28,
+    padding: 24,
+    marginBottom: 20,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+    flexWrap: 'wrap',
+  },
+  headerBadge: {
+    display: 'inline-block',
+    padding: '6px 12px',
+    borderRadius: 999,
+    background: 'rgba(255,255,255,0.16)',
+    fontSize: 13,
+    fontWeight: 700,
+  },
+  logoutButton: {
+    padding: '12px 16px',
+    borderRadius: 14,
+    border: 'none',
+    background: 'white',
+    color: '#062C5D',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  coachMenu: {
+    display: 'flex',
+    gap: 10,
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  menuButton: {
+    padding: '12px 16px',
+    borderRadius: 14,
+    border: '1px solid #d6e1ec',
+    background: 'white',
+    cursor: 'pointer',
+    fontWeight: 700,
+    color: '#16304c',
+  },
+  menuButtonActive: {
+    background: '#0A5FB5',
+    color: 'white',
+    border: '1px solid #0A5FB5',
+  },
+  contentCard: {
+    background: 'white',
+    borderRadius: 24,
+    padding: 22,
+    boxShadow: '0 14px 30px rgba(16,35,59,0.08)',
+  },
+  blockTitle: {
+    margin: '0 0 8px 0',
+    fontSize: 26,
+  },
+  blockSubtitle: {
+    margin: '0 0 20px 0',
+    color: '#5b6472',
+  },
+  formCard: {
+    border: '1px solid #d8e5f2',
+    borderRadius: 20,
+    padding: 18,
+    background: '#f8fbff',
+  },
+  formGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: 12,
+    marginBottom: 16,
+  },
+  inputLabel: {
+    display: 'block',
+    marginBottom: 6,
+    fontWeight: 700,
+    color: '#1b2430',
+  },
+  primaryButton: {
+    padding: '14px 18px',
+    borderRadius: 14,
+    border: 'none',
+    background: '#0A5FB5',
+    color: 'white',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  secondaryButton: {
+    padding: '10px 14px',
+    borderRadius: 12,
+    border: 'none',
+    background: '#0A5FB5',
+    color: 'white',
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  smallButton: {
+    padding: '10px 14px',
+    borderRadius: 12,
+    border: 'none',
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  teamCard: {
+    border: '1px solid #d8e5f2',
+    borderRadius: 20,
+    padding: 18,
+    background: '#f8fbff',
+  },
+  miniTitle: {
+    fontWeight: 800,
+    marginBottom: 8,
+    color: '#0f2743',
+  },
+  list: {
+    margin: 0,
+    paddingLeft: 18,
+    lineHeight: 1.7,
+  },
+  emptyText: {
+    margin: 0,
+    color: '#6c7684',
+  },
+  emptyState: {
+    border: '1px dashed #c9d8e8',
+    borderRadius: 18,
+    padding: 22,
+    background: '#f8fbff',
+    color: '#556273',
+  },
+  emptyStateSmall: {
+    border: '1px dashed #c9d8e8',
+    borderRadius: 14,
+    padding: 14,
+    background: 'white',
+    color: '#556273',
+  },
+  profileCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    border: '1px solid #d8e5f2',
+    borderRadius: 20,
+    padding: 18,
+    background: '#f8fbff',
+    marginBottom: 18,
+  },
+  profileAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: '50%',
+    background: '#dbeafe',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 28,
+    flexShrink: 0,
+  },
+  panelCard: {
+    border: '1px solid #d8e5f2',
+    borderRadius: 20,
+    padding: 18,
+    background: '#f8fbff',
+  },
+  panelTitle: {
+    marginTop: 0,
+    marginBottom: 12,
+  },
+  trainingCard: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    border: '1px solid #dbe6f2',
+    borderRadius: 16,
+    padding: 14,
+    background: 'white',
+  },
+  statusButton: {
+    padding: '10px 14px',
+    borderRadius: 12,
+    border: 'none',
+    fontWeight: 800,
+    cursor: 'pointer',
+    minWidth: 100,
+  },
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: 12,
+  },
+  statBox: {
+    background: 'white',
+    borderRadius: 16,
+    padding: 16,
+    textAlign: 'center',
+    border: '1px solid #dde7f2',
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: 800,
+    color: '#0A5FB5',
+    marginBottom: 6,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#5b6472',
+    fontWeight: 700,
+  },
+  attendanceRow: {
+    display: 'flex',
+    gap: 16,
+    flexWrap: 'wrap',
+    padding: '10px 12px',
+    borderRadius: 12,
+    background: 'white',
+    border: '1px solid #dde7f2',
+    marginBottom: 8,
+  },
+  summaryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: 12,
+    marginTop: 12,
+  },
+  summaryBox: {
+    background: 'white',
+    borderRadius: 16,
+    padding: 16,
+    textAlign: 'center',
+    border: '1px solid #dde7f2',
+  },
+  summaryValue: {
+    fontSize: 26,
+    fontWeight: 800,
+    color: '#0A5FB5',
+    marginBottom: 6,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#5b6472',
+  },
+  playerAttendanceRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+    padding: '12px 14px',
+    borderRadius: 14,
+    background: 'white',
+    border: '1px solid #dde7f2',
+  },
+  statusBadge: {
+    padding: '8px 12px',
+    borderRadius: 999,
+    fontWeight: 800,
+    fontSize: 13,
+  },
+  badgeGreen: {
+    background: '#e8f7ee',
+    color: '#166534',
+  },
+  badgeRed: {
+    background: '#fdecec',
+    color: '#991b1b',
+  },
+  badgeGray: {
+    background: '#eef2f7',
+    color: '#526071',
+  },
+  filterBar: {
+    marginBottom: 16,
+    maxWidth: 320,
+  },
+  inlineStats: {
+    display: 'flex',
+    gap: 14,
+    flexWrap: 'wrap',
+    color: '#4d5c6d',
+    fontWeight: 600,
+  },
+  createAccountCard: {
+    marginTop: 22,
+    border: '1px solid #d8e5f2',
+    borderRadius: 20,
+    padding: 18,
+    background: '#f8fbff',
+  },
+  createAccountHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  secondaryOutlineButton: {
+    padding: '10px 14px',
+    borderRadius: 12,
+    border: '1px solid #0A5FB5',
+    background: 'white',
+    color: '#0A5FB5',
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  linkRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+    padding: '12px 14px',
+    borderRadius: 14,
+    background: 'white',
+    border: '1px solid #dde7f2',
+  },
+  linkRemoveButton: {
+    padding: '10px 12px',
+    borderRadius: 12,
+    border: 'none',
+    background: '#fee2e2',
+    color: '#991b1b',
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  childSection: {
+    border: '1px solid #d8e5f2',
+    borderRadius: 24,
+    padding: 18,
+    background: '#fbfdff',
+  },
+};
