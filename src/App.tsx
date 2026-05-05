@@ -886,6 +886,8 @@ export default function App() {
   const [connectionHistory, setConnectionHistory] = useState<ConnectionHistory[]>([]);
   const [showHeaderOnline, setShowHeaderOnline] = useState(false);
   const [presenceTick, setPresenceTick] = useState(Date.now());
+  const [presenceHistoryError, setPresenceHistoryError] = useState('');
+  const [localConnectionHistory, setLocalConnectionHistory] = useState<ConnectionHistory[]>([]);
 
   // ── Sondages ──
   const [polls, setPolls] = useState<Poll[]>([]);
@@ -959,11 +961,38 @@ export default function App() {
     } catch (e) { /* table may not exist yet */ }
     try {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: historyData } = await supabase.from('user_presence_history').select('*').gte('seen_at', sevenDaysAgo).order('seen_at', { ascending: false }).limit(700);
+      const { data: historyData, error: historyError } = await supabase.from('user_presence_history').select('*').gte('seen_at', sevenDaysAgo).order('seen_at', { ascending: false }).limit(700);
+      if (historyError) throw historyError;
       if (historyData) setConnectionHistory(historyData as ConnectionHistory[]);
-      await supabase.from('user_presence_history').delete().lt('seen_at', sevenDaysAgo);
-    } catch (e) { /* optional history table may not exist yet */ }
+      const { error: cleanupError } = await supabase.from('user_presence_history').delete().lt('seen_at', sevenDaysAgo);
+      if (cleanupError) throw cleanupError;
+      setPresenceHistoryError('');
+    } catch (e: any) {
+      setPresenceHistoryError(e?.message || 'Historique Supabase indisponible.');
+    }
+    setLocalConnectionHistory(readLocalPresenceHistory());
     setPresenceTick(Date.now());
+  }
+
+  function readLocalPresenceHistory(): ConnectionHistory[] {
+    try {
+      const raw = window.localStorage.getItem('handlife_presence_history');
+      if (!raw) return [];
+      const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      return (JSON.parse(raw) as ConnectionHistory[])
+        .filter((p) => new Date(p.seen_at).getTime() >= cutoff)
+        .sort((a, b) => new Date(b.seen_at).getTime() - new Date(a.seen_at).getTime());
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveLocalPresenceHistory(item: ConnectionHistory) {
+    try {
+      const next = [item, ...readLocalPresenceHistory()].slice(0, 500);
+      window.localStorage.setItem('handlife_presence_history', JSON.stringify(next));
+      setLocalConnectionHistory(next);
+    } catch (e) { /* ignore local fallback */ }
   }
 
   // ── Computed visibilité ──
@@ -1083,13 +1112,24 @@ export default function App() {
           last_seen: now,
         }, { onConflict: 'auth_id' });
         try {
-          await supabase.from('user_presence_history').insert({
+          const historyItem = {
+            auth_id: session.user.id,
+            role,
+            display_name: displayName,
+            seen_at: now,
+          };
+          const { error: historyInsertError } = await supabase.from('user_presence_history').insert(historyItem);
+          if (historyInsertError) throw historyInsertError;
+          setPresenceHistoryError('');
+        } catch (e: any) {
+          setPresenceHistoryError(e?.message || 'Historique Supabase indisponible.');
+          saveLocalPresenceHistory({
             auth_id: session.user.id,
             role,
             display_name: displayName,
             seen_at: now,
           });
-        } catch (e) { /* optional history table may not exist yet */ }
+        }
         refreshPresenceData();
       } catch (e) { /* table may not exist yet */ }
     };
@@ -1640,7 +1680,7 @@ export default function App() {
       display_name: p.display_name,
       seen_at: p.last_seen,
     }));
-    const source = connectionHistory.length > 0 ? connectionHistory : fallbackHistory;
+    const source = connectionHistory.length > 0 ? connectionHistory : [...localConnectionHistory, ...fallbackHistory];
     const cutoff = presenceTick - 7 * 24 * 60 * 60 * 1000;
     const recent = source
       .filter((p) => new Date(p.seen_at).getTime() >= cutoff)
@@ -6135,6 +6175,11 @@ export default function App() {
                   const counts = getOnlineCounts();
                   const connectionStats = getConnectionStats();
                   return <>
+                    {presenceHistoryError && (
+                      <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 14, background: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412', fontSize: 13, fontWeight: 700 }}>
+                        Historique Supabase non enregistré : {presenceHistoryError}
+                      </div>
+                    )}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(118px,1fr))', gap: 10, marginBottom: 18 }}>
                       {[
                         { label: '🟢 Total connectés', value: counts.total, bg: '#dcfce7', color: '#166534' },
@@ -6192,7 +6237,7 @@ export default function App() {
                     </div>
                     <div style={styles.panelCard}>
                       <h3 style={styles.panelTitle}>🕘 Historique récent</h3>
-                      <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#94a3b8' }}>Conservé sur les derniers jours. Si la table d'historique existe, chaque passage est listé; sinon l'app affiche la dernière activité connue par personne.</p>
+                      <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#94a3b8' }}>Conservé sur les derniers jours. Si Supabase bloque l'historique, l'app garde un secours local sur cet appareil et affiche l'erreur au-dessus.</p>
                       {connectionStats.history.length === 0 ? (
                         <div style={styles.emptyState}>Aucune activité récente.</div>
                       ) : (
