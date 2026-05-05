@@ -1695,6 +1695,13 @@ export default function App() {
     return {
       history: recent,
       daily: Object.entries(byDay).map(([day, data]) => ({ day, total: data.total, users: data.users.size })),
+      totals: {
+        total: recent.length,
+        parents: recent.filter((p) => p.role === 'parent').length,
+        players: recent.filter((p) => p.role === 'player').length,
+        coaches: recent.filter((p) => p.role === 'coach').length,
+        admins: recent.filter((p) => p.role === 'admin').length,
+      },
     };
   }
 
@@ -6180,16 +6187,30 @@ export default function App() {
                         Historique Supabase non enregistré : {presenceHistoryError}
                       </div>
                     )}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(118px,1fr))', gap: 10, marginBottom: 18 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(118px,1fr))', gap: 10, marginBottom: 12 }}>
                       {[
-                        { label: '🟢 Total connectés', value: counts.total, bg: '#dcfce7', color: '#166534' },
-                        { label: '👪 Parents', value: counts.parents, bg: '#dbeafe', color: '#1e40af' },
-                        { label: '🤾 Joueurs', value: counts.players, bg: '#ede9fe', color: '#5b21b6' },
-                        { label: '🏆 Coachs', value: counts.coaches, bg: '#fef3c7', color: '#92400e' },
-                        { label: '⚙️ Admins', value: counts.admins, bg: '#fee2e2', color: '#991b1b' },
+                        { label: '🟢 En ligne maintenant', value: counts.total, bg: '#dcfce7', color: '#166534' },
+                        { label: '👪 Parents en ligne', value: counts.parents, bg: '#dbeafe', color: '#1e40af' },
+                        { label: '🤾 Joueurs en ligne', value: counts.players, bg: '#ede9fe', color: '#5b21b6' },
+                        { label: '🏆 Coachs en ligne', value: counts.coaches, bg: '#fef3c7', color: '#92400e' },
+                        { label: '⚙️ Admins en ligne', value: counts.admins, bg: '#fee2e2', color: '#991b1b' },
                       ].map((s) => (
                         <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: 12, textAlign: 'center', border: '1px solid rgba(0,0,0,0.04)', minWidth: 0 }}>
                           <div style={{ fontSize: 26, fontWeight: 900, color: s.color }}>{s.value}</div>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: s.color, marginTop: 4, opacity: 0.85, lineHeight: 1.2 }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(118px,1fr))', gap: 10, marginBottom: 18 }}>
+                      {[
+                        { label: '📊 Connexions totales', value: connectionStats.totals.total, bg: '#f1f5f9', color: '#334155' },
+                        { label: '👪 Connexions parents', value: connectionStats.totals.parents, bg: '#eff6ff', color: '#1e40af' },
+                        { label: '🤾 Connexions joueurs', value: connectionStats.totals.players, bg: '#f5f3ff', color: '#5b21b6' },
+                        { label: '🏆 Connexions coachs', value: connectionStats.totals.coaches, bg: '#fffbeb', color: '#92400e' },
+                        { label: '⚙️ Connexions admins', value: connectionStats.totals.admins, bg: '#fef2f2', color: '#991b1b' },
+                      ].map((s) => (
+                        <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: 12, textAlign: 'center', border: '1px solid rgba(0,0,0,0.04)', minWidth: 0 }}>
+                          <div style={{ fontSize: 24, fontWeight: 900, color: s.color }}>{s.value}</div>
                           <div style={{ fontSize: 11, fontWeight: 800, color: s.color, marginTop: 4, opacity: 0.85, lineHeight: 1.2 }}>{s.label}</div>
                         </div>
                       ))}
