@@ -888,6 +888,7 @@ export default function App() {
   const [presenceTick, setPresenceTick] = useState(Date.now());
   const [presenceHistoryError, setPresenceHistoryError] = useState('');
   const [localConnectionHistory, setLocalConnectionHistory] = useState<ConnectionHistory[]>([]);
+  const presenceHistoryLoggedRef = React.useRef(false);
 
   // ── Sondages ──
   const [polls, setPolls] = useState<Poll[]>([]);
@@ -1111,24 +1112,28 @@ export default function App() {
           display_name: displayName,
           last_seen: now,
         }, { onConflict: 'auth_id' });
-        try {
-          const historyItem = {
-            auth_id: session.user.id,
-            role,
-            display_name: displayName,
-            seen_at: now,
-          };
-          const { error: historyInsertError } = await supabase.from('user_presence_history').insert(historyItem);
-          if (historyInsertError) throw historyInsertError;
-          setPresenceHistoryError('');
-        } catch (e: any) {
-          setPresenceHistoryError(e?.message || 'Historique Supabase indisponible.');
-          saveLocalPresenceHistory({
-            auth_id: session.user.id,
-            role,
-            display_name: displayName,
-            seen_at: now,
-          });
+        if (!presenceHistoryLoggedRef.current) {
+          try {
+            const historyItem = {
+              auth_id: session.user.id,
+              role,
+              display_name: displayName,
+              seen_at: now,
+            };
+            const { error: historyInsertError } = await supabase.from('user_presence_history').insert(historyItem);
+            if (historyInsertError) throw historyInsertError;
+            presenceHistoryLoggedRef.current = true;
+            setPresenceHistoryError('');
+          } catch (e: any) {
+            presenceHistoryLoggedRef.current = true;
+            setPresenceHistoryError(e?.message || 'Historique Supabase indisponible.');
+            saveLocalPresenceHistory({
+              auth_id: session.user.id,
+              role,
+              display_name: displayName,
+              seen_at: now,
+            });
+          }
         }
         refreshPresenceData();
       } catch (e) { /* table may not exist yet */ }
@@ -1392,7 +1397,7 @@ export default function App() {
     }
     setCoachAccessList(coachRows);
 
-    const parentUsrs = (usersRes.data || []).filter((u: UserItem) => u.role === 'parent');
+    const parentUsrs = (usersRes.data || []).filter((u: UserItem) => u.role === 'parent' || u.role === 'player');
     if (parentUsrs.length > 0 && !selectedManagedParentId) setSelectedManagedParentId(parentUsrs[0].id);
     if (parentUsrs.length > 0 && !selectedLinkParentId) setSelectedLinkParentId(parentUsrs[0].id);
     if ((playersRes.data || []).length > 0 && !selectedLinkPlayerId) setSelectedLinkPlayerId((playersRes.data || [])[0].id);
@@ -1534,6 +1539,7 @@ export default function App() {
   }
 
   async function handleLogout() {
+    presenceHistoryLoggedRef.current = false;
     // Conserver la dernière activité pour l'historique admin.
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -1682,9 +1688,17 @@ export default function App() {
     }));
     const source = connectionHistory.length > 0 ? connectionHistory : [...localConnectionHistory, ...fallbackHistory];
     const cutoff = presenceTick - 7 * 24 * 60 * 60 * 1000;
-    const recent = source
+    const recentRaw = source
       .filter((p) => new Date(p.seen_at).getTime() >= cutoff)
       .sort((a, b) => new Date(b.seen_at).getTime() - new Date(a.seen_at).getTime());
+    const seenBuckets = new Set<string>();
+    const recent = recentRaw.filter((item) => {
+      const bucket = Math.floor(new Date(item.seen_at).getTime() / (15 * 60 * 1000));
+      const key = `${item.auth_id}-${item.role}-${bucket}`;
+      if (seenBuckets.has(key)) return false;
+      seenBuckets.add(key);
+      return true;
+    });
     const byDay = recent.reduce<Record<string, { total: number; users: Set<string> }>>((acc, item) => {
       const day = new Date(item.seen_at).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
       if (!acc[day]) acc[day] = { total: 0, users: new Set<string>() };
@@ -2025,7 +2039,7 @@ export default function App() {
   }
   function getLinkedParentsForPlayer(playerId: string) {
     const ids = parentLinks.filter((l) => l.player_id === playerId).map((l) => l.parent_id);
-    return users.filter((u) => u.role === 'parent' && ids.includes(u.id));
+    return users.filter((u) => (u.role === 'parent' || u.role === 'player') && ids.includes(u.id));
   }
   /**
    * Visibilité des stats individuelles dans la vue "Équipe" :
@@ -3470,7 +3484,7 @@ export default function App() {
 
 
   // ── Computed for coach UI ──
-  const parentUsers = useMemo(() => users.filter((u) => u.role === 'parent'), [users]);
+  const parentUsers = useMemo(() => users.filter((u) => u.role === 'parent' || u.role === 'player'), [users]);
   const selectedCoachTemplate = visibleTemplates.find((t) => t.id === selectedTrainingTemplateId) || null;
   const coachTemplateDates = selectedCoachTemplate ? getNextDatesForWeekday(selectedCoachTemplate.weekday, 8) : [];
   const coachTeamPlayers = selectedCoachTeamId ? getPlayersForTeam(selectedCoachTeamId).filter((p) => visibleTeams.some((vt) => vt.id === p.team_id)) : visiblePlayers;
@@ -4894,9 +4908,9 @@ export default function App() {
                   <h3 style={styles.panelTitle}>{"Lier un enfant à un parent"}</h3>
                   <div style={styles.formGrid}>
                     <div>
-                      <label style={styles.inputLabel}>Parent</label>
+                      <label style={styles.inputLabel}>Parent / compte joueur</label>
                       <select value={selectedLinkParentId} onChange={(e) => setSelectedLinkParentId(e.target.value)} style={styles.select}>
-                        {parentUsers.map((p) => <option key={p.id} value={p.id}>{getUserName(p)} {p.email ? `(${p.email})` : ''}</option>)}
+                        {parentUsers.map((p) => <option key={p.id} value={p.id}>{getUserName(p)} {p.role === 'player' ? '· joueur' : '· parent'} {p.email ? `(${p.email})` : ''}</option>)}
                       </select>
                     </div>
                     <div>
@@ -4920,7 +4934,7 @@ export default function App() {
                             <div>
                               <h3 style={{ margin: 0 }}>{getPlayerName(player)}</h3>
                               <p style={{ margin: '8px 0 0 0', color: '#5b6472' }}>Équipe : {getTeamName(player.team_id)}</p>
-                              <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>Parents : {linkedParents.length > 0 ? linkedParents.map((p) => getUserName(p)).join(', ') : 'Aucun parent lié'}</p>
+                              <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>Comptes liés : {linkedParents.length > 0 ? linkedParents.map((p) => `${getUserName(p)}${p.role === 'player' ? ' (joueur)' : ''}`).join(', ') : 'Aucun compte lié'}</p>
                             </div>
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               <button onClick={() => startEditPlayer(player)} style={styles.secondaryButton}>Modifier</button>
@@ -4929,7 +4943,7 @@ export default function App() {
                           </div>
                           {linkedParents.length > 0 && (
                             <div style={{ marginTop: 12 }}>
-                              <div style={styles.miniTitle}>Liens parents</div>
+                              <div style={styles.miniTitle}>Comptes liés</div>
                               <div style={{ display: 'grid', gap: 8 }}>
                                 {linkedParents.map((parent) => {
                                   const link = parentLinks.find((l) => l.parent_id === parent.id && l.player_id === player.id);
@@ -4960,11 +4974,11 @@ export default function App() {
                   <h3 style={styles.panelTitle}>Modifier un parent</h3>
                   <div style={styles.formGrid}>
                     <div>
-                      <label style={styles.inputLabel}>Parent</label>
-                      <select value={selectedManagedParentId} onChange={(e) => setSelectedManagedParentId(e.target.value)} style={styles.select}>
-                        {parentUsers.length === 0
-                          ? <option value="">Aucun parent</option>
-                          : parentUsers.map((p) => <option key={p.id} value={p.id}>{getUserName(p)}{p.email ? ` – ${p.email}` : ''}</option>)}
+                        <label style={styles.inputLabel}>Parent / compte joueur</label>
+                        <select value={selectedManagedParentId} onChange={(e) => setSelectedManagedParentId(e.target.value)} style={styles.select}>
+                          {parentUsers.length === 0
+                          ? <option value="">Aucun compte</option>
+                          : parentUsers.map((p) => <option key={p.id} value={p.id}>{getUserName(p)} · {p.role === 'player' ? 'joueur' : 'parent'}{p.email ? ` – ${p.email}` : ''}</option>)}
                       </select>
                     </div>
                     <div><label style={styles.inputLabel}>{"Prénom"}</label><input value={managedParentFirstName} onChange={(e) => setManagedParentFirstName(e.target.value)} style={styles.input} /></div>
@@ -4993,7 +5007,7 @@ export default function App() {
                       );
                     })()}
                   </div>
-                  <div style={styles.warningBox}>{"Les parents se connectent avec leur email et mot de passe. Le code PIN n'est plus utilisé."}</div>
+                  <div style={styles.warningBox}>{"Les parents et joueurs se connectent avec leur email et mot de passe. Le code PIN n'est plus utilisé."}</div>
                 </div>
 
                 <div style={{ ...styles.panelCard, marginTop: 18 }}>
@@ -5009,7 +5023,7 @@ export default function App() {
                               <div>
                                 <h3 style={{ margin: 0 }}>{getPlayerName(player)}</h3>
                                 <p style={{ margin: '8px 0 0 0', color: '#5b6472' }}>Équipe : {getTeamName(player.team_id)} – Catégorie : {getTeamCategory(player.team_id)}</p>
-                                <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>Parents : {linkedParents.length > 0 ? linkedParents.map((p) => getUserName(p)).join(', ') : 'Aucun parent lié'}</p>
+                                <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>Comptes liés : {linkedParents.length > 0 ? linkedParents.map((p) => `${getUserName(p)}${p.role === 'player' ? ' (joueur)' : ''}`).join(', ') : 'Aucun compte lié'}</p>
                               </div>
                               <button onClick={() => { setCoachTab('players'); startEditPlayer(player); }} style={styles.secondaryButton}>Modifier</button>
                             </div>
