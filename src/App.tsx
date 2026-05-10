@@ -88,6 +88,16 @@ type ParentPlayerLink = {
   player_id: string;
 };
 
+type PlayerSeasonAssignment = {
+  id: string;
+  player_id: string;
+  season_id: string;
+  team_id: string;
+  status: 'draft' | 'confirmed';
+  created_at?: string;
+  updated_at?: string;
+};
+
 type TrainingTemplate = {
   id: string;
   team_id: string;
@@ -666,6 +676,10 @@ export default function App() {
   const [newSeasonTeamId, setNewSeasonTeamId] = useState('');
   const [savingSeason, setSavingSeason] = useState(false);
   const [resetingTraining, setResetingTraining] = useState(false);
+  const [playerSeasonAssignments, setPlayerSeasonAssignments] = useState<PlayerSeasonAssignment[]>([]);
+  const [planningSeasonId, setPlanningSeasonId] = useState('');
+  const [savingSeasonAssignments, setSavingSeasonAssignments] = useState(false);
+  const [switchingSeason, setSwitchingSeason] = useState(false);
 
   // Paramètres (settings)
   type AppSettings = {
@@ -1077,13 +1091,14 @@ export default function App() {
     if (loggedIn) {
       loadData();
       loadSeasons();
+      loadPlayerSeasonAssignments();
     }
   }, [loggedIn]);
 
   // Auto-refresh toutes les 30 secondes pour les données générales
   useEffect(() => {
     if (!loggedIn) return;
-    const interval = setInterval(() => { loadDataSilent(); }, 30000);
+    const interval = setInterval(() => { loadDataSilent(); loadPlayerSeasonAssignments(); }, 30000);
     return () => clearInterval(interval);
   }, [loggedIn]);
 
@@ -1236,6 +1251,10 @@ export default function App() {
   useEffect(() => {
     if (visibleTeams.length > 0 && !selectedCoachTeamId) setSelectedCoachTeamId(visibleTeams[0].id);
   }, [visibleTeams]);
+
+  useEffect(() => {
+    if (seasons.length > 0 && !planningSeasonId) setPlanningSeasonId(seasons[0].id);
+  }, [seasons, planningSeasonId]);
 
   useEffect(() => {
     if (teams.length > 0 && !newTrainingTeamId) setNewTrainingTeamId(teams[0].id);
@@ -1918,6 +1937,22 @@ export default function App() {
     return t?.category || t?.name || 'Sans catégorie';
   }
   function getPlayersForTeam(teamId: string) { return players.filter((p) => p.team_id === teamId); }
+  function getSeasonAssignment(playerId: string, seasonId = ''): PlayerSeasonAssignment | null {
+    if (!seasonId) return null;
+    return playerSeasonAssignments.find((a) => a.player_id === playerId && a.season_id === seasonId) || null;
+  }
+  function getPlayerTeamIdForSeason(player: Player, seasonId = '') {
+    return getSeasonAssignment(player.id, seasonId)?.team_id || player.team_id;
+  }
+  function getPlayersForTeamSeason(teamId: string, seasonId = '') {
+    return players.filter((p) => getPlayerTeamIdForSeason(p, seasonId) === teamId);
+  }
+  function getPlayerSeasonTeamName(player: Player, seasonId = '') {
+    const assignment = getSeasonAssignment(player.id, seasonId);
+    const teamId = assignment?.team_id || player.team_id;
+    const suffix = assignment ? (assignment.status === 'confirmed' ? ' (confirme)' : ' (brouillon)') : '';
+    return `${getTeamName(teamId)}${suffix}`;
+  }
   function getStatForPlayer(playerId: string) { return stats.find((s) => s.player_id === playerId); }
   function getMatchPlayerStat(matchId: string, playerId: string) {
     return matchPlayerStats.find((s) => s.match_id === matchId && s.player_id === playerId);
@@ -2049,8 +2084,8 @@ export default function App() {
    *   (le coach a décidé que personne ne voit les stats de cette équipe)
    * - Coach et admin voient TOUJOURS tout (cette fonction n'est pas utilisée par eux)
    */
-  function isPlayerStatsVisibleForParent(player: Player, isMyChild: boolean): boolean {
-    const team = teams.find((t) => t.id === player.team_id);
+  function isPlayerStatsVisibleForParent(player: Player, isMyChild: boolean, seasonId = ''): boolean {
+    const team = teams.find((t) => t.id === getPlayerTeamIdForSeason(player, seasonId));
     const teamHidden = team?.stats_hidden_for_parents === true;
     if (teamHidden) return false; // équipe verrouillée par le coach
     return isMyChild; // sinon, visible uniquement pour mon propre enfant
@@ -2062,7 +2097,7 @@ export default function App() {
    * `forParent` = false → coach/admin → tout est visible.
    */
   function buildFifaCardsForTeam(teamId: string, forParent: boolean, seasonId: string = '') {
-    const tps = players.filter((p) => p.team_id === teamId);
+    const tps = getPlayersForTeamSeason(teamId, seasonId);
     const sorted = [...tps].sort((a, b) => {
       if (a.jersey_number != null && b.jersey_number != null) return a.jersey_number - b.jersey_number;
       if (a.jersey_number != null) return -1;
@@ -2080,7 +2115,7 @@ export default function App() {
       const goals = playerStats.reduce((sum, s) => sum + (s.goals || 0), 0);
       const shots = playerStats.reduce((sum, s) => sum + (s.shots || 0), 0);
       const matchesPlayed = getMatchPresentCount(p.id, seasonId);
-      const hideStats = forParent ? !isPlayerStatsVisibleForParent(p, isMyChild) : false;
+      const hideStats = forParent ? !isPlayerStatsVisibleForParent(p, isMyChild, seasonId) : false;
       return {
         player: p,
         totalTrainingPresences: trainingPresences,
@@ -2378,6 +2413,84 @@ export default function App() {
     await loadData();
   }
 
+  async function savePlayerSeasonAssignment(playerId: string, seasonId: string, teamId: string, status: 'draft' | 'confirmed' = 'draft') {
+    if (!playerId || !seasonId) return;
+    setSavingSeasonAssignments(true);
+    try {
+      const existing = getSeasonAssignment(playerId, seasonId);
+      if (!teamId) {
+        if (existing) {
+          const { error } = await supabase.from('player_season_assignments').delete().eq('id', existing.id);
+          if (error) throw error;
+        }
+      } else if (existing) {
+        const { error } = await supabase.from('player_season_assignments').update({
+          team_id: teamId,
+          status,
+          updated_at: new Date().toISOString(),
+        }).eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('player_season_assignments').insert({
+          player_id: playerId,
+          season_id: seasonId,
+          team_id: teamId,
+          status,
+        });
+        if (error) throw error;
+      }
+      await loadPlayerSeasonAssignments();
+    } catch (e: any) {
+      alert(e?.message?.includes('player_season_assignments')
+        ? "La table Supabase player_season_assignments n'existe pas encore."
+        : `Erreur affectation saison : ${e?.message || e}`);
+    } finally {
+      setSavingSeasonAssignments(false);
+    }
+  }
+
+  async function confirmSeasonAssignments(seasonId: string) {
+    if (!seasonId) { alert('Choisis une saison'); return; }
+    const rows = playerSeasonAssignments.filter((a) => a.season_id === seasonId && a.team_id);
+    if (rows.length === 0) { alert('Aucune affectation a confirmer pour cette saison.'); return; }
+    setSavingSeasonAssignments(true);
+    try {
+      const { error } = await supabase.from('player_season_assignments')
+        .update({ status: 'confirmed', updated_at: new Date().toISOString() })
+        .eq('season_id', seasonId);
+      if (error) throw error;
+      await loadPlayerSeasonAssignments();
+      alert('Affectations confirmees');
+    } catch (e: any) {
+      alert(`Erreur confirmation : ${e?.message || e}`);
+    } finally {
+      setSavingSeasonAssignments(false);
+    }
+  }
+
+  async function switchToSeason(seasonId: string) {
+    if (!seasonId) { alert('Choisis une saison'); return; }
+    const season = seasons.find((s) => s.id === seasonId);
+    const rows = playerSeasonAssignments.filter((a) => a.season_id === seasonId && a.team_id && a.status === 'confirmed');
+    if (rows.length === 0) { alert('Aucune affectation confirmee pour cette saison.'); return; }
+    if (!window.confirm(`Basculer officiellement vers ${season?.name || 'cette saison'} ? Les equipes actuelles des joueurs seront mises a jour.`)) return;
+    setSwitchingSeason(true);
+    try {
+      for (const row of rows) {
+        const { error } = await supabase.from('players').update({ team_id: row.team_id }).eq('id', row.player_id);
+        if (error) throw error;
+      }
+      await loadData();
+      await loadPlayerSeasonAssignments();
+      setParentSelectedSeasonId(seasonId);
+      alert(`Saison basculee : ${rows.length} joueur(s) mis a jour.`);
+    } catch (e: any) {
+      alert(`Erreur bascule saison : ${e?.message || e}`);
+    } finally {
+      setSwitchingSeason(false);
+    }
+  }
+
   async function addSeason() {
     if (!newSeasonName.trim() || !newSeasonStart || !newSeasonEnd) { alert('Remplir le nom, la date de début et la date de fin'); return; }
     setSavingSeason(true);
@@ -2397,7 +2510,20 @@ export default function App() {
     // Auto-sélectionner la saison courante pour les licences
     const today = new Date().toISOString().slice(0, 10);
     const cur = list.find((s) => s.start_date <= today && s.end_date >= today) || list[0];
-    if (cur) setSelectedLicenseSeasonId(cur.id);
+    if (cur) {
+      setSelectedLicenseSeasonId(cur.id);
+      if (!parentSelectedSeasonId) setParentSelectedSeasonId(cur.id);
+    }
+  }
+
+  async function loadPlayerSeasonAssignments() {
+    const { data, error } = await supabase.from('player_season_assignments').select('*');
+    if (error) {
+      console.warn('[SeasonAssignments] table unavailable:', error.message);
+      setPlayerSeasonAssignments([]);
+      return;
+    }
+    setPlayerSeasonAssignments((data || []) as PlayerSeasonAssignment[]);
   }
 
   async function loadSettings() {
@@ -5698,6 +5824,84 @@ export default function App() {
                   </div>}
                 </div>}
 
+                {adminSubTab === 'seasons' && (
+                  <div style={{ ...styles.formCard, marginTop: 18, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
+                    <h3 style={{ margin: '0 0 6px 0', color: '#1e40af' }}>Preparation saison suivante</h3>
+                    <p style={{ margin: '0 0 16px 0', color: '#1e40af', fontSize: 14 }}>
+                      Prepare les prochaines equipes sans modifier la saison actuelle. La bascule officielle reste manuelle.
+                    </p>
+                    <div style={styles.formGrid}>
+                      <div>
+                        <label style={styles.inputLabel}>Saison a preparer</label>
+                        <select value={planningSeasonId} onChange={(e) => setPlanningSeasonId(e.target.value)} style={styles.select}>
+                          <option value="">-- Choisir une saison --</option>
+                          {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={styles.inputLabel}>Actions</label>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button onClick={() => confirmSeasonAssignments(planningSeasonId)} disabled={!planningSeasonId || savingSeasonAssignments}
+                            style={{ ...styles.secondaryButton, background: '#16a34a', opacity: !planningSeasonId || savingSeasonAssignments ? 0.6 : 1 }}>
+                            Confirmer les affectations
+                          </button>
+                          <button onClick={() => switchToSeason(planningSeasonId)} disabled={!planningSeasonId || switchingSeason}
+                            style={{ ...styles.secondaryButton, background: '#dc2626', opacity: !planningSeasonId || switchingSeason ? 0.6 : 1 }}>
+                            {switchingSeason ? 'Bascule...' : 'Basculer manuellement'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {planningSeasonId ? (() => {
+                      const seasonRows = playerSeasonAssignments.filter((a) => a.season_id === planningSeasonId);
+                      const confirmed = seasonRows.filter((a) => a.status === 'confirmed').length;
+                      return (
+                        <>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 10, margin: '14px 0' }}>
+                            <div style={{ background: '#eaf4ff', borderRadius: 12, padding: 12, textAlign: 'center', border: '1px solid #bfdbfe' }}>
+                              <div style={{ fontSize: 22, fontWeight: 900, color: '#1e40af' }}>{seasonRows.length}</div>
+                              <div style={{ fontSize: 11, fontWeight: 800, color: '#1e40af' }}>Affectations</div>
+                            </div>
+                            <div style={{ background: '#dcfce7', borderRadius: 12, padding: 12, textAlign: 'center', border: '1px solid #86efac' }}>
+                              <div style={{ fontSize: 22, fontWeight: 900, color: '#166534' }}>{confirmed}</div>
+                              <div style={{ fontSize: 11, fontWeight: 800, color: '#166534' }}>Confirmees</div>
+                            </div>
+                            <div style={{ background: '#fef3c7', borderRadius: 12, padding: 12, textAlign: 'center', border: '1px solid #fde68a' }}>
+                              <div style={{ fontSize: 22, fontWeight: 900, color: '#92400e' }}>{seasonRows.length - confirmed}</div>
+                              <div style={{ fontSize: 11, fontWeight: 800, color: '#92400e' }}>Brouillons</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gap: 8, maxHeight: 520, overflowY: 'auto', paddingRight: 2 }}>
+                            {[...players].sort((a, b) => `${getTeamName(a.team_id)} ${a.last_name}`.localeCompare(`${getTeamName(b.team_id)} ${b.last_name}`, 'fr')).map((p) => {
+                              const assignment = getSeasonAssignment(p.id, planningSeasonId);
+                              const nextTeamId = assignment?.team_id || '';
+                              return (
+                                <div key={p.id} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 10, alignItems: 'center', padding: '10px 12px', background: 'white', border: '1px solid #d8e5f2', borderRadius: 12 }}>
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontWeight: 900, color: '#10233b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getPlayerName(p)}</div>
+                                    <div style={{ fontSize: 12, color: '#64748b' }}>{p.birth_date ? `${getPlayerAge(p.birth_date)} ans` : 'Age non renseigne'}</div>
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>Actuel : {getTeamName(p.team_id)}</div>
+                                  <select value={nextTeamId} onChange={(e) => savePlayerSeasonAssignment(p.id, planningSeasonId, e.target.value, 'draft')} style={{ ...styles.select, minHeight: 38, padding: '8px 10px' }}>
+                                    <option value="">-- Non affecte --</option>
+                                    {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                  </select>
+                                  <span style={{ justifySelf: 'end', background: assignment?.status === 'confirmed' ? '#dcfce7' : assignment ? '#fef3c7' : '#f1f5f9', color: assignment?.status === 'confirmed' ? '#166534' : assignment ? '#92400e' : '#64748b', borderRadius: 999, padding: '5px 10px', fontSize: 11, fontWeight: 900, whiteSpace: 'nowrap' }}>
+                                    {assignment?.status === 'confirmed' ? 'Confirme' : assignment ? 'Brouillon' : 'Aucun'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      );
+                    })() : (
+                      <div style={styles.emptyState}>Choisis une saison pour preparer les affectations.</div>
+                    )}
+                  </div>
+                )}
+
                 {/* ── PARAMÈTRES ── */}
                 {adminSubTab === 'settings' && <>
                   <div style={{ ...styles.formCard, background: '#f0f4ff', border: '1px solid #c7d2fe' }}>
@@ -6365,10 +6569,10 @@ export default function App() {
                   { key: 'team', label: '👕 Mon équipe' },
                 ];
                 // Onglet sondages si au moins un sondage me concerne
-                const myTeamIds = [...new Set(parentPlayers.map((p) => p.team_id).filter(Boolean) as string[])];
+                const myTeamIds = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)).filter(Boolean) as string[])];
                 if (linkedPlayerId) {
                   const me = players.find((p) => p.id === linkedPlayerId);
-                  if (me?.team_id) myTeamIds.push(me.team_id);
+                  if (me?.team_id) myTeamIds.push(getPlayerTeamIdForSeason(me, parentSelectedSeasonId));
                 }
                 const visiblePolls = getPollsVisibleFor([...new Set(myTeamIds)]);
                 if (visiblePolls.length > 0) tabs.push({ key: 'polls', label: '📊 Sondages' });
@@ -6405,6 +6609,19 @@ export default function App() {
                 });
               })()}
             </div>
+
+            {seasons.length > 0 && (
+              <div style={{ ...styles.panelCard, background: '#f0f7ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
+                <span style={{ fontWeight: 800, color: '#1e40af', fontSize: 14 }}>Saison :</span>
+                <select value={parentSelectedSeasonId} onChange={(e) => setParentSelectedSeasonId(e.target.value)}
+                  style={{ ...styles.select, maxWidth: 260, minHeight: 44, padding: '10px 14px' }}>
+                  {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <span style={{ fontSize: 12, color: '#5b6472' }}>
+                  L'equipe affichee suit les affectations preparees pour la saison choisie.
+                </span>
+              </div>
+            )}
 
             {(() => {
               const profileButtons = parentPlayers.map((child) => ({
@@ -6469,25 +6686,13 @@ export default function App() {
             {/* ── MON ÉQUIPE côté parent ── */}
             {parentTab === 'team' && (() => {
               // Récupérer toutes les équipes des enfants liés
-              const parentTeamIds = [...new Set(parentPlayers.map((p) => p.team_id))];
-              const seasonForFilter = parentSelectedSeasonId; // '' = toutes saisons (ou saison courante via getCurrentSeason)
+              const parentTeamIds = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)))];
+              const seasonForFilter = parentSelectedSeasonId;
               return (
                 <div style={{ display: 'grid', gap: 24 }}>
-                  {/* ── Sélecteur de saison ── */}
-                  {seasons.length > 0 && (
-                    <div style={{ ...styles.panelCard, background: '#f0f7ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 800, color: '#1e40af', fontSize: 14 }}>🗓 Saison :</span>
-                      <select value={parentSelectedSeasonId} onChange={(e) => setParentSelectedSeasonId(e.target.value)}
-                        style={{ ...styles.select, maxWidth: 260, minHeight: 44, padding: '10px 14px' }}>
-                        <option value="">Toutes les saisons</option>
-                        {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
-                      <span style={{ fontSize: 12, color: '#5b6472' }}>Les cartes et statistiques sont filtrées sur la saison sélectionnée.</span>
-                    </div>
-                  )}
                   {parentTeamIds.map((teamId) => {
                     const team = teams.find((t) => t.id === teamId);
-                    const teamPlayers = players.filter((p) => p.team_id === teamId);
+                    const teamPlayers = getPlayersForTeamSeason(teamId, seasonForFilter);
                     if (!team || teamPlayers.length === 0) return null;
                     return (
                       <div key={teamId}>
@@ -6566,18 +6771,18 @@ export default function App() {
                   </div>
                 );
               }
-              const myTeam = teams.find((t) => t.id === me.team_id);
+              const myTeamIdForSeason = getPlayerTeamIdForSeason(me, parentSelectedSeasonId);
               const myMatches = matches
-                .filter((m) => (m.team_id === me.team_id || (matchSquad[m.id] || []).includes(me.id)) && isFutureOrToday(m.match_date))
+                .filter((m) => (m.team_id === myTeamIdForSeason || (matchSquad[m.id] || []).includes(me.id)) && isFutureOrToday(m.match_date))
                 .sort((a, b) => (a.match_date || '').localeCompare(b.match_date || ''))
                 .slice(0, 5);
-              const myStatsRows = matchPlayerStats.filter((s) => s.player_id === me.id);
+              const myStatsRows = getMatchPlayerStatsForSeason(me.id, parentSelectedSeasonId);
               const totalGoals = myStatsRows.reduce((acc, s) => acc + (s.goals || 0), 0);
               const totalShots = myStatsRows.reduce((acc, s) => acc + (s.shots || 0), 0);
               const totalSaves = myStatsRows.reduce((acc, s) => acc + (s.saves || 0), 0);
               const totalMatches = new Set(myStatsRows.map((s) => s.match_id)).size;
-              const trainingPresences = getTrainingPresentCount(me.id);
-              const totalTrainings = me.team_id ? getTrainingTotalCount(me.team_id) : 0;
+              const trainingPresences = getTrainingPresentCount(me.id, parentSelectedSeasonId);
+              const totalTrainings = myTeamIdForSeason ? getTrainingTotalCount(myTeamIdForSeason, parentSelectedSeasonId) : 0;
               return (
                 <div style={{ display: 'grid', gap: 18 }}>
                   <div style={styles.profileCard}>
@@ -6595,7 +6800,7 @@ export default function App() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <h3 style={{ margin: '0 0 4px 0' }}>{getPlayerName(me)}</h3>
-                      <p style={{ margin: 0, color: '#5b6472' }}>Équipe : <strong>{myTeam?.name || 'Non définie'}</strong></p>
+                      <p style={{ margin: 0, color: '#5b6472' }}>Équipe : <strong>{getPlayerSeasonTeamName(me, parentSelectedSeasonId)}</strong></p>
                       {me.birth_date && <p style={{ margin: '4px 0 0 0', color: '#5b6472', fontSize: 13 }}>🎂 {getPlayerAge(me.birth_date)} ans</p>}
                     </div>
                   </div>
@@ -6641,10 +6846,10 @@ export default function App() {
 
             {/* ── SONDAGES côté parent/joueur ── */}
             {parentTab === 'polls' && (() => {
-              const myTeamIds: string[] = [...new Set(parentPlayers.map((p) => p.team_id).filter(Boolean) as string[])];
+              const myTeamIds: string[] = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)).filter(Boolean) as string[])];
               if (linkedPlayerId) {
                 const me = players.find((p) => p.id === linkedPlayerId);
-                if (me?.team_id) myTeamIds.push(me.team_id);
+                if (me?.team_id) myTeamIds.push(getPlayerTeamIdForSeason(me, parentSelectedSeasonId));
               }
               const visiblePolls = getPollsVisibleFor([...new Set(myTeamIds)]);
               const voterUserId = selectedParentId;
@@ -6762,13 +6967,13 @@ export default function App() {
                   {parentPlayers
                     .filter((child) => parentPlayers.length <= 1 || child.id === (parentChildTab || parentPlayers[0].id))
                     .map((child) => {
-                    const childTeam = teams.find((t) => t.id === child.team_id) || null;
+                    const childTeamIdForSeason = getPlayerTeamIdForSeason(child, parentSelectedSeasonId);
+                    const childTeam = teams.find((t) => t.id === childTeamIdForSeason) || null;
                     // Include own team matches + guest matches where child is convoqued
-                    const ownMatches = matches.filter((m) => m.team_id === child.team_id && isFutureOrToday(m.match_date));
-                    const guestMatches = matches.filter((m) => m.team_id !== child.team_id && isFutureOrToday(m.match_date) && (matchSquad[m.id] || []).includes(child.id));
+                    const ownMatches = matches.filter((m) => m.team_id === childTeamIdForSeason && isFutureOrToday(m.match_date));
+                    const guestMatches = matches.filter((m) => m.team_id !== childTeamIdForSeason && isFutureOrToday(m.match_date) && (matchSquad[m.id] || []).includes(child.id));
                     const childMatches = [...ownMatches, ...guestMatches].sort((a, b) => (a.match_date || '').localeCompare(b.match_date || '')).slice(0, 3);
-                    const childStats = stats.find((s) => s.player_id === child.id) || null;
-                    const childTemplates = trainingTemplates.filter((t) => t.team_id === child.team_id && t.active !== false);
+                    const childTemplates = trainingTemplates.filter((t) => t.team_id === childTeamIdForSeason && t.active !== false);
                     const childUpcomingTrainings: UpcomingTraining[] = childTemplates.flatMap((template) =>
                       getNextDatesForWeekday(template.weekday, 6).map((date) => ({
                         templateId: template.id, teamId: template.team_id, title: template.title,
@@ -6806,14 +7011,14 @@ export default function App() {
                           </div>
                           <div style={{ flex: 1 }}>
                             <h3 style={{ margin: '0 0 4px 0' }}>{getPlayerName(child)}</h3>
-                            <p style={{ margin: 0, color: '#5b6472' }}>Équipe : <strong>{childTeam?.name || 'Non définie'}</strong></p>
+                            <p style={{ margin: 0, color: '#5b6472' }}>Équipe : <strong>{getPlayerSeasonTeamName(child, parentSelectedSeasonId)}</strong></p>
                             {child.birth_date && <p style={{ margin: '4px 0 0 0', color: '#5b6472', fontSize: 13 }}>🎂 {getPlayerAge(child.birth_date)} ans</p>}
                             {uploadingPhoto && <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#0A5FB5' }}>⏳ Upload en cours...</p>}
                             {/* ── Niveau & étoiles ── (masqué si l'équipe a verrouillé les stats) */}
                             {!childTeam?.stats_hidden_for_parents && (() => {
-                              const childPresences = getTrainingPresentCount(child.id);
-                              const childGoals = matchPlayerStats.filter((s) => s.player_id === child.id).reduce((sum, s) => sum + (s.goals || 0), 0);
-                              const childMatchesPlayed = getMatchPresentCount(child.id);
+                              const childPresences = getTrainingPresentCount(child.id, parentSelectedSeasonId);
+                              const childGoals = getMatchPlayerStatsForSeason(child.id, parentSelectedSeasonId).reduce((sum, s) => sum + (s.goals || 0), 0);
+                              const childMatchesPlayed = getMatchPresentCount(child.id, parentSelectedSeasonId);
                               const { grade, starsInLevel, isRainbow } = computeGrade(childPresences, childGoals, childMatchesPlayed);
                               const rainbowColors = ['#f59e0b','#10b981','#3b82f6','#a855f7','#ef4444'];
                               const starColor = isRainbow ? undefined : grade.color;
@@ -6882,7 +7087,7 @@ export default function App() {
                         {/* ── Carte Mon Coach ── */}
                         {(() => {
                           const teamCoaches = [...new Map(
-                            coachAccessList.filter((c) => c.team_id === child.team_id && (c.first_name || c.last_name))
+                            coachAccessList.filter((c) => c.team_id === childTeamIdForSeason && (c.first_name || c.last_name))
                               .map((c) => [c.id, c])
                           ).values()];
                           if (teamCoaches.length === 0) return null;
@@ -6934,16 +7139,17 @@ export default function App() {
                             <h3 style={styles.panelTitle}>{"⭐ Statistiques du joueur"}</h3>
                             <div style={styles.statsGrid}>
                               {((() => {
-                                const totalShots = matchPlayerStats.filter((s) => s.player_id === child.id).reduce((sum, s) => sum + (s.shots || 0), 0);
-                                const goals = childStats?.goals || 0;
+                                const seasonStats = getMatchPlayerStatsForSeason(child.id, parentSelectedSeasonId);
+                                const totalShots = seasonStats.reduce((sum, s) => sum + (s.shots || 0), 0);
+                                const goals = seasonStats.reduce((sum, s) => sum + (s.goals || 0), 0);
                                 const shootPct = totalShots > 0 ? Math.round((goals / totalShots) * 100) : null;
                                 return [
-                                  ['Entraînements', `${getTrainingPresentCount(child.id)} / ${child.team_id ? getTrainingTotalCount(child.team_id) : 0}`],
-                                  ['Matchs', `${getMatchPresentCount(child.id)} / ${child.team_id ? getMatchTotalCount(child.team_id) : 0}`],
+                                  ['Entraînements', `${getTrainingPresentCount(child.id, parentSelectedSeasonId)} / ${childTeamIdForSeason ? getTrainingTotalCount(childTeamIdForSeason, parentSelectedSeasonId) : 0}`],
+                                  ['Matchs', `${getMatchPresentCount(child.id, parentSelectedSeasonId)} / ${childTeamIdForSeason ? getMatchTotalCount(childTeamIdForSeason, parentSelectedSeasonId) : 0}`],
                                   ['Buts', goals],
                                   ['Tirs', totalShots],
                                   ['% Tirs', shootPct !== null ? `${shootPct}%` : '-'],
-                                  ['Arrêts', childStats?.saves || 0],
+                                  ['Arrêts', seasonStats.reduce((sum, s) => sum + (s.saves || 0), 0)],
                                 ] as [string, string | number][];
                               })()).map(([label, val]) => (
                                 <div key={label} style={styles.statBox}>
@@ -6959,7 +7165,7 @@ export default function App() {
                         {(() => {
                           const lic = getLicenseStatus(child.id, getCurrentSeason()?.id || null);
                           const st = lic?.status || 'pending';
-                          const licUrl = getLicenseUrl(child.team_id);
+                          const licUrl = getLicenseUrl(childTeamIdForSeason);
                           const badgeColor = st === 'validated' ? { bg: '#dcfce7', color: '#166534', border: '#86efac' } : st === 'paid' ? { bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' } : { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' };
                           return (
                             <div style={{ ...styles.panelCard, background: badgeColor.bg, border: `1px solid ${badgeColor.border}`, marginBottom: 4 }}>
@@ -7051,7 +7257,7 @@ export default function App() {
                                 const isConvoked = !isSquadDefined(match.id) || squad.includes(child.id);
                                 const status = getMatchAttendanceStatus(match.id, child.id);
                                 const counts = getMatchCounts(match.id, match.team_id || '');
-                                const isGuestMatch = match.team_id !== child.team_id;
+                                const isGuestMatch = match.team_id !== childTeamIdForSeason;
                                 const guestMatchTeam = isGuestMatch ? teams.find((t) => t.id === match.team_id) : null;
                                 return (
                                   <div key={`${match.id}-${child.id}`} style={styles.trainingCard}>
@@ -7118,7 +7324,7 @@ export default function App() {
 
                         {/* ── Événements du club ── */}
                         {(() => {
-                          const childTeamId = child.team_id;
+                          const childTeamId = childTeamIdForSeason;
                           const relevantEvents = clubEvents.filter((ev) => {
                             const future = new Date(ev.event_date) >= new Date(new Date().setHours(0,0,0,0));
                             const forThisTeam = !ev.team_ids || ev.team_ids.length === 0 || ev.team_ids.includes(childTeamId);
@@ -7525,4 +7731,3 @@ const styles: Record<string, React.CSSProperties> = {
   td: { padding: '11px 16px', borderBottom: '1px solid #e8eef5', fontSize: 14 },
   statPill: { display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontWeight: 700, fontSize: 14 },
 };
-
