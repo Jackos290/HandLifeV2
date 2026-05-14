@@ -21,6 +21,7 @@ type Player = {
   photo_url: string | null;
   jersey_number: number | null;
   position: string | null;
+  gender?: 'male' | 'female' | null;
 };
 
 type MatchItem = {
@@ -228,7 +229,6 @@ type EventFormResponse = {
 
 // ADMIN_CODE supprimé — auth via Supabase
 const PRESENCE_ONLINE_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
-const MAX_MATCH_PLAYERS = 12;
 
 const CLUB_LOGO = `data:image/png;base64,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`;
 
@@ -537,7 +537,7 @@ export default function App() {
   const [parentChildTab, setParentChildTab] = useState<string>('');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showParentMessages, setShowParentMessages] = useState(false);
-  const [adminSubTab, setAdminSubTab] = useState<'coaches' | 'trainings' | 'matches' | 'players' | 'accounts' | 'seasons' | 'settings' | 'licenses' | 'registrations' | 'events' | 'polls' | 'online'>('coaches');
+  const [adminSubTab, setAdminSubTab] = useState<'coaches' | 'trainings' | 'matches' | 'players' | 'roster' | 'accounts' | 'seasons' | 'settings' | 'licenses' | 'registrations' | 'events' | 'polls' | 'online'>('coaches');
   const [matchesExpanded, setMatchesExpanded] = useState(false);
   const [clubEvents, setClubEvents] = useState<ClubEvent[]>([]);
   const [eventAttendance, setEventAttendance] = useState<EventAttendance[]>([]);
@@ -628,6 +628,7 @@ export default function App() {
   const [playerFormBirthDate, setPlayerFormBirthDate] = useState('');
   const [playerFormJerseyNumber, setPlayerFormJerseyNumber] = useState('');
   const [playerFormPosition, setPlayerFormPosition] = useState<string>('');
+  const [playerFormGender, setPlayerFormGender] = useState<'male' | 'female' | ''>('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [jerseyEditId, setJerseyEditId] = useState<string | null>(null);
   const [jerseyEditValue, setJerseyEditValue] = useState('');
@@ -640,11 +641,17 @@ export default function App() {
   const [newChildFirstName, setNewChildFirstName] = useState('');
   const [newChildLastName, setNewChildLastName] = useState('');
   const [newChildTeamId, setNewChildTeamId] = useState('');
+  const [newChildGender, setNewChildGender] = useState<'male' | 'female' | ''>('');
   const [newParentFirstName, setNewParentFirstName] = useState('');
   const [newParentLastName, setNewParentLastName] = useState('');
   const [newParentEmail, setNewParentEmail] = useState('');
   const [newParentPassword, setNewParentPassword] = useState('');
   const [creatingChildAccount, setCreatingChildAccount] = useState(false);
+  const [promotionSourceTeamId, setPromotionSourceTeamId] = useState('');
+  const [promotionTargetTeamId, setPromotionTargetTeamId] = useState('');
+  const [promotionGenderFilter, setPromotionGenderFilter] = useState<'all' | 'male' | 'female' | 'unknown'>('all');
+  const [promotionSelectedIds, setPromotionSelectedIds] = useState<string[]>([]);
+  const [promotionSaving, setPromotionSaving] = useState(false);
 
   // Users — gestion parents
   const [selectedManagedParentId, setSelectedManagedParentId] = useState('');
@@ -2152,7 +2159,6 @@ export default function App() {
       setMatchSquad((prev) => ({ ...prev, [matchId]: current.filter((id) => id !== playerId) }));
       await supabase.from('match_squads').delete().eq('match_id', matchId).eq('player_id', playerId);
     } else {
-      if (current.length >= MAX_MATCH_PLAYERS) { alert(`Maximum ${MAX_MATCH_PLAYERS} joueurs par match`); return; }
       setMatchSquad((prev) => ({ ...prev, [matchId]: [...current, playerId] }));
       await supabase.from('match_squads').upsert({ match_id: matchId, player_id: playerId }, { onConflict: 'match_id,player_id' });
       // Initialiser la présence à "unknown" si pas encore définie
@@ -2819,7 +2825,7 @@ export default function App() {
   function resetPlayerForm() {
     setEditingPlayerId(''); setPlayerFormFirstName(''); setPlayerFormLastName('');
     setPlayerFormTeamId(teams[0]?.id || ''); setPlayerFormBirthDate(''); setPlayerFormJerseyNumber('');
-    setPlayerFormPosition('');
+    setPlayerFormPosition(''); setPlayerFormGender('');
   }
   function startEditPlayer(player: Player) {
     setEditingPlayerId(player.id);
@@ -2829,30 +2835,47 @@ export default function App() {
     setPlayerFormBirthDate(player.birth_date || '');
     setPlayerFormJerseyNumber(player.jersey_number != null ? String(player.jersey_number) : '');
     setPlayerFormPosition(player.position || '');
+    setPlayerFormGender(player.gender || '');
+  }
+  function isMissingGenderColumnError(error: any) {
+    return String(error?.message || error?.details || '').toLowerCase().includes('gender');
   }
   async function savePlayer() {
     if (!playerFormFirstName.trim() || !playerFormLastName.trim() || !playerFormTeamId) { alert('Remplir prénom, nom et équipe'); return; }
     setSavingPlayer(true);
     try {
       if (editingPlayerId) {
-        const { error } = await supabase.from('players').update({
+        const payload = {
           first_name: playerFormFirstName.trim(), last_name: playerFormLastName.trim(),
           team_id: playerFormTeamId, birth_date: playerFormBirthDate || null,
           jersey_number: playerFormJerseyNumber ? parseInt(playerFormJerseyNumber) : null,
           position: playerFormPosition || null,
-        }).eq('id', editingPlayerId);
+          gender: playerFormGender || null,
+        };
+        let { error } = await supabase.from('players').update(payload).eq('id', editingPlayerId);
+        if (error && isMissingGenderColumnError(error)) {
+          const { gender, ...payloadWithoutGender } = payload;
+          const retry = await supabase.from('players').update(payloadWithoutGender).eq('id', editingPlayerId);
+          error = retry.error;
+        }
         if (error) throw error;
         alert('Joueur modifié');
       } else {
         if (await playerAlreadyExists(playerFormFirstName, playerFormLastName, playerFormTeamId)) {
           alert(`Le joueur ${playerFormFirstName.trim()} ${playerFormLastName.trim()} existe déjà dans cette équipe.`); return;
         }
-        const res = await supabase.from('players').insert({
+        const payload = {
           first_name: playerFormFirstName.trim(), last_name: playerFormLastName.trim(),
           team_id: playerFormTeamId, birth_date: playerFormBirthDate || null,
           jersey_number: playerFormJerseyNumber ? parseInt(playerFormJerseyNumber) : null,
           position: playerFormPosition || null,
-        }).select().single();
+          gender: playerFormGender || null,
+        };
+        let res = await supabase.from('players').insert(payload).select().single();
+        if (res.error && isMissingGenderColumnError(res.error)) {
+          const { gender, ...payloadWithoutGender } = payload;
+          res = await supabase.from('players').insert(payloadWithoutGender).select().single();
+        }
         if (res.error || !res.data) throw res.error || new Error('Impossible de créer le joueur');
         await supabase.from('player_stats').insert({ player_id: res.data.id, goals: 0, assists: 0, saves: 0, matches_played: 0 });
         alert('Joueur ajouté');
@@ -2992,9 +3015,17 @@ export default function App() {
         // Créer le rôle
         await supabase.from('user_roles').insert({ auth_id: authUserId, role: 'parent', ref_id: parentId });
       }
-      const playerRes = await supabase.from('players').insert({
-        first_name: newChildFirstName.trim(), last_name: newChildLastName.trim(), team_id: newChildTeamId,
-      }).select().single();
+      const childPayload = {
+        first_name: newChildFirstName.trim(),
+        last_name: newChildLastName.trim(),
+        team_id: newChildTeamId,
+        gender: newChildGender || null,
+      };
+      let playerRes = await supabase.from('players').insert(childPayload).select().single();
+      if (playerRes.error && isMissingGenderColumnError(playerRes.error)) {
+        const { gender, ...childPayloadWithoutGender } = childPayload;
+        playerRes = await supabase.from('players').insert(childPayloadWithoutGender).select().single();
+      }
       if (playerRes.error || !playerRes.data) throw playerRes.error || new Error("Impossible de créer l'enfant");
       const playerId = playerRes.data.id;
       await supabase.from('parent_player').insert({ parent_id: parentId, player_id: playerId });
@@ -3004,6 +3035,7 @@ export default function App() {
       setNewChildFirstName(''); setNewChildLastName('');
       setNewParentFirstName(''); setNewParentLastName(''); setNewParentEmail('');
       setNewChildTeamId(teams[0]?.id || '');
+      setNewChildGender('');
       setShowCreateChildForm(false);
       await loadData();
       alert(`Compte parent créé pour ${parentEmail}. Email de connexion envoyé.`);
@@ -3626,6 +3658,64 @@ export default function App() {
   const selectedMatch = matches.find((m) => m.id === selectedMatchId) || null;
   const playersForSelectedMatch = selectedMatch?.team_id ? players.filter((p) => p.team_id === selectedMatch.team_id) : [];
   const squadForSelectedMatch = selectedMatchId ? getSquadForMatch(selectedMatchId) : [];
+
+  function getPlayerGender(player: Player): 'male' | 'female' | 'unknown' {
+    if (player.gender === 'male' || player.gender === 'female') return player.gender;
+    const team = teams.find((t) => t.id === player.team_id);
+    const text = `${team?.name || ''} ${team?.category || ''}`.toLowerCase();
+    if (text.includes('fille') || text.includes('fémin') || text.includes('feminin') || text.includes('female')) return 'female';
+    if (text.includes('garçon') || text.includes('garcon') || text.includes('masculin') || text.includes('male')) return 'male';
+    return 'unknown';
+  }
+
+  const rosterSummary = useMemo(() => {
+    return [...teams]
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+      .map((team) => {
+        const teamPlayers = players
+          .filter((p) => p.team_id === team.id)
+          .sort((a, b) => getPlayerName(a).localeCompare(getPlayerName(b), 'fr'));
+        return {
+          team,
+          players: teamPlayers,
+          boys: teamPlayers.filter((p) => getPlayerGender(p) === 'male').length,
+          girls: teamPlayers.filter((p) => getPlayerGender(p) === 'female').length,
+          unknown: teamPlayers.filter((p) => getPlayerGender(p) === 'unknown').length,
+        };
+      });
+  }, [teams, players]);
+
+  const promotionCandidates = useMemo(() => {
+    return players
+      .filter((p) => p.team_id === promotionSourceTeamId)
+      .filter((p) => promotionGenderFilter === 'all' || getPlayerGender(p) === promotionGenderFilter)
+      .sort((a, b) => getPlayerName(a).localeCompare(getPlayerName(b), 'fr'));
+  }, [players, teams, promotionSourceTeamId, promotionGenderFilter]);
+
+  function togglePromotionPlayer(playerId: string) {
+    setPromotionSelectedIds((prev) => prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]);
+  }
+
+  async function transferSelectedPlayers() {
+    if (!promotionSourceTeamId || !promotionTargetTeamId) { alert('Choisir une catégorie de départ et une catégorie d’arrivée'); return; }
+    if (promotionSourceTeamId === promotionTargetTeamId) { alert('Choisir deux catégories différentes'); return; }
+    if (promotionSelectedIds.length === 0) { alert('Sélectionner au moins un joueur'); return; }
+    const targetName = getTeamName(promotionTargetTeamId);
+    if (!window.confirm(`Transférer ${promotionSelectedIds.length} joueur(s) vers ${targetName} ?`)) return;
+    setPromotionSaving(true);
+    try {
+      const { error } = await supabase.from('players').update({ team_id: promotionTargetTeamId }).in('id', promotionSelectedIds);
+      if (error) throw error;
+      setPromotionSelectedIds([]);
+      await loadData();
+      alert('Transfert terminé');
+    } catch (e) {
+      console.error(e);
+      alert('Erreur pendant le transfert');
+    } finally {
+      setPromotionSaving(false);
+    }
+  }
 
   const selectedTrainingPresentCount = coachPlayersForSelectedTraining.filter((p) => selectedCoachTemplate && selectedTrainingDate && getAttendanceStatus(selectedCoachTemplate.id, p.id, selectedTrainingDate) === 'present').length;
   const selectedTrainingAbsentCount = coachPlayersForSelectedTraining.filter((p) => selectedCoachTemplate && selectedTrainingDate && getAttendanceStatus(selectedCoachTemplate.id, p.id, selectedTrainingDate) === 'absent').length;
@@ -4591,8 +4681,7 @@ export default function App() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
                               <h4 style={{ margin: 0 }}>📣 Convocation</h4>
                               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                {/* Compteur — avertissement si > 12, pas de blocage */}
-                                <span style={{ ...styles.statusBadge, ...(squadForSelectedMatch.length > MAX_MATCH_PLAYERS ? styles.badgeRed : styles.badgeGreen) }}>
+                                <span style={{ ...styles.statusBadge, ...styles.badgeGreen }}>
                                   {squadForSelectedMatch.length} joueur{squadForSelectedMatch.length !== 1 ? 's' : ''} convoqué{squadForSelectedMatch.length !== 1 ? 's' : ''}
                                 </span>
                                 {isSquadDefined(selectedMatch.id) && squadForSelectedMatch.length > 0 && (
@@ -4603,13 +4692,6 @@ export default function App() {
                                 )}
                               </div>
                             </div>
-
-                            {/* Avertissement si > 12 joueurs */}
-                            {squadForSelectedMatch.length > MAX_MATCH_PLAYERS && (
-                              <div style={{ padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, marginBottom: 12, fontSize: 14, color: '#92400e', fontWeight: 700 }}>
-                                ⚠️ Attention : vous avez convoqué {squadForSelectedMatch.length} joueurs, soit {squadForSelectedMatch.length - MAX_MATCH_PLAYERS} de plus que les {MAX_MATCH_PLAYERS} habituels.
-                              </div>
-                            )}
 
                             <div style={{ display: 'grid', gap: 8 }}>
                               {playersForSelectedMatch.length === 0
@@ -5010,6 +5092,14 @@ export default function App() {
                         </div>
                         <div><label style={styles.inputLabel}>Date de naissance</label><input type="date" value={playerFormBirthDate} onChange={(e) => setPlayerFormBirthDate(e.target.value)} style={styles.input} /></div>
                         <div><label style={styles.inputLabel}>N° de maillot</label><input type="number" min={1} max={99} value={playerFormJerseyNumber} onChange={(e) => setPlayerFormJerseyNumber(e.target.value)} style={styles.input} placeholder="Ex : 7" /></div>
+                        <div>
+                          <label style={styles.inputLabel}>Garçon / fille</label>
+                          <select value={playerFormGender} onChange={(e) => setPlayerFormGender(e.target.value as 'male' | 'female' | '')} style={styles.select}>
+                            <option value="">— Non défini —</option>
+                            <option value="male">Garçon</option>
+                            <option value="female">Fille</option>
+                          </select>
+                        </div>
                         <div>
                           <label style={styles.inputLabel}>Poste</label>
                           <select value={playerFormPosition} onChange={(e) => setPlayerFormPosition(e.target.value)} style={styles.select}>
@@ -5603,6 +5693,7 @@ export default function App() {
                     ['trainings', '📅 Entraînements'],
                     ['matches', '⚽ Matchs'],
                     ['players', '👥 Joueurs'],
+                    ['roster', '📋 Effectifs'],
                     ['accounts', '👶 Comptes'],
                     ['seasons', '🗓 Saisons'],
                     ['settings', '⚙️ Paramètres'],
@@ -5774,10 +5865,80 @@ export default function App() {
                     <div><label style={styles.inputLabel}>{"Prénom"}</label><input value={playerFormFirstName} onChange={(e) => setPlayerFormFirstName(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Nom</label><input value={playerFormLastName} onChange={(e) => setPlayerFormLastName(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>{"Équipe"}</label><select value={playerFormTeamId} onChange={(e) => setPlayerFormTeamId(e.target.value)} style={styles.select}>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                    <div><label style={styles.inputLabel}>Garçon / fille</label><select value={playerFormGender} onChange={(e) => setPlayerFormGender(e.target.value as 'male' | 'female' | '')} style={styles.select}><option value="">— Non défini —</option><option value="male">Garçon</option><option value="female">Fille</option></select></div>
                   </div>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button onClick={savePlayer} style={styles.primaryButton} disabled={savingPlayer}>{savingPlayer ? 'Enregistrement...' : editingPlayerId ? 'Modifier le joueur' : 'Ajouter le joueur'}</button>
                     <button onClick={resetPlayerForm} style={styles.secondaryOutlineButton}>{"Réinitialiser"}</button>
+                  </div>
+                </div>}
+
+                {/* ── EFFECTIFS ── */}
+                {adminSubTab === 'roster' && <div style={{ display: 'grid', gap: 18 }}>
+                  <div style={styles.formCard}>
+                    <h3 style={styles.panelTitle}>Récapitulatif des effectifs</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 16 }}>
+                      <div style={{ padding: 14, borderRadius: 12, background: '#eff6ff', border: '1px solid #bfdbfe' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#1d4ed8' }}>Total club</div><div style={{ fontSize: 26, fontWeight: 900, color: '#062C5D' }}>{players.length}</div></div>
+                      <div style={{ padding: 14, borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#166534' }}>Garçons</div><div style={{ fontSize: 26, fontWeight: 900, color: '#14532d' }}>{players.filter((p) => getPlayerGender(p) === 'male').length}</div></div>
+                      <div style={{ padding: 14, borderRadius: 12, background: '#fdf2f8', border: '1px solid #fbcfe8' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#be185d' }}>Filles</div><div style={{ fontSize: 26, fontWeight: 900, color: '#831843' }}>{players.filter((p) => getPlayerGender(p) === 'female').length}</div></div>
+                      <div style={{ padding: 14, borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#64748b' }}>Non renseignés</div><div style={{ fontSize: 26, fontWeight: 900, color: '#334155' }}>{players.filter((p) => getPlayerGender(p) === 'unknown').length}</div></div>
+                    </div>
+                    <div style={{ display: 'grid', gap: 12 }}>
+                      {rosterSummary.map(({ team, players: teamPlayers, boys, girls, unknown }) => (
+                        <div key={team.id} style={{ padding: 14, borderRadius: 12, border: '1px solid #dbe4ef', background: 'white' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+                            <div><strong style={{ color: '#062C5D' }}>{team.name}</strong><div style={{ fontSize: 12, color: '#64748b' }}>{team.category || 'Catégorie'}</div></div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 12, fontWeight: 800 }}>
+                              <span style={{ ...styles.statusBadge, background: '#dbeafe', color: '#1d4ed8' }}>{teamPlayers.length} joueur{teamPlayers.length > 1 ? 's' : ''}</span>
+                              <span style={{ ...styles.statusBadge, ...styles.badgeGreen }}>{boys} garçon{boys > 1 ? 's' : ''}</span>
+                              <span style={{ ...styles.statusBadge, background: '#fce7f3', color: '#be185d' }}>{girls} fille{girls > 1 ? 's' : ''}</span>
+                              {unknown > 0 && <span style={{ ...styles.statusBadge, background: '#f1f5f9', color: '#475569' }}>{unknown} à définir</span>}
+                            </div>
+                          </div>
+                          {teamPlayers.length === 0
+                            ? <div style={styles.emptyState}>Aucun joueur dans cette catégorie.</div>
+                            : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              {teamPlayers.map((p) => {
+                                const gender = getPlayerGender(p);
+                                return (
+                                  <span key={p.id} style={{ padding: '5px 9px', borderRadius: 999, fontSize: 12, fontWeight: 800, background: gender === 'female' ? '#fce7f3' : gender === 'male' ? '#dcfce7' : '#f1f5f9', color: gender === 'female' ? '#be185d' : gender === 'male' ? '#166534' : '#475569' }}>
+                                    {getPlayerName(p)}
+                                  </span>
+                                );
+                              })}
+                            </div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ ...styles.formCard, background: '#fff7ed', border: '1px solid #fed7aa' }}>
+                    <h3 style={{ margin: '0 0 6px 0', color: '#92400e' }}>Passage de catégorie</h3>
+                    <p style={{ margin: '0 0 16px 0', color: '#9a3412', fontSize: 14 }}>Sélectionne les joueurs à transférer vers la catégorie supérieure.</p>
+                    <div style={styles.formGrid}>
+                      <div><label style={styles.inputLabel}>Catégorie actuelle</label><select value={promotionSourceTeamId} onChange={(e) => { setPromotionSourceTeamId(e.target.value); setPromotionSelectedIds([]); }} style={styles.select}><option value="">Choisir...</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                      <div><label style={styles.inputLabel}>Nouvelle catégorie</label><select value={promotionTargetTeamId} onChange={(e) => setPromotionTargetTeamId(e.target.value)} style={styles.select}><option value="">Choisir...</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                      <div><label style={styles.inputLabel}>Filtre</label><select value={promotionGenderFilter} onChange={(e) => { setPromotionGenderFilter(e.target.value as 'all' | 'male' | 'female' | 'unknown'); setPromotionSelectedIds([]); }} style={styles.select}><option value="all">Tous</option><option value="male">Garçons</option><option value="female">Filles</option><option value="unknown">Non renseignés</option></select></div>
+                    </div>
+                    {promotionSourceTeamId && <div style={{ marginTop: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+                        <strong>{promotionCandidates.length} joueur{promotionCandidates.length > 1 ? 's' : ''} disponible{promotionCandidates.length > 1 ? 's' : ''}</strong>
+                        <button type="button" onClick={() => setPromotionSelectedIds(promotionSelectedIds.length === promotionCandidates.length ? [] : promotionCandidates.map((p) => p.id))} style={styles.secondaryOutlineButton}>
+                          {promotionSelectedIds.length === promotionCandidates.length ? 'Tout décocher' : 'Tout sélectionner'}
+                        </button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
+                        {promotionCandidates.map((p) => (
+                          <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, border: `1px solid ${promotionSelectedIds.includes(p.id) ? '#0A5FB5' : '#d5dfeb'}`, background: promotionSelectedIds.includes(p.id) ? '#eff6ff' : 'white', cursor: 'pointer', fontWeight: 700 }}>
+                            <input type="checkbox" checked={promotionSelectedIds.includes(p.id)} onChange={() => togglePromotionPlayer(p.id)} style={{ width: 18, height: 18, accentColor: '#0A5FB5' }} />
+                            <span>{getPlayerName(p)}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button onClick={transferSelectedPlayers} disabled={promotionSaving || promotionSelectedIds.length === 0} style={{ ...styles.primaryButton, marginTop: 14, background: '#ea580c', opacity: promotionSaving || promotionSelectedIds.length === 0 ? 0.65 : 1 }}>
+                        {promotionSaving ? 'Transfert...' : `Transférer ${promotionSelectedIds.length} joueur(s)`}
+                      </button>
+                    </div>}
                   </div>
                 </div>}
 
@@ -5792,6 +5953,7 @@ export default function App() {
                       <div><label style={styles.inputLabel}>{"Prénom enfant"}</label><input value={newChildFirstName} onChange={(e) => setNewChildFirstName(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Nom enfant</label><input value={newChildLastName} onChange={(e) => setNewChildLastName(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>{"Équipe"}</label><select value={newChildTeamId} onChange={(e) => setNewChildTeamId(e.target.value)} style={styles.select}>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                      <div><label style={styles.inputLabel}>Garçon / fille</label><select value={newChildGender} onChange={(e) => setNewChildGender(e.target.value as 'male' | 'female' | '')} style={styles.select}><option value="">— Non défini —</option><option value="male">Garçon</option><option value="female">Fille</option></select></div>
                       <div><label style={styles.inputLabel}>{"Prénom parent"}</label><input value={newParentFirstName} onChange={(e) => setNewParentFirstName(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Nom parent</label><input value={newParentLastName} onChange={(e) => setNewParentLastName(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Email parent</label><input value={newParentEmail} onChange={(e) => setNewParentEmail(e.target.value)} style={styles.input} type="email" /></div>
@@ -7220,7 +7382,7 @@ export default function App() {
                                         const presentPlayers = players.filter((p) =>
                                           p.team_id === training.teamId &&
                                           getAttendanceStatus(training.templateId, p.id, training.date) === 'present'
-                                        );
+                                        ).sort((a, b) => getPlayerName(a).localeCompare(getPlayerName(b), 'fr'));
                                         if (presentPlayers.length === 0) return null;
                                         return (
                                           <div style={{ marginTop: 12, padding: '10px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #86efac' }}>
