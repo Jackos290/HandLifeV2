@@ -1691,6 +1691,48 @@ export default function App() {
     };
   }
 
+  function renderEventVoters(eventId: string) {
+    const groups: { status: 'present' | 'absent' | 'pending'; label: string; bg: string; color: string }[] = [
+      { status: 'present', label: 'Présents', bg: '#dcfce7', color: '#166534' },
+      { status: 'absent', label: 'Absents', bg: '#fee2e2', color: '#991b1b' },
+      { status: 'pending', label: 'Sans réponse', bg: '#f1f5f9', color: '#475569' },
+    ];
+    const attendees = eventAttendance.filter((a) => a.event_id === eventId);
+    if (attendees.length === 0) {
+      return <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>Aucun vote pour le moment.</div>;
+    }
+    return (
+      <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+        {groups.map((group) => {
+          const rows = attendees
+            .filter((a) => a.status === group.status)
+            .map((a) => {
+              const player = players.find((p) => p.id === a.player_id);
+              return {
+                id: a.id,
+                name: player ? getPlayerName(player) : 'Joueur inconnu',
+                team: player?.team_id ? getTeamName(player.team_id) : '',
+              };
+            })
+            .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+          if (rows.length === 0) return null;
+          return (
+            <div key={group.status} style={{ padding: '8px 10px', borderRadius: 10, background: group.bg, border: `1px solid ${group.color}22` }}>
+              <div style={{ fontSize: 12, fontWeight: 900, color: group.color, marginBottom: 6 }}>{group.label} ({rows.length})</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {rows.map((row) => (
+                  <span key={row.id} title={row.team} style={{ padding: '4px 9px', borderRadius: 999, background: 'white', color: group.color, fontSize: 12, fontWeight: 800, border: `1px solid ${group.color}33` }}>
+                    {row.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   // ────────────── HELPERS PRÉSENCE EN LIGNE ──────────────
   function getOnlineCounts() {
     const cutoff = presenceTick - PRESENCE_ONLINE_WINDOW_MS;
@@ -3651,9 +3693,22 @@ export default function App() {
   const coachTemplates = selectedCoachTeamId ? visibleTemplates.filter((t) => t.team_id === selectedCoachTeamId) : visibleTemplates;
   const eventPollTeams = isAdmin ? teams : visibleTeams;
   const eventPollTeamIds = eventPollTeams.map((t) => t.id);
-  const manageableClubEvents = isAdmin ? clubEvents : clubEvents.filter((ev) => !ev.team_ids || ev.team_ids.length === 0 || ev.team_ids.some((tid) => eventPollTeamIds.includes(tid)));
-  const manageablePolls = isAdmin ? polls : polls.filter((poll) => !poll.team_ids || poll.team_ids.length === 0 || poll.team_ids.some((tid) => eventPollTeamIds.includes(tid)));
+  const selectedCoachEventTeamIds = !isAdmin && selectedCoachTeamId ? [selectedCoachTeamId] : eventPollTeamIds;
+  const manageableClubEvents = isAdmin ? clubEvents : clubEvents.filter((ev) => !ev.team_ids || ev.team_ids.length === 0 || ev.team_ids.some((tid) => selectedCoachEventTeamIds.includes(tid)));
+  const manageablePolls = isAdmin ? polls : polls.filter((poll) => !poll.team_ids || poll.team_ids.length === 0 || poll.team_ids.some((tid) => selectedCoachEventTeamIds.includes(tid)));
   const coachPlayersForSelectedTraining = selectedCoachTemplate?.team_id ? players.filter((p) => p.team_id === selectedCoachTemplate.team_id) : [];
+
+  function chooseCoachTeam(teamId: string) {
+    setSelectedCoachTeamId(teamId);
+    setCrossCategoryTeamId(teamId);
+    const nextTemplate = visibleTemplates.find((t) => t.team_id === teamId);
+    setSelectedTrainingTemplateId(nextTemplate?.id || '');
+    if (nextTemplate) {
+      setSelectedTrainingDate(getNextDatesForWeekday(nextTemplate.weekday, 1)[0] || '');
+    }
+    const nextMatch = visibleMatches.find((m) => m.team_id === teamId);
+    setSelectedMatchId(nextMatch?.id || '');
+  }
 
   const selectedMatch = matches.find((m) => m.id === selectedMatchId) || null;
   const playersForSelectedMatch = selectedMatch?.team_id ? players.filter((p) => p.team_id === selectedMatch.team_id) : [];
@@ -4374,6 +4429,22 @@ export default function App() {
         {/* ─── VUE COACH ─────────────────────────────────────────────────── */}
         {activeRole === 'coach' && (
           <>
+            {visibleTeams.length > 0 && (
+              <div style={{ ...styles.panelCard, marginBottom: 12, padding: 12, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
+                <div style={{ fontSize: 12, fontWeight: 900, color: '#0A5FB5', textTransform: 'uppercase', letterSpacing: 0, marginBottom: 8 }}>Catégorie affichée</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(126px, 1fr))', gap: 8 }}>
+                  {visibleTeams.map((team) => {
+                    const active = selectedCoachTeamId === team.id;
+                    return (
+                      <button key={team.id} onClick={() => chooseCoachTeam(team.id)}
+                        style={{ minHeight: 44, padding: '9px 12px', borderRadius: 12, border: `2px solid ${active ? '#0A5FB5' : '#d5dfeb'}`, background: active ? '#0A5FB5' : 'white', color: active ? 'white' : '#10233b', fontWeight: 900, fontSize: 13, cursor: 'pointer', textAlign: 'center' }}>
+                        {team.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {/* Menu onglets */}
             <div style={styles.coachMenu}>
               {(['trainings', 'matches', 'stats', 'composition', 'team', 'players', 'users', 'messages', 'licenses', 'events', 'polls', 'password', ...(isAdmin ? ['admin'] : [])] as CoachTab[]).map((tab) => {
@@ -4437,7 +4508,7 @@ export default function App() {
                 {/* Filtre équipe */}
                 <div style={{ ...styles.filterBar, marginBottom: 20 }}>
                   <label style={styles.inputLabel}>Équipe</label>
-                  <select value={selectedCoachTeamId} onChange={(e) => setSelectedCoachTeamId(e.target.value)} style={styles.select}>
+                  <select value={selectedCoachTeamId} onChange={(e) => chooseCoachTeam(e.target.value)} style={styles.select}>
                     {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
@@ -6338,6 +6409,7 @@ export default function App() {
                                       <span style={{ color: '#dc2626' }}>❌ {counts.absent} absents</span>
                                       <span style={{ color: '#94a3b8' }}>⏳ {counts.pending} sans réponse</span>
                                     </div>
+                                    {renderEventVoters(ev.id)}
                                   </div>
                                   <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                                     <button onClick={() => {
@@ -7536,6 +7608,7 @@ export default function App() {
                                         </div>
                                       )}
                                       <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>✅ {counts.present} · ❌ {counts.absent} · ⏳ {counts.pending}</div>
+                                      {renderEventVoters(ev.id)}
                                       <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
                                         <button onClick={() => saveEventAttendance(ev.id, child.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#7c3aed' : '#f3e8ff', color: status === 'present' ? 'white' : '#7c3aed' }}>✅ Présent</button>
                                         <button onClick={() => saveEventAttendance(ev.id, child.id, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>❌ Absent</button>
