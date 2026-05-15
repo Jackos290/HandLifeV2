@@ -107,6 +107,18 @@ export const HANDBALL_POWERS = [
   { id: 'passe', label: 'Passe laser', icon: '🎯' },
   { id: 'gardien', label: 'Réflexes de gardien', icon: '🧤' },
   { id: 'capitaine', label: 'Esprit capitaine', icon: '🗣️' },
+  { id: 'interception', label: 'Interception ninja', icon: '🥷' },
+  { id: 'roucoulette', label: 'Roucoulette', icon: '🌀' },
+  { id: 'kungfu', label: 'Kung-fu volant', icon: '🪽' },
+  { id: 'contre', label: 'Contre géant', icon: '🛡️' },
+  { id: 'relance', label: 'Relance éclair', icon: '🏹' },
+  { id: 'lucarne', label: 'Lucarne magique', icon: '🪄' },
+  { id: 'pivot', label: 'Pivot indestructible', icon: '💪' },
+  { id: 'dernier_rempart', label: 'Dernier rempart', icon: '🚧' },
+  { id: 'vision', label: 'Vision de jeu', icon: '👁️' },
+  { id: 'mental', label: 'Mental d’acier', icon: '🧠' },
+  { id: 'supporter', label: 'Boost équipe', icon: '📣' },
+  { id: 'grinta', label: 'Grinta', icon: '🔥' },
 ] as const;
 
 function getPlayerPowers(player: Player) {
@@ -264,7 +276,7 @@ export function FifaPlayerCard({
 
       {/* HEADER : Niveau + Position + Logo plus gros */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 48 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 62 }}>
           {hideStats ? (
             <div style={{ fontSize: 16, fontWeight: 900, color: textColor, lineHeight: 1, opacity: 0.72 }}>ID</div>
           ) : (
@@ -281,7 +293,7 @@ export function FifaPlayerCard({
           }}>{positionLabel}</div>
           {clubLogo && (
             <img src={clubLogo} alt="" style={{
-              width: 44, height: 44, borderRadius: '50%', marginTop: 6,
+              width: 76, height: 76, borderRadius: '50%', marginTop: 6,
               objectFit: 'cover', border: `1.5px solid ${textColor === 'white' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)'}`,
               background: 'white',
               boxShadow: '0 3px 10px rgba(0,0,0,0.22)',
@@ -590,7 +602,7 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
 
       {/* HEADER : Niveau + Position + Logo */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 84 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 122 }}>
           {hideStats ? (
             <div style={{ fontSize: 56, fontWeight: 900, color: textColor, lineHeight: 1, opacity: 0.35 }}>—</div>
           ) : (
@@ -607,7 +619,7 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
           }}>{positionLabel}</div>
           {clubLogo && (
             <img src={clubLogo} alt="" style={{
-              width: 78, height: 78, borderRadius: '50%', marginTop: 12,
+              width: 136, height: 136, borderRadius: '50%', marginTop: 12,
               objectFit: 'cover', border: `2px solid ${textColor === 'white' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)'}`,
               background: 'white',
               boxShadow: '0 5px 16px rgba(0,0,0,0.28)',
