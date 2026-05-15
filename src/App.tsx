@@ -706,6 +706,8 @@ export default function App() {
   const [newTrainingStart, setNewTrainingStart] = useState('18:30');
   const [newTrainingEnd, setNewTrainingEnd] = useState('20:00');
   const [newTrainingLocation, setNewTrainingLocation] = useState('Gymnase de Gorcy');
+  const [editingTrainingTemplateId, setEditingTrainingTemplateId] = useState('');
+  const [savingTrainingTemplate, setSavingTrainingTemplate] = useState(false);
   const [newBreakTeamId, setNewBreakTeamId] = useState('');
   const [newBreakTitle, setNewBreakTitle] = useState('Vacances');
   const [newBreakStart, setNewBreakStart] = useState('');
@@ -2842,8 +2844,54 @@ export default function App() {
     finally { setSavingMatchResult(false); }
   }
 
+  function resetTrainingTemplateForm() {
+    setEditingTrainingTemplateId('');
+    setNewTrainingTitle('Entrainement');
+    setNewTrainingWeekday('3');
+    setNewTrainingStart('18:30');
+    setNewTrainingEnd('20:00');
+    setNewTrainingLocation('Gymnase de Gorcy');
+    setNewTrainingTeamId(visibleTeams[0]?.id || teams[0]?.id || '');
+  }
+
+  function startEditTrainingTemplate(template: TrainingTemplate) {
+    setEditingTrainingTemplateId(template.id);
+    setNewTrainingTeamId(template.team_id);
+    setNewTrainingTitle(template.title || 'Entrainement');
+    setNewTrainingWeekday(String(template.weekday));
+    setNewTrainingStart((template.start_time || '').slice(0, 5));
+    setNewTrainingEnd((template.end_time || '').slice(0, 5));
+    setNewTrainingLocation(template.location || '');
+  }
+
   async function addTrainingTemplate() {
     if (!newTrainingTeamId || !newTrainingStart || !newTrainingEnd) { alert('Remplir les champs obligatoires'); return; }
+    if (editingTrainingTemplateId) {
+      const existing = trainingTemplates.find((t) => t.id === editingTrainingTemplateId);
+      const targetTeamId = isAdmin ? newTrainingTeamId : (existing?.team_id || newTrainingTeamId);
+      if (!isAdmin && !allowedTeamIds.includes(targetTeamId)) { alert("Tu ne peux modifier que les entrainements de tes equipes."); return; }
+      setSavingTrainingTemplate(true);
+      try {
+        const { error } = await supabase.from('training_templates').update({
+          team_id: targetTeamId,
+          title: newTrainingTitle.trim() || 'Entrainement',
+          weekday: Number(newTrainingWeekday),
+          start_time: newTrainingStart,
+          end_time: newTrainingEnd,
+          location: newTrainingLocation.trim() || null,
+        }).eq('id', editingTrainingTemplateId);
+        if (error) throw error;
+        resetTrainingTemplateForm();
+        await loadData();
+        alert('Entrainement modifie');
+      } catch (e) {
+        console.error(e);
+        alert("Erreur lors de la modification de l'entrainement");
+      } finally {
+        setSavingTrainingTemplate(false);
+      }
+      return;
+    }
     const { error } = await supabase.from('training_templates').insert({
       team_id: newTrainingTeamId, title: newTrainingTitle,
       weekday: Number(newTrainingWeekday), start_time: newTrainingStart,
@@ -2853,6 +2901,7 @@ export default function App() {
     setNewTrainingTitle('Entraînement'); setNewTrainingWeekday('3');
     setNewTrainingStart('18:30'); setNewTrainingEnd('20:00');
     setNewTrainingLocation('Gymnase de Gorcy');
+    setEditingTrainingTemplateId('');
     await loadData();
     alert('Entraînement ajouté');
   }
@@ -5242,6 +5291,39 @@ export default function App() {
                   );
                 })()}
 
+                <div style={{ ...styles.panelCard, marginTop: 20, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
+                  <h3 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Creneaux recurrents</h3>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {coachTemplates.map((template) => (
+                      <div key={template.id} style={{ ...styles.linkRow, background: 'white', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: 220 }}>
+                          <strong>{template.title || 'Entrainement'} - {getTeamName(template.team_id)}</strong>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                            {getWeekdayLabel(template.weekday)} - {template.start_time} / {template.end_time} - {template.location || '-'}
+                          </div>
+                        </div>
+                        <button onClick={() => startEditTrainingTemplate(template)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '8px 12px' }}>Modifier</button>
+                      </div>
+                    ))}
+                  </div>
+                  {editingTrainingTemplateId && coachTemplates.some((t) => t.id === editingTrainingTemplateId) && (
+                    <div style={{ marginTop: 14, padding: 14, borderRadius: 14, background: 'white', border: '1px solid #dbe4ef' }}>
+                      <div style={{ ...styles.miniTitle, marginBottom: 10 }}>Modifier le creneau</div>
+                      <div style={styles.formGrid}>
+                        <div><label style={styles.inputLabel}>Titre</label><input value={newTrainingTitle} onChange={(e) => setNewTrainingTitle(e.target.value)} style={styles.input} /></div>
+                        <div><label style={styles.inputLabel}>Jour</label><select value={newTrainingWeekday} onChange={(e) => setNewTrainingWeekday(e.target.value)} style={styles.select}><option value="1">Lundi</option><option value="2">Mardi</option><option value="3">Mercredi</option><option value="4">Jeudi</option><option value="5">Vendredi</option><option value="6">Samedi</option><option value="0">Dimanche</option></select></div>
+                        <div><label style={styles.inputLabel}>Debut</label><input type="time" value={newTrainingStart} onChange={(e) => setNewTrainingStart(e.target.value)} style={styles.input} /></div>
+                        <div><label style={styles.inputLabel}>Fin</label><input type="time" value={newTrainingEnd} onChange={(e) => setNewTrainingEnd(e.target.value)} style={styles.input} /></div>
+                        <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>Lieu</label><input value={newTrainingLocation} onChange={(e) => setNewTrainingLocation(e.target.value)} style={styles.input} /></div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <button onClick={addTrainingTemplate} disabled={savingTrainingTemplate} style={styles.primaryButton}>{savingTrainingTemplate ? 'Enregistrement...' : 'Enregistrer'}</button>
+                        <button onClick={resetTrainingTemplateForm} style={styles.secondaryOutlineButton}>Annuler</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ ...styles.panelCard, marginTop: 20, background: '#f8fafc', border: '1px solid #dbe4ef' }}>
                   <h3 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Périodes de vacances</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
@@ -6693,7 +6775,36 @@ export default function App() {
                     <div><label style={styles.inputLabel}>Fin</label><input type="time" value={newTrainingEnd} onChange={(e) => setNewTrainingEnd(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Lieu</label><input value={newTrainingLocation} onChange={(e) => setNewTrainingLocation(e.target.value)} style={styles.input} /></div>
                   </div>
-                  <button onClick={addTrainingTemplate} style={styles.primaryButton}>{"Ajouter l'entraînement"}</button>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button onClick={addTrainingTemplate} disabled={savingTrainingTemplate} style={styles.primaryButton}>
+                      {savingTrainingTemplate ? 'Enregistrement...' : editingTrainingTemplateId ? "Modifier l'entrainement" : "Ajouter l'entrainement"}
+                    </button>
+                    {editingTrainingTemplateId && <button onClick={resetTrainingTemplateForm} style={styles.secondaryOutlineButton}>Annuler</button>}
+                  </div>
+
+                  <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #dbe4ef' }}>
+                    <h3 style={{ ...styles.panelTitle, fontSize: 18 }}>Creneaux recurrents</h3>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      {trainingTemplates.length === 0 ? (
+                        <div style={styles.emptyState}>Aucun entrainement recurrent.</div>
+                      ) : trainingTemplates.map((template) => (
+                        <div key={template.id} style={{ ...styles.linkRow, background: 'white', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <div style={{ flex: 1, minWidth: 220 }}>
+                            <strong>{template.title || 'Entrainement'} - {getTeamName(template.team_id)}</strong>
+                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                              {getWeekdayLabel(template.weekday)} - {template.start_time} / {template.end_time} - {template.location || '-'}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button onClick={() => startEditTrainingTemplate(template)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '8px 12px' }}>Modifier</button>
+                            <button onClick={() => toggleTemplateActive(template)} style={{ ...(template.active ? styles.linkRemoveButton : styles.secondaryButton), fontSize: 12, padding: '8px 12px' }}>
+                              {template.active ? 'Desactiver' : 'Reactiver'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
                   <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #dbe4ef' }}>
                     <h3 style={{ ...styles.panelTitle, fontSize: 18 }}>Périodes de vacances entraînement</h3>
