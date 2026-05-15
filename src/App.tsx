@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import Calendar from './Calendar';
 import MatchComposition from './MatchComposition';
 import HandLifeLogo from './HandLifeLogo';
-import { GRADES, PlayerCard, FifaPlayerCard, FullScreenCard, GradeModal, computeGrade, POSITIONS } from './PlayerGrades';
+import { GRADES, PlayerCard, FifaPlayerCard, FullScreenCard, GradeModal, computeGrade, POSITIONS, HANDBALL_POWERS } from './PlayerGrades';
 
 type Team = {
   id: string;
@@ -22,6 +22,7 @@ type Player = {
   jersey_number: number | null;
   position: string | null;
   gender?: 'male' | 'female' | null;
+  card_powers?: string[] | null;
 };
 
 type MatchItem = {
@@ -1188,7 +1189,7 @@ export default function App() {
     supabase.from('teams').select('*').order('name')
       .then(({ data }) => { if (data) setTeams(data as Team[]); }, () => {});
     // Joueurs chargés publiquement pour la liste déroulante du formulaire d'inscription
-    supabase.from('players').select('id, first_name, last_name, team_id, birth_date, photo_url, jersey_number, position').order('last_name')
+    supabase.from('players').select('id, first_name, last_name, team_id, birth_date, photo_url, jersey_number, position, card_powers').order('last_name')
       .then(({ data }) => { if (data) setPlayers(data as Player[]); }, () => {});
     // Sponsors chargés publiquement pour la page de connexion
     supabase.from('sponsors').select('*').eq('active', true).order('display_order')
@@ -3464,6 +3465,22 @@ export default function App() {
     setJerseyEditId(null);
     setJerseyEditValue('');
     await loadDataSilent();
+  }
+
+  async function togglePlayerCardPower(player: Player, powerId: string) {
+    const current = Array.isArray(player.card_powers) ? player.card_powers : [];
+    const next = current.includes(powerId)
+      ? current.filter((id) => id !== powerId)
+      : current.length >= 3
+        ? current
+        : [...current, powerId];
+    if (!current.includes(powerId) && current.length >= 3) {
+      alert('Choisis maximum 3 super pouvoirs.');
+      return;
+    }
+    const { error } = await supabase.from('players').update({ card_powers: next }).eq('id', player.id);
+    if (error) { alert("Erreur lors de l'enregistrement des super pouvoirs."); return; }
+    setPlayers((prev) => prev.map((p) => p.id === player.id ? { ...p, card_powers: next } : p));
   }
 
   // ── Helper : créer un compte Auth via Edge Function ──
@@ -7645,6 +7662,25 @@ export default function App() {
                                     onClick={() => setFullScreenCardData({ cards: teamCards, index: selectedCardIndex })}
                                   />
                                 </div>
+                                {selectedCard.isMyChild && (
+                                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #fde68a' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+                                      <strong style={{ color: '#062C5D', fontSize: 14 }}>Mes 3 super pouvoirs</strong>
+                                      <span style={{ color: '#92400e', fontSize: 12, fontWeight: 800 }}>{(selectedCard.player.card_powers || []).length}/3</span>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8 }}>
+                                      {HANDBALL_POWERS.map((power) => {
+                                        const selected = (selectedCard.player.card_powers || []).includes(power.id);
+                                        return (
+                                          <button key={power.id} onClick={() => togglePlayerCardPower(selectedCard.player, power.id)}
+                                            style={{ minHeight: 42, padding: '8px 10px', borderRadius: 12, border: `2px solid ${selected ? '#0A5FB5' : '#dbe4ef'}`, background: selected ? '#eaf4ff' : 'white', color: '#10233b', fontWeight: 900, fontSize: 12, cursor: 'pointer', textAlign: 'center' }}>
+                                            <span style={{ fontSize: 15, marginRight: 5 }}>{power.icon}</span>{power.label}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
 
                               <div style={{ ...styles.panelCard, marginTop: 10 }}>

@@ -95,7 +95,27 @@ type Player = {
   photo_url: string | null;
   jersey_number: number | null;
   position?: string | null;
+  card_powers?: string[] | null;
 };
+
+export const HANDBALL_POWERS = [
+  { id: 'muraille', label: 'Muraille', icon: '🧱' },
+  { id: 'missile', label: 'Missile', icon: '🚀' },
+  { id: 'aimant', label: 'Aimant à ballons', icon: '🧲' },
+  { id: 'feinte', label: 'Feinte magique', icon: '✨' },
+  { id: 'eclair', label: 'Vitesse éclair', icon: '⚡' },
+  { id: 'passe', label: 'Passe laser', icon: '🎯' },
+  { id: 'gardien', label: 'Réflexes de gardien', icon: '🧤' },
+  { id: 'capitaine', label: 'Esprit capitaine', icon: '🗣️' },
+] as const;
+
+function getPlayerPowers(player: Player) {
+  const selected = Array.isArray(player.card_powers) ? player.card_powers : [];
+  const powers = selected
+    .map((id) => HANDBALL_POWERS.find((p) => p.id === id))
+    .filter(Boolean) as typeof HANDBALL_POWERS[number][];
+  return powers.length > 0 ? powers.slice(0, 3) : HANDBALL_POWERS.slice(0, 3);
+}
 
 // ─── Helpers de style partagés (carte FIFA) ──────────────────────────────────
 function getCardStyle(_grade: Grade, _isRainbow: boolean) {
@@ -127,8 +147,8 @@ type FifaPlayerCardProps = {
 // ─── JerseyBadge : numéro de maillot façon tissu avec coutures ────────────────
 function JerseyBadge({ number, size = 'small' }: { number: number; size?: 'small' | 'large' }) {
   const isLarge = size === 'large';
-  const dim = isLarge ? 56 : 28;
-  const fontSize = isLarge ? 22 : 12;
+  const dim = isLarge ? 72 : 40;
+  const fontSize = isLarge ? 28 : 17;
   const stitchWidth = isLarge ? 1.5 : 1;
   const stitchOffset = isLarge ? 5 : 3;
   const waveDepth = isLarge ? 3 : 1.5;
@@ -244,7 +264,7 @@ export function FifaPlayerCard({
 
       {/* HEADER : Niveau + Position + Logo plus gros */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 36 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 48 }}>
           {hideStats ? (
             <div style={{ fontSize: 16, fontWeight: 900, color: textColor, lineHeight: 1, opacity: 0.72 }}>ID</div>
           ) : (
@@ -261,10 +281,10 @@ export function FifaPlayerCard({
           }}>{positionLabel}</div>
           {clubLogo && (
             <img src={clubLogo} alt="" style={{
-              width: 30, height: 30, borderRadius: '50%', marginTop: 5,
+              width: 44, height: 44, borderRadius: '50%', marginTop: 6,
               objectFit: 'cover', border: `1.5px solid ${textColor === 'white' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)'}`,
               background: 'white',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+              boxShadow: '0 3px 10px rgba(0,0,0,0.22)',
             }} />
           )}
         </div>
@@ -272,7 +292,7 @@ export function FifaPlayerCard({
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
           {p.photo_url ? (
             <img src={p.photo_url} alt={`${p.first_name} ${p.last_name}`} style={{
-              width: '100%', maxWidth: 90, height: 80, objectFit: 'cover',
+              width: '100%', maxWidth: 96, height: 84, objectFit: 'cover',
               objectPosition: 'top center',
               borderRadius: 8,
             }} />
@@ -507,30 +527,18 @@ export function FullScreenCard({ cards, initialIndex, onClose, clubLogo }: FullS
 }
 
 function PrivateStatsPanel({ player, textColor, subtleText, compact = false }: { player: Player; textColor: string; subtleText: string; compact?: boolean }) {
-  const identityRows = [
-    ['Poste', player.position || 'A définir'],
-    ['N°', player.jersey_number != null ? String(player.jersey_number) : 'A définir'],
-  ];
-  const badges = [
-    ['Fair-play', '⭐'],
-    ['Collectif', '🤝'],
-    ['Motivation', '🔥'],
-  ];
+  const powers = getPlayerPowers(player);
   return (
     <div style={{ width: '100%', display: 'grid', gap: compact ? 6 : 12, color: textColor }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: compact ? 5 : 10 }}>
-        {identityRows.map(([label, value]) => (
-          <div key={label} style={{ padding: compact ? '5px 5px' : '10px 12px', borderRadius: compact ? 8 : 14, background: 'rgba(255,255,255,0.28)', border: '1px solid rgba(120,53,15,0.16)', textAlign: 'center' }}>
-            <div style={{ fontSize: compact ? 7 : 11, fontWeight: 900, textTransform: 'uppercase', color: subtleText }}>{label}</div>
-            <div style={{ fontSize: compact ? 9 : 16, fontWeight: 900, marginTop: compact ? 1 : 4 }}>{value}</div>
-          </div>
-        ))}
+      <div style={{ padding: compact ? '6px 8px' : '12px 14px', borderRadius: compact ? 10 : 16, background: 'rgba(255,255,255,0.24)', border: '1px solid rgba(120,53,15,0.14)', textAlign: 'center' }}>
+        <div style={{ fontSize: compact ? 7 : 11, fontWeight: 900, textTransform: 'uppercase', color: subtleText }}>Carte personnalisée</div>
+        <div style={{ fontSize: compact ? 10 : 18, fontWeight: 900, marginTop: compact ? 2 : 5 }}>{player.position || 'Poste à définir'}</div>
       </div>
       <div style={{ display: 'grid', gap: compact ? 4 : 8 }}>
-        {badges.map(([label, icon]) => (
-          <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: compact ? 5 : 10, padding: compact ? '4px 6px' : '9px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.24)', border: '1px solid rgba(120,53,15,0.12)' }}>
-            <span style={{ fontSize: compact ? 10 : 18 }}>{icon}</span>
-            <span style={{ fontSize: compact ? 7 : 12, fontWeight: 900, letterSpacing: compact ? 0.2 : 0.6, textTransform: 'uppercase' }}>{label}</span>
+        {powers.map((power) => (
+          <div key={power.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: compact ? 6 : 12, padding: compact ? '6px 7px' : '11px 14px', borderRadius: 999, background: 'linear-gradient(90deg, rgba(255,255,255,0.34), rgba(255,255,255,0.16))', border: '1px solid rgba(120,53,15,0.14)', boxShadow: compact ? 'none' : '0 4px 12px rgba(120,53,15,0.10)' }}>
+            <span style={{ fontSize: compact ? 13 : 22 }}>{power.icon}</span>
+            <span style={{ fontSize: compact ? 8 : 13, fontWeight: 900, letterSpacing: compact ? 0.2 : 0.6, textTransform: 'uppercase' }}>{power.label}</span>
           </div>
         ))}
       </div>
@@ -582,7 +590,7 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
 
       {/* HEADER : Niveau + Position + Logo */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 70 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 84 }}>
           {hideStats ? (
             <div style={{ fontSize: 56, fontWeight: 900, color: textColor, lineHeight: 1, opacity: 0.35 }}>—</div>
           ) : (
@@ -599,10 +607,10 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
           }}>{positionLabel}</div>
           {clubLogo && (
             <img src={clubLogo} alt="" style={{
-              width: 56, height: 56, borderRadius: '50%', marginTop: 10,
+              width: 78, height: 78, borderRadius: '50%', marginTop: 12,
               objectFit: 'cover', border: `2px solid ${textColor === 'white' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)'}`,
               background: 'white',
-              boxShadow: '0 3px 10px rgba(0,0,0,0.25)',
+              boxShadow: '0 5px 16px rgba(0,0,0,0.28)',
             }} />
           )}
         </div>
