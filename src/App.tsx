@@ -1972,6 +1972,16 @@ export default function App() {
     return questionOpts.length > 0 ? questionOpts : opts.filter((o) => !o.question_key);
   }
 
+  function isMissingPollMigrationError(error: any) {
+    const msg = String(error?.message || error || '').toLowerCase();
+    return msg.includes('external_url') || msg.includes('questions') || msg.includes('question_key') || msg.includes('schema cache');
+  }
+
+  function buildLegacyPollOptions(questions: PollQuestion[]) {
+    const multiQuestion = questions.length > 1;
+    return questions.flatMap((q) => q.options.map((label) => multiQuestion ? `${q.question} - ${label}` : label));
+  }
+
   async function addPoll() {
     const cleanQuestions = newPollQuestions
       .map((q, idx) => ({
@@ -1992,7 +2002,7 @@ export default function App() {
       const mainQuestion = newPollQuestion.trim() || cleanQuestions[0].question;
       let pollId = editingPollId;
       if (editingPollId) {
-        await supabase.from('polls').update({
+        const { error: updateError } = await supabase.from('polls').update({
           question: mainQuestion,
           description: newPollDescription.trim() || null,
           external_url: newPollExternalUrl.trim() || null,
@@ -2000,6 +2010,19 @@ export default function App() {
           team_ids: pollTeamIds,
           multiple_choice: cleanQuestions.some((q) => q.multiple_choice),
         }).eq('id', editingPollId);
+        if (updateError) {
+          if (!isMissingPollMigrationError(updateError)) throw updateError;
+          const { error: legacyUpdateError } = await supabase.from('polls').update({
+            question: mainQuestion,
+            description: [
+              newPollDescription.trim(),
+              newPollExternalUrl.trim() ? `Lien externe : ${newPollExternalUrl.trim()}` : '',
+            ].filter(Boolean).join('\n') || null,
+            team_ids: pollTeamIds,
+            multiple_choice: cleanQuestions.some((q) => q.multiple_choice),
+          }).eq('id', editingPollId);
+          if (legacyUpdateError) throw legacyUpdateError;
+        }
         // Supprimer anciennes options et leurs votes pour repartir propre
         await supabase.from('poll_options').delete().eq('poll_id', editingPollId);
       } else {
@@ -2012,8 +2035,23 @@ export default function App() {
           multiple_choice: cleanQuestions.some((q) => q.multiple_choice),
           created_by: createdBy,
         }).select().single();
-        if (error || !np) throw error || new Error('Impossible de créer le sondage');
-        pollId = np.id;
+        if (error || !np) {
+          if (!isMissingPollMigrationError(error)) throw error || new Error('Impossible de créer le sondage');
+          const { data: legacyPoll, error: legacyError } = await supabase.from('polls').insert({
+            question: mainQuestion,
+            description: [
+              newPollDescription.trim(),
+              newPollExternalUrl.trim() ? `Lien externe : ${newPollExternalUrl.trim()}` : '',
+            ].filter(Boolean).join('\n') || null,
+            team_ids: pollTeamIds,
+            multiple_choice: cleanQuestions.some((q) => q.multiple_choice),
+            created_by: createdBy,
+          }).select().single();
+          if (legacyError || !legacyPoll) throw legacyError || new Error('Impossible de créer le sondage');
+          pollId = legacyPoll.id;
+        } else {
+          pollId = np.id;
+        }
       }
       const optsRows = cleanQuestions.flatMap((q) => q.options.map((label, idx) => ({
         poll_id: pollId,
@@ -2021,7 +2059,13 @@ export default function App() {
         label,
         display_order: idx,
       })));
-      await supabase.from('poll_options').insert(optsRows);
+      const { error: optionsError } = await supabase.from('poll_options').insert(optsRows);
+      if (optionsError) {
+        if (!isMissingPollMigrationError(optionsError)) throw optionsError;
+        const legacyRows = buildLegacyPollOptions(cleanQuestions).map((label, idx) => ({ poll_id: pollId, label, display_order: idx }));
+        const { error: legacyOptionsError } = await supabase.from('poll_options').insert(legacyRows);
+        if (legacyOptionsError) throw legacyOptionsError;
+      }
       // Reload
       const { data: pData } = await supabase.from('polls').select('*').order('created_at', { ascending: false });
       if (pData) setPolls(pData as Poll[]);
@@ -4911,28 +4955,6 @@ export default function App() {
                   </select>
                 </div>
 
-                <div style={{ ...styles.panelCard, marginBottom: 20, background: '#f8fafc', border: '1px solid #dbe4ef' }}>
-                  <h3 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Périodes de vacances</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
-                    <div><label style={styles.inputLabel}>Titre</label><input value={newBreakTitle} onChange={(e) => setNewBreakTitle(e.target.value)} style={styles.input} placeholder="Vacances scolaires" /></div>
-                    <div><label style={styles.inputLabel}>Début</label><input type="date" value={newBreakStart} onChange={(e) => setNewBreakStart(e.target.value)} style={styles.input} /></div>
-                    <div><label style={styles.inputLabel}>Fin</label><input type="date" value={newBreakEnd} onChange={(e) => setNewBreakEnd(e.target.value)} style={styles.input} /></div>
-                    <div><label style={styles.inputLabel}>Note</label><input value={newBreakReason} onChange={(e) => setNewBreakReason(e.target.value)} style={styles.input} placeholder="Optionnel" /></div>
-                  </div>
-                  <button onClick={addTrainingBreak} style={{ ...styles.secondaryButton, marginTop: 10, background: '#0A5FB5' }}>Ajouter la période</button>
-                  <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
-                    {trainingBreaks.filter((b) => !b.team_id || b.team_id === selectedCoachTeamId).map((b) => (
-                      <div key={b.id} style={{ ...styles.linkRow, background: 'white' }}>
-                        <div style={{ flex: 1 }}>
-                          <strong>{b.title}</strong>
-                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{formatDate(b.start_date)} au {formatDate(b.end_date)} · {b.team_id ? getTeamName(b.team_id) : 'Toutes les équipes'}{b.reason ? ` · ${b.reason}` : ''}</div>
-                        </div>
-                        <button onClick={() => deleteTrainingBreak(b.id)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>Supprimer</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {(() => {
                   // Calculer les 2 prochaines séances toutes templates confondues
                   const today = new Date(); today.setHours(0,0,0,0);
@@ -5045,6 +5067,28 @@ export default function App() {
                     </div>
                   );
                 })()}
+
+                <div style={{ ...styles.panelCard, marginTop: 20, background: '#f8fafc', border: '1px solid #dbe4ef' }}>
+                  <h3 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Périodes de vacances</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                    <div><label style={styles.inputLabel}>Titre</label><input value={newBreakTitle} onChange={(e) => setNewBreakTitle(e.target.value)} style={styles.input} placeholder="Vacances scolaires" /></div>
+                    <div><label style={styles.inputLabel}>Début</label><input type="date" value={newBreakStart} onChange={(e) => setNewBreakStart(e.target.value)} style={styles.input} /></div>
+                    <div><label style={styles.inputLabel}>Fin</label><input type="date" value={newBreakEnd} onChange={(e) => setNewBreakEnd(e.target.value)} style={styles.input} /></div>
+                    <div><label style={styles.inputLabel}>Note</label><input value={newBreakReason} onChange={(e) => setNewBreakReason(e.target.value)} style={styles.input} placeholder="Optionnel" /></div>
+                  </div>
+                  <button onClick={addTrainingBreak} style={{ ...styles.secondaryButton, marginTop: 10, background: '#0A5FB5' }}>Ajouter la période</button>
+                  <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+                    {trainingBreaks.filter((b) => !b.team_id || b.team_id === selectedCoachTeamId).map((b) => (
+                      <div key={b.id} style={{ ...styles.linkRow, background: 'white' }}>
+                        <div style={{ flex: 1 }}>
+                          <strong>{b.title}</strong>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{formatDate(b.start_date)} au {formatDate(b.end_date)} · {b.team_id ? getTeamName(b.team_id) : 'Toutes les équipes'}{b.reason ? ` · ${b.reason}` : ''}</div>
+                        </div>
+                        <button onClick={() => deleteTrainingBreak(b.id)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>Supprimer</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
