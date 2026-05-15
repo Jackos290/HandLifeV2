@@ -959,6 +959,7 @@ export default function App() {
   const [regDirectFirstName, setRegDirectFirstName] = useState('');
   const [regDirectLastName, setRegDirectLastName] = useState('');
   const [regDirectTeamId, setRegDirectTeamId] = useState('');
+  const [regDirectTeamIds, setRegDirectTeamIds] = useState<string[]>([]);
   const [regDirectBirthDate, setRegDirectBirthDate] = useState('');
   const [regDirectEmail, setRegDirectEmail] = useState('');
   const [regDirectPassword, setRegDirectPassword] = useState('');
@@ -978,6 +979,7 @@ export default function App() {
     child1_first_name: string | null;
     child1_last_name: string | null;
     child1_team_id: string | null;
+    direct_team_ids?: string[] | null;
     child1_birth_date: string | null;
     child1_name: string | null;
     child2_mode: string | null;
@@ -3593,6 +3595,19 @@ export default function App() {
     return haystack.includes('loisir') || haystack.includes('senior');
   }
 
+  function getSelectedDirectTeamIds() {
+    const ids = regDirectTeamIds.length > 0 ? regDirectTeamIds : (regDirectTeamId ? [regDirectTeamId] : []);
+    return [...new Set(ids.filter(Boolean))];
+  }
+
+  function toggleDirectTeam(teamId: string) {
+    setRegDirectTeamIds((prev) => {
+      const next = prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId];
+      setRegDirectTeamId(next[0] || '');
+      return next;
+    });
+  }
+
   // Vérifier doublon joueur
   async function playerAlreadyExists(firstName: string, lastName: string, teamId: string): Promise<boolean> {
     const { data } = await supabase.from('players')
@@ -3812,7 +3827,8 @@ export default function App() {
   async function handleDirectRegister() {
     setRegError('');
     setRegSuccess('');
-    if (!regDirectFirstName.trim() || !regDirectLastName.trim() || !regDirectTeamId) { setRegError('Tous les champs sont obligatoires.'); return; }
+    const selectedDirectTeamIds = getSelectedDirectTeamIds();
+    if (!regDirectFirstName.trim() || !regDirectLastName.trim() || selectedDirectTeamIds.length === 0) { setRegError('Tous les champs sont obligatoires.'); return; }
     if (!regDirectEmail.trim()) { setRegError('L\'email est obligatoire.'); return; }
     if (!regDirectPassword || regDirectPassword.length < 8) { setRegError('Le mot de passe doit faire au moins 8 caractères.'); return; }
     setRegistering(true);
@@ -3825,7 +3841,8 @@ export default function App() {
         email: regDirectEmail.trim(),
         child1_first_name: regDirectFirstName.trim(),
         child1_last_name: regDirectLastName.trim(),
-        child1_team_id: regDirectTeamId,
+        child1_team_id: selectedDirectTeamIds[0],
+        direct_team_ids: selectedDirectTeamIds,
         child1_birth_date: regDirectBirthDate || null,
         child1_name: `${regDirectFirstName.trim()} ${regDirectLastName.trim()}`,
         direct_password: regDirectPassword.trim(),
@@ -3833,7 +3850,16 @@ export default function App() {
       let { error: regErr } = await supabase.from('registrations').insert(payload);
       if (regErr) {
         // Si la colonne direct_password n'existe pas encore, retry sans
-        if (regErr.message?.includes('direct_password') || (regErr as any).code === '42703') {
+        if (regErr.message?.includes('direct_team_ids')) {
+          delete payload.direct_team_ids;
+          const fallbackRows = selectedDirectTeamIds.map((teamId) => ({
+            ...payload,
+            child1_team_id: teamId,
+            child1_name: `${regDirectFirstName.trim()} ${regDirectLastName.trim()} - ${getTeamName(teamId)}`,
+          }));
+          const retry = await supabase.from('registrations').insert(fallbackRows);
+          if (retry.error) throw retry.error;
+        } else if (regErr.message?.includes('direct_password') || (regErr as any).code === '42703') {
           delete payload.direct_password;
           const retry = await supabase.from('registrations').insert(payload);
           if (retry.error) throw retry.error;
@@ -3852,12 +3878,12 @@ export default function App() {
       notifyAdminsNewRegistration({
         parentName: `${regDirectFirstName.trim()} ${regDirectLastName.trim()}`,
         parentEmail: regDirectEmail.trim(),
-        childrenNames: `${regDirectFirstName.trim()} ${regDirectLastName.trim()}`,
+        childrenNames: `${regDirectFirstName.trim()} ${regDirectLastName.trim()} (${selectedDirectTeamIds.map(getTeamName).join(', ')})`,
         appUrl: appSettings.app_url,
       });
 
       setRegSuccess('✅ Votre demande a bien été envoyée ! Vous recevrez un email dès que votre accès sera validé par l\'administrateur.');
-      setRegDirectFirstName(''); setRegDirectLastName(''); setRegDirectTeamId(''); setRegDirectBirthDate(''); setRegDirectEmail(''); setRegDirectPassword('');
+      setRegDirectFirstName(''); setRegDirectLastName(''); setRegDirectTeamId(''); setRegDirectTeamIds([]); setRegDirectBirthDate(''); setRegDirectEmail(''); setRegDirectPassword('');
     } catch (e: any) { console.error(e); setRegError(e?.message || "Erreur lors de l'inscription. Veuillez réessayer."); }
     finally { setRegistering(false); }
   }
@@ -3871,7 +3897,8 @@ export default function App() {
     if (!regParentEmail.trim()) { setRegError("L'email est obligatoire."); return; }
     if (regParentPassword.trim().length < 8) { setRegError('Le mot de passe doit faire au moins 8 caractères.'); return; }
     if (!regAdultIsPlayer && !regHasFirstChild && !regHasSecondChild) { setRegError('Coche au moins une option : je suis joueur, un enfant ou deux enfants.'); return; }
-    if (regAdultIsPlayer && !regDirectTeamId) { setRegError('Choisis la catégorie du joueur adulte.'); return; }
+    const selectedAdultTeamIds = getSelectedDirectTeamIds();
+    if (regAdultIsPlayer && selectedAdultTeamIds.length === 0) { setRegError('Choisis au moins une catégorie du joueur adulte.'); return; }
     if (regHasFirstChild) {
       if (!regChildTeamId) { setRegError("Choisis la catégorie de l'enfant 1."); return; }
       if (regChildMode === 'existing' && !regChildExistingId) { setRegError("Sélectionne l'enfant 1 dans la liste ou coche \"Mon enfant n'est pas dans la liste\"."); return; }
@@ -3930,13 +3957,23 @@ export default function App() {
           email: regParentEmail.trim(),
           child1_first_name: regParentFirstName.trim(),
           child1_last_name: regParentLastName.trim(),
-          child1_team_id: regDirectTeamId,
+          child1_team_id: selectedAdultTeamIds[0],
+          direct_team_ids: selectedAdultTeamIds,
           child1_birth_date: regDirectBirthDate || null,
           child1_name: playerName,
           direct_password: regParentPassword.trim(),
         };
         let { error } = await supabase.from('registrations').insert(payload);
-        if (error && (error.message?.includes('direct_password') || (error as any).code === '42703')) {
+        if (error && error.message?.includes('direct_team_ids')) {
+          delete payload.direct_team_ids;
+          const fallbackRows = selectedAdultTeamIds.map((teamId) => ({
+            ...payload,
+            child1_team_id: teamId,
+            child1_name: `${playerName} - ${getTeamName(teamId)}`,
+          }));
+          const retry = await supabase.from('registrations').insert(fallbackRows);
+          error = retry.error;
+        } else if (error && (error.message?.includes('direct_password') || (error as any).code === '42703')) {
           delete payload.direct_password;
           const retry = await supabase.from('registrations').insert(payload);
           error = retry.error;
@@ -3953,7 +3990,7 @@ export default function App() {
 
       setRegSuccess("✅ Demande envoyée ! Votre compte sera activé après validation par l'administrateur.");
       setRegParentFirstName(''); setRegParentLastName(''); setRegParentEmail(''); setRegParentPassword('');
-      setRegAdultIsPlayer(false); setRegDirectTeamId(''); setRegDirectBirthDate('');
+      setRegAdultIsPlayer(false); setRegDirectTeamId(''); setRegDirectTeamIds([]); setRegDirectBirthDate('');
       setRegHasFirstChild(false); setRegChildMode('existing'); setRegChildExistingId(''); setRegChildFirstName(''); setRegChildLastName(''); setRegChildTeamId(''); setRegChildBirthDate('');
       setRegHasSecondChild(false); setRegChild2Mode('existing'); setRegChild2ExistingId(''); setRegChild2FirstName(''); setRegChild2LastName(''); setRegChild2TeamId(''); setRegChild2BirthDate('');
     } catch (e: any) {
@@ -4050,16 +4087,24 @@ export default function App() {
         }
       } else {
         // Inscription directe (loisir/senior)
-        if (await playerAlreadyExists(reg.child1_first_name || '', reg.child1_last_name || '', reg.child1_team_id || '')) {
-          alert(`Le joueur ${reg.child1_first_name} ${reg.child1_last_name} existe déjà dans cette équipe.`); return;
+        const directTeamIds = [...new Set(((reg as any).direct_team_ids && Array.isArray((reg as any).direct_team_ids) ? (reg as any).direct_team_ids : [reg.child1_team_id]).filter(Boolean))] as string[];
+        if (directTeamIds.length === 0) throw new Error('Aucune catégorie sélectionnée pour cette inscription.');
+        for (const teamId of directTeamIds) {
+          if (await playerAlreadyExists(reg.child1_first_name || '', reg.child1_last_name || '', teamId)) {
+            alert(`Le joueur ${reg.child1_first_name} ${reg.child1_last_name} existe déjà dans ${getTeamName(teamId)}.`); return;
+          }
         }
-        // Créer le joueur
-        const { data: newPlayer, error: pe } = await supabase.from('players').insert({
-          first_name: reg.child1_first_name, last_name: reg.child1_last_name,
-          team_id: reg.child1_team_id, birth_date: reg.child1_birth_date || null,
-        }).select().single();
-        if (pe || !newPlayer) throw pe;
-        await supabase.from('player_stats').insert({ player_id: newPlayer.id, goals: 0, assists: 0, saves: 0, matches_played: 0 });
+        const createdPlayers: Player[] = [];
+        for (const teamId of directTeamIds) {
+          const { data: newPlayer, error: pe } = await supabase.from('players').insert({
+            first_name: reg.child1_first_name, last_name: reg.child1_last_name,
+            team_id: teamId, birth_date: reg.child1_birth_date || null,
+          }).select().single();
+          if (pe || !newPlayer) throw pe;
+          createdPlayers.push(newPlayer as Player);
+          await supabase.from('player_stats').insert({ player_id: newPlayer.id, goals: 0, assists: 0, saves: 0, matches_played: 0 });
+        }
+        const mainPlayer = createdPlayers[0];
 
         // Si email + password fournis : créer/lier un compte de connexion
         const directPassword = (reg as any).direct_password as string | undefined;
@@ -4071,20 +4116,19 @@ export default function App() {
             const currentExtras: string[] = ((existingUser as any).roles_extra || []) as string[];
             const newExtras = currentExtras.includes('player') ? currentExtras : [...currentExtras, 'player'];
             await supabase.from('users').update({
-              player_id: newPlayer.id,
+              player_id: mainPlayer.id,
               roles_extra: newExtras,
             }).eq('id', existingUser.id);
-            // Lien parent_player si pas déjà existant (utile si ce parent veut se voir comme parent de soi-même)
-            const already = parentLinks.some((l) => l.parent_id === existingUser.id && l.player_id === newPlayer.id);
-            if (!already) {
-              await supabase.from('parent_player').insert({ parent_id: existingUser.id, player_id: newPlayer.id });
+            for (const player of createdPlayers) {
+              const already = parentLinks.some((l) => l.parent_id === existingUser.id && l.player_id === player.id);
+              if (!already) await supabase.from('parent_player').insert({ parent_id: existingUser.id, player_id: player.id });
             }
             // S'assurer qu'un rôle 'player' existe dans user_roles si auth_id présent
             if (existingUser.auth_id) {
               const { data: existingRoles } = await supabase.from('user_roles').select('*').eq('auth_id', existingUser.auth_id);
               const hasPlayerRoleRow = (existingRoles || []).some((r: any) => r.role === 'player');
               if (!hasPlayerRoleRow) {
-                await supabase.from('user_roles').insert({ auth_id: existingUser.auth_id, role: 'player', ref_id: newPlayer.id }).then(() => {}, () => {});
+                await supabase.from('user_roles').insert({ auth_id: existingUser.auth_id, role: 'player', ref_id: mainPlayer.id }).then(() => {}, () => {});
               }
             }
           } else {
@@ -4097,11 +4141,14 @@ export default function App() {
                 email: reg.email,
                 role: 'player',
                 auth_id: authId,
-                player_id: newPlayer.id,
+                player_id: mainPlayer.id,
                 roles_extra: ['player'],
               }).select().single();
               if (ue || !newUser) throw ue;
-              await supabase.from('user_roles').insert({ auth_id: authId, role: 'player', ref_id: newPlayer.id });
+              await supabase.from('user_roles').insert({ auth_id: authId, role: 'player', ref_id: mainPlayer.id });
+              for (const player of createdPlayers) {
+                await supabase.from('parent_player').insert({ parent_id: newUser.id, player_id: player.id }).then(() => {}, () => {});
+              }
             } catch (e: any) {
               console.warn('Auth creation failed for direct registration', e);
               // On laisse le joueur exister même sans compte auth
@@ -4115,7 +4162,7 @@ export default function App() {
             body: {
               email: reg.email,
               playerName: `${reg.child1_first_name} ${reg.child1_last_name}`,
-              teamName: getTeamName(reg.child1_team_id || ''),
+              teamName: directTeamIds.map(getTeamName).join(', '),
               appUrl: appSettings.app_url,
             },
           }).catch(console.error);
@@ -4294,7 +4341,7 @@ export default function App() {
                         <div style={styles.roleText}>Créer un compte parent et lier votre/vos enfant(s) à votre espace.</div>
                       </button>
                       {directTeams.length > 0 && (
-                        <button onClick={() => { setRegStep('direct'); setRegDirectTeamId(directTeams[0]?.id || ''); setRegError(''); }}
+                        <button onClick={() => { const first = directTeams[0]?.id || ''; setRegStep('direct'); setRegDirectTeamId(first); setRegDirectTeamIds(first ? [first] : []); setRegError(''); }}
                           style={{ ...styles.roleButton, textAlign: 'left' }}>
                           <div style={styles.roleEmoji}>🏅</div>
                           <div style={styles.roleTitle}>Loisirs / Senior</div>
@@ -4351,11 +4398,18 @@ export default function App() {
                             <div><label style={styles.inputLabel}>Prénom</label><input value={regParentFirstName} onChange={(e) => setRegParentFirstName(e.target.value)} style={styles.input} placeholder="Prénom" /></div>
                             <div><label style={styles.inputLabel}>Date de naissance</label><input type="date" value={regDirectBirthDate} onChange={(e) => setRegDirectBirthDate(e.target.value)} style={styles.input} /></div>
                             <div>
-                              <label style={styles.inputLabel}>Catégorie *</label>
-                              <select value={regDirectTeamId} onChange={(e) => setRegDirectTeamId(e.target.value)} style={styles.select}>
-                                <option value="">-- Choisir la catégorie --</option>
-                                {(directTeams.length > 0 ? directTeams : teams).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                              </select>
+                              <label style={styles.inputLabel}>Catégories *</label>
+                              <div style={{ display: 'grid', gap: 8 }}>
+                                {(directTeams.length > 0 ? directTeams : teams).map((t) => {
+                                  const checked = regDirectTeamIds.includes(t.id) || (!regDirectTeamIds.length && regDirectTeamId === t.id);
+                                  return (
+                                    <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, border: `1.5px solid ${checked ? '#0A5FB5' : '#dbe4ef'}`, background: checked ? '#eaf4ff' : 'white', fontWeight: 800, color: '#10233b' }}>
+                                      <input type="checkbox" checked={checked} onChange={() => toggleDirectTeam(t.id)} style={{ accentColor: '#0A5FB5' }} />
+                                      {t.name}
+                                    </label>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -4518,14 +4572,19 @@ export default function App() {
                         <div><label style={styles.inputLabel}>Prénom *</label><input value={regDirectFirstName} onChange={(e) => setRegDirectFirstName(e.target.value)} style={styles.input} placeholder="Prénom" /></div>
                         <div><label style={styles.inputLabel}>Nom *</label><input value={regDirectLastName} onChange={(e) => setRegDirectLastName(e.target.value)} style={styles.input} placeholder="Nom" /></div>
                         <div style={{ gridColumn: '1/-1' }}>
-                          <label style={styles.inputLabel}>Équipe *</label>
-                          <div style={{ position: 'relative' }}>
-                            <select value={regDirectTeamId} onChange={(e) => setRegDirectTeamId(e.target.value)} style={styles.select}>
-                              <option value="">-- Choisir l'équipe --</option>
-                              {directTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                            </select>
-                            <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#5b6472' }}>▾</span>
+                          <label style={styles.inputLabel}>Catégories *</label>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+                            {directTeams.map((t) => {
+                              const checked = regDirectTeamIds.includes(t.id) || (!regDirectTeamIds.length && regDirectTeamId === t.id);
+                              return (
+                                <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, border: `2px solid ${checked ? '#0A5FB5' : '#dbe4ef'}`, background: checked ? '#eaf4ff' : 'white', fontWeight: 900, color: '#10233b' }}>
+                                  <input type="checkbox" checked={checked} onChange={() => toggleDirectTeam(t.id)} style={{ accentColor: '#0A5FB5' }} />
+                                  {t.name}
+                                </label>
+                              );
+                            })}
                           </div>
+                          <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: 12 }}>Tu peux cocher plusieurs catégories, par exemple Loisir et Senior masculin.</p>
                         </div>
                         <div style={{ gridColumn: '1/-1' }}>
                           <label style={styles.inputLabel}>Date de naissance</label>
@@ -6863,7 +6922,8 @@ export default function App() {
                         <div style={{ display: 'grid', gap: 12 }}>
                           {list.map((reg) => {
                             const childrenNames = [reg.child1_name, reg.child2_name].filter(Boolean).join(' et ');
-                            const teamName = reg.child1_team_id ? getTeamName(reg.child1_team_id) : '-';
+                            const directTeamIds = Array.isArray((reg as any).direct_team_ids) ? (reg as any).direct_team_ids.filter(Boolean) : [];
+                            const teamName = directTeamIds.length > 0 ? directTeamIds.map(getTeamName).join(', ') : (reg.child1_team_id ? getTeamName(reg.child1_team_id) : '-');
                             const date = new Date(reg.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
                             return (
                               <div key={reg.id} style={{ background: 'white', borderRadius: 14, padding: 16, border: `1px solid ${status === 'pending' ? '#fde047' : status === 'approved' ? '#86efac' : '#fca5a5'}` }}>
