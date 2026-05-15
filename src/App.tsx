@@ -582,6 +582,9 @@ export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [lastReadConvTimestamps, setLastReadConvTimestamps] = useState<Record<string, string>>({});
+  const [showNewMessagePopup, setShowNewMessagePopup] = useState(false);
+  const [newMessagePopupCount, setNewMessagePopupCount] = useState(0);
+  const messagePopupKeyRef = React.useRef('');
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const selectedConvIdRef = React.useRef<string | null>(null);
   React.useEffect(() => { selectedConvIdRef.current = selectedConvId; }, [selectedConvId]);
@@ -604,6 +607,52 @@ export default function App() {
   const [parentSelectedCoachTeamId, setParentSelectedCoachTeamId] = useState<string>('');
   const parentConvEnsuredRef = React.useRef<string>(''); // tracks last parentId for which conv was ensured
   const [realtimeSub, setRealtimeSub] = useState<any>(null);
+
+  function getMessageReadStorageKey() {
+    if (activeRole === 'parent') return `handlife_message_reads_parent_${selectedParentId || 'unknown'}`;
+    return `handlife_message_reads_coach_${isAdmin ? 'admin' : (connectedCoachId || 'unknown')}`;
+  }
+
+  function readStoredMessageReads() {
+    try {
+      const raw = window.localStorage.getItem(getMessageReadStorageKey());
+      return raw ? JSON.parse(raw) as Record<string, string> : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function updateMessageReadTimestamps(updater: (prev: Record<string, string>) => Record<string, string>) {
+    setLastReadConvTimestamps((prev) => {
+      const next = updater(prev);
+      try { window.localStorage.setItem(getMessageReadStorageKey(), JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
+
+  function markConversationsRead(convIds: string[]) {
+    if (convIds.length === 0) return;
+    const now = new Date().toISOString();
+    updateMessageReadTimestamps((prev) => {
+      const next = { ...prev };
+      convIds.forEach((id) => { next[id] = now; });
+      return next;
+    });
+  }
+
+  function getUnreadMessageConversations() {
+    return conversations.filter((conv) => {
+      const lastRead = lastReadConvTimestamps[conv.id];
+      if (!lastRead) return false;
+      return new Date(conv.updated_at).getTime() > new Date(lastRead).getTime();
+    });
+  }
+
+  function openMessagesPanel() {
+    if (activeRole === 'coach') setCoachTab('messages');
+    else setShowParentMessages(true);
+    setShowNewMessagePopup(false);
+  }
 
   // Admin — entraînement
   const [newTrainingTeamId, setNewTrainingTeamId] = useState('');
@@ -1174,6 +1223,27 @@ export default function App() {
     return () => clearInterval(interval);
   }, [loggedIn, activeRole, selectedParentId]);
 
+  useEffect(() => {
+    if (!loggedIn) return;
+    const stored = readStoredMessageReads();
+    conversations.forEach((c) => { if (!stored[c.id]) stored[c.id] = c.updated_at; });
+    setLastReadConvTimestamps(stored);
+    try { window.localStorage.setItem(getMessageReadStorageKey(), JSON.stringify(stored)); } catch {}
+    setShowNewMessagePopup(false);
+    messagePopupKeyRef.current = '';
+  }, [loggedIn, activeRole, selectedParentId, connectedCoachId, isAdmin]);
+
+  useEffect(() => {
+    if (!loggedIn || conversations.length === 0) return;
+    const unread = getUnreadMessageConversations();
+    if (unread.length === 0) return;
+    const popupKey = `${getMessageReadStorageKey()}::${unread.map((c) => `${c.id}-${c.updated_at}`).join('|')}`;
+    if (messagePopupKeyRef.current === popupKey) return;
+    messagePopupKeyRef.current = popupKey;
+    setNewMessagePopupCount(unread.length);
+    setShowNewMessagePopup(true);
+  }, [loggedIn, conversations, lastReadConvTimestamps, activeRole, selectedParentId, connectedCoachId, isAdmin]);
+
   // Les rappels email entraînement sont gérés par le cron Supabase (check-training-reminders)
   // Ne pas les déclencher depuis le front pour éviter les doublons
 
@@ -1205,13 +1275,13 @@ export default function App() {
         ensureParentConversation(selectedParentId);
       }
     }
-  }, [loggedIn, activeRole, isAdmin, allowedTeamIds, selectedParentId, teams]);
+  }, [loggedIn, activeRole, isAdmin, allowedTeamIds, selectedParentId, teams, connectedCoachId]);
 
   useEffect(() => {
     if (!selectedConvId) return;
     loadMessages(selectedConvId);
     // Mark this conversation as read now
-    setLastReadConvTimestamps((prev) => ({ ...prev, [selectedConvId]: new Date().toISOString() }));
+    markConversationsRead([selectedConvId]);
     const ch = supabase.channel('msgs-' + selectedConvId)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'conversation_id=eq.' + selectedConvId },
         (payload: any) => { setMessages((prev) => prev.find((m) => m.id === payload.new.id) ? prev : [...prev, payload.new as Message]); }
@@ -1234,7 +1304,7 @@ export default function App() {
           });
           // Si cette conv est ouverte, marquer comme lue
           if (selectedConvIdRef.current === payload.new.id) {
-            setLastReadConvTimestamps((prev) => ({ ...prev, [payload.new.id]: new Date().toISOString() }));
+            markConversationsRead([payload.new.id]);
           }
         }
       )
@@ -1247,7 +1317,7 @@ export default function App() {
           ));
           // Si cette conv est ouverte, marquer lue
           if (selectedConvIdRef.current === newMsg.conversation_id) {
-            setLastReadConvTimestamps((prev) => ({ ...prev, [newMsg.conversation_id]: new Date().toISOString() }));
+            markConversationsRead([newMsg.conversation_id]);
           }
         }
       )
@@ -2635,7 +2705,7 @@ export default function App() {
     setConversations(list);
     // Init lastRead = updated_at de la conv pour les NOUVELLES convs (jamais vues).
     // Tout nouveau message remontera updated_at au-dessus → pastille.
-    setLastReadConvTimestamps((prev) => {
+    updateMessageReadTimestamps((prev) => {
       const next = { ...prev };
       list.forEach((c) => { if (!next[c.id]) next[c.id] = c.updated_at; });
       return next;
@@ -2660,7 +2730,7 @@ export default function App() {
     merged.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     setConversations(merged);
     // Init lastRead = updated_at de la conv pour les NOUVELLES convs (jamais vues)
-    setLastReadConvTimestamps((prev) => {
+    updateMessageReadTimestamps((prev) => {
       const next = { ...prev };
       merged.forEach((c) => { if (!next[c.id]) next[c.id] = c.updated_at; });
       return next;
@@ -2699,7 +2769,7 @@ export default function App() {
     setConversations((prev) => prev.filter((c) => c.id !== convId));
     if (selectedConvId === convId) { setSelectedConvId(null); setMessages([]); }
     if (parentConvId === convId) { setParentConvId(null); }
-    setLastReadConvTimestamps((prev) => { const n = { ...prev }; delete n[convId]; return n; });
+    updateMessageReadTimestamps((prev) => { const n = { ...prev }; delete n[convId]; return n; });
   }
 
   async function sendMessage(convId: string, senderType: 'coach' | 'parent', senderId: string) {
@@ -2711,7 +2781,7 @@ export default function App() {
       await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', convId);
       setNewMessage('');
       // Mark this conversation as read immediately after sending
-      setLastReadConvTimestamps((prev) => ({ ...prev, [convId]: new Date().toISOString() }));
+      markConversationsRead([convId]);
       await loadMessages(convId);
       if (senderType === 'coach') {
         const tids = isAdmin ? teams.map((t) => t.id) : allowedTeamIds;
@@ -4372,24 +4442,9 @@ export default function App() {
               })()}
               {/* Message icon with badge */}
               {(() => {
-                const unreadCount = conversations.filter((conv) => {
-                  const lastRead = lastReadConvTimestamps[conv.id];
-                  if (!lastRead) return false;
-                  return new Date(conv.updated_at) > new Date(lastRead);
-                }).length;
+                const unreadCount = getUnreadMessageConversations().length;
                 return (
-                  <button onClick={() => {
-                    if (activeRole === 'coach') {
-                      setCoachTab('messages');
-                    } else {
-                      setShowParentMessages(true);
-                    }
-                    setLastReadConvTimestamps((prev) => {
-                      const next = { ...prev };
-                      conversations.forEach((c) => { next[c.id] = new Date().toISOString(); });
-                      return next;
-                    });
-                  }} style={{ position: 'relative', padding: '10px 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: 18 }} title="Messages">
+                  <button onClick={openMessagesPanel} style={{ position: 'relative', padding: '10px 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: 18 }} title="Messages">
                     💬
                     {unreadCount > 0 && (
                       <span style={{ position: 'absolute', top: 2, right: 2, background: '#dc2626', color: 'white', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px', minWidth: 16, textAlign: 'center', lineHeight: '14px', display: 'block' }}>
@@ -4404,6 +4459,21 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {showNewMessagePopup && (
+          <div style={{ marginBottom: 16, padding: 16, borderRadius: 18, background: '#eff6ff', border: '1px solid #93c5fd', boxShadow: '0 12px 28px rgba(10,95,181,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 900, color: '#0A5FB5', fontSize: 16 }}>Nouveau message disponible</div>
+              <div style={{ color: '#475569', fontSize: 13, marginTop: 3 }}>
+                {newMessagePopupCount} conversation{newMessagePopupCount > 1 ? 's' : ''} avec un nouveau message.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button onClick={openMessagesPanel} style={{ ...styles.primaryButton, padding: '10px 14px' }}>Ouvrir</button>
+              <button onClick={() => setShowNewMessagePopup(false)} style={{ ...styles.secondaryOutlineButton, padding: '10px 14px' }}>Plus tard</button>
+            </div>
+          </div>
+        )}
 
         {showCalendar && (
           <Calendar
@@ -4460,12 +4530,7 @@ export default function App() {
                 // Badges de notification
                 let badgeCount = 0;
                 if (tab === 'messages') {
-                  // Only count conversations where a PARENT sent a message after last read
-                  badgeCount = conversations.filter((conv) => {
-                    const lastRead = lastReadConvTimestamps[conv.id];
-                    if (!lastRead) return false; // Never opened = no badge until first visit
-                    return new Date(conv.updated_at) > new Date(lastRead);
-                  }).length;
+                  badgeCount = getUnreadMessageConversations().length;
                 } else if (tab === 'licenses' && isAdmin) {
                   // Licences 'paid' en attente de validation
                   const myPlayerIds = players.map((p) => p.id);
@@ -4477,15 +4542,7 @@ export default function App() {
                   <button key={tab} onClick={() => {
                     setCoachTab(tab);
                     if (tab === 'events' || tab === 'polls') setAdminSubTab(tab);
-                    if (tab === 'messages') {
-                      // Marquer toutes les conversations comme lues
-                      const now = new Date().toISOString();
-                      setLastReadConvTimestamps((prev) => {
-                        const next = { ...prev };
-                        conversations.forEach((c) => { next[c.id] = now; });
-                        return next;
-                      });
-                    }
+                    if (tab === 'messages') setShowNewMessagePopup(false);
                   }}
                     style={{ ...styles.menuButton, ...(coachTab === tab ? styles.menuButtonActive : {}), position: 'relative' }}>
                     {labels[tab]}
@@ -5441,7 +5498,7 @@ export default function App() {
                       return (
                         <div key={conv.id} onClick={() => {
                           setSelectedConvId(conv.id);
-                          setLastReadConvTimestamps((prev) => ({ ...prev, [conv.id]: new Date().toISOString() }));
+                          markConversationsRead([conv.id]);
                         }}
                           style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderRadius: 16, border: hasUnread ? '2px solid #0A5FB5' : '1px solid #d8e5f2', background: hasUnread ? '#eaf4ff' : '#f8fbff', cursor: 'pointer', transition: 'box-shadow 0.15s', position: 'relative' }}
                           onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(10,95,181,0.12)')}
@@ -6858,14 +6915,7 @@ export default function App() {
                 const visiblePolls = getPollsVisibleFor([...new Set(myTeamIds)]);
                 if (visiblePolls.length > 0) tabs.push({ key: 'polls', label: '📊 Sondages' });
                 return tabs.map(({ key: tab, label }) => {
-                  const convId = parentConvId;
-                  const hasUnread = tab === 'home' && convId && (() => {
-                    const conv = conversations.find((c) => c.id === convId);
-                    if (!conv) return false;
-                    const lastRead = lastReadConvTimestamps[convId];
-                    if (!lastRead) return true;
-                    return new Date(conv.updated_at) > new Date(lastRead);
-                  })();
+                  const hasUnread = tab === 'home' && getUnreadMessageConversations().length > 0;
                   // Pastille sondages : nb sondages où je n'ai pas voté
                   const pollBadge = tab === 'polls' && (() => {
                     const playerId = linkedPlayerId;
@@ -7818,7 +7868,7 @@ export default function App() {
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               {/* Canal de groupe */}
                               {groupConv ? (
-                                <button onClick={() => { setSelectedConvId(groupConv.id); setLastReadConvTimestamps((p) => ({ ...p, [groupConv.id]: new Date().toISOString() })); loadMessages(groupConv.id); }}
+                                <button onClick={() => { setSelectedConvId(groupConv.id); markConversationsRead([groupConv.id]); loadMessages(groupConv.id); }}
                                   style={{ padding: '7px 14px', borderRadius: 10, border: '1px solid #93c5fd', background: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', color: '#1e40af' }}>
                                   👥 Canal {team.name}
                                 </button>
@@ -7837,7 +7887,7 @@ export default function App() {
                                       if (alreadyExists) {
                                         setSelectedConvId(alreadyExists.id);
                                         setParentConvId(alreadyExists.id);
-                                        setLastReadConvTimestamps((p) => ({ ...p, [alreadyExists.id]: new Date().toISOString() }));
+                                        markConversationsRead([alreadyExists.id]);
                                         loadMessages(alreadyExists.id);
                                       } else {
                                         // Check DB for existing conv with this title
@@ -7845,7 +7895,7 @@ export default function App() {
                                           .eq('parent_id', selectedParentId).eq('team_id', tid).eq('is_group', false).eq('title', coachName).maybeSingle();
                                         if (ex) {
                                           setSelectedConvId(ex.id); setParentConvId(ex.id);
-                                          setLastReadConvTimestamps((p) => ({ ...p, [ex.id]: new Date().toISOString() }));
+                                          markConversationsRead([ex.id]);
                                           loadMessages(ex.id);
                                         } else {
                                           // Create new conv with title = coachName
@@ -7897,7 +7947,7 @@ export default function App() {
                       }
                       return (
                         <div key={conv.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: hasUnread ? '2px solid #0A5FB5' : '1px solid #d8e5f2', background: hasUnread ? '#eaf4ff' : '#f8fbff', cursor: 'pointer', position: 'relative' }}
-                          onClick={() => { setSelectedConvId(conv.id); setLastReadConvTimestamps((p) => ({ ...p, [conv.id]: new Date().toISOString() })); loadMessages(conv.id); }}>
+                          onClick={() => { setSelectedConvId(conv.id); markConversationsRead([conv.id]); loadMessages(conv.id); }}>
                           {hasUnread && <span style={{ position: 'absolute', top: 8, right: 48, background: '#dc2626', borderRadius: '50%', width: 8, height: 8, display: 'block' }} />}
                           <div style={{ width: 40, height: 40, borderRadius: '50%', background: conv.is_group ? '#fde68a' : '#0A5FB5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: conv.is_group ? '#92400e' : 'white', flexShrink: 0 }}>{icon}</div>
                           <div style={{ flex: 1, minWidth: 0 }}>
