@@ -720,6 +720,7 @@ export default function App() {
   const [playerFormPosition, setPlayerFormPosition] = useState<string>('');
   const [playerFormGender, setPlayerFormGender] = useState<'male' | 'female' | ''>('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [playerSearch, setPlayerSearch] = useState('');
   const [jerseyEditId, setJerseyEditId] = useState<string | null>(null);
   const [jerseyEditValue, setJerseyEditValue] = useState('');
   const [connectedCoachId, setConnectedCoachId] = useState<string | null>(null);
@@ -5835,9 +5836,36 @@ export default function App() {
                 </div>
 
                 <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
-                  {visiblePlayers.length === 0
-                    ? <div style={styles.emptyState}>Aucun joueur.</div>
-                    : visiblePlayers.map((player) => {
+                  <div style={{ ...styles.panelCard, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: '#f8fbff', border: '1px solid #d8e5f2' }}>
+                    <div style={{ flex: 1, minWidth: 220 }}>
+                      <label style={styles.inputLabel}>Rechercher un joueur</label>
+                      <input
+                        value={playerSearch}
+                        onChange={(e) => setPlayerSearch(e.target.value)}
+                        style={styles.input}
+                        placeholder="Nom, prénom, équipe, numéro..."
+                      />
+                    </div>
+                    {playerSearch.trim() && (
+                      <button onClick={() => setPlayerSearch('')} style={{ ...styles.secondaryOutlineButton, marginTop: 22 }}>Effacer</button>
+                    )}
+                  </div>
+                  {(() => {
+                    const query = playerSearch.trim().toLowerCase();
+                    const filteredPlayers = !query ? visiblePlayers : visiblePlayers.filter((player) => {
+                      const haystack = [
+                        getPlayerName(player),
+                        player.first_name,
+                        player.last_name,
+                        getTeamName(player.team_id),
+                        getTeamCategory(player.team_id),
+                        player.jersey_number != null ? String(player.jersey_number) : '',
+                      ].join(' ').toLowerCase();
+                      return haystack.includes(query);
+                    });
+                    if (visiblePlayers.length === 0) return <div style={styles.emptyState}>Aucun joueur.</div>;
+                    if (filteredPlayers.length === 0) return <div style={styles.emptyState}>Aucun joueur trouvé pour “{playerSearch}”.</div>;
+                    return filteredPlayers.map((player) => {
                       const linkedParents = getLinkedParentsForPlayer(player.id);
                       return (
                         <div key={player.id} style={styles.teamCard}>
@@ -5870,7 +5898,8 @@ export default function App() {
                           )}
                         </div>
                       );
-                    })}
+                    });
+                  })()}
                 </div>
               </div>
             )}
@@ -8324,6 +8353,7 @@ export default function App() {
                                       <div style={{ ...styles.attendanceRow, marginTop: 10, marginBottom: 0 }}>
                                         <span>Présents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans réponse : {counts.pending}</span>
                                       </div>
+                                      {renderEventVoters(ev.id)}
                                     </div>
                                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                       <button onClick={() => saveEventAttendance(ev.id, child.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>Présent</button>
