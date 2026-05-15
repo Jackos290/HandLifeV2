@@ -1349,11 +1349,19 @@ export default function App() {
 
   useEffect(() => {
     if (visibleMatches.length > 0 && !selectedMatchId) {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const next = visibleMatches.find((m) => new Date(m.match_date) >= today) || visibleMatches[visibleMatches.length - 1];
-      setSelectedMatchId(next.id);
+      const next = getPreferredUpcomingMatch(visibleMatches);
+      if (next) setSelectedMatchId(next.id);
     }
   }, [visibleMatches]);
+
+  useEffect(() => {
+    if (activeRole !== 'coach' || coachTab !== 'matches' || matchSubTab !== 'convocation') return;
+    const candidates = selectedCoachTeamId ? visibleMatches.filter((m) => m.team_id === selectedCoachTeamId) : visibleMatches;
+    const next = getPreferredUpcomingMatch(candidates);
+    if (next) {
+      setSelectedMatchId(next.id);
+    }
+  }, [activeRole, coachTab, matchSubTab, selectedCoachTeamId, visibleMatches]);
 
   useEffect(() => {
     if (!selectedTrainingTemplateId) return;
@@ -2179,6 +2187,13 @@ export default function App() {
     }
     return { present, absent, unknown, total: tp.length };
   }
+  function getPreferredUpcomingMatch(matchList: MatchItem[]) {
+    if (matchList.length === 0) return null;
+    const now = new Date();
+    const future = [...matchList].filter((m) => new Date(m.match_date) >= now).sort((a, b) => a.match_date.localeCompare(b.match_date));
+    if (future.length > 0) return future[0];
+    return [...matchList].sort((a, b) => b.match_date.localeCompare(a.match_date))[0];
+  }
   function getMatchAttendanceStatus(matchId: string, playerId: string) {
     return matchAttendance.find((a) => a.match_id === matchId && a.player_id === playerId)?.status || 'unknown';
   }
@@ -2190,6 +2205,54 @@ export default function App() {
       if (s === 'present') present++; else if (s === 'absent') absent++; else unknown++;
     }
     return { present, absent, unknown, total: tp.length };
+  }
+  function renderMatchPresenceOverview(match: MatchItem) {
+    const squadIds = getSquadForMatch(match.id);
+    const squadDefined = isSquadDefined(match.id);
+    const displayPlayers = squadDefined
+      ? squadIds.map((id) => players.find((p) => p.id === id)).filter(Boolean) as Player[]
+      : getPlayersForTeam(match.team_id || '');
+    const groups = [
+      { key: 'present', label: 'Présents', bg: '#dcfce7', color: '#166534', list: displayPlayers.filter((p) => getMatchAttendanceStatus(match.id, p.id) === 'present') },
+      { key: 'absent', label: 'Absents', bg: '#fee2e2', color: '#991b1b', list: displayPlayers.filter((p) => getMatchAttendanceStatus(match.id, p.id) === 'absent') },
+      { key: 'unknown', label: 'Sans réponse', bg: '#f1f5f9', color: '#475569', list: displayPlayers.filter((p) => getMatchAttendanceStatus(match.id, p.id) === 'unknown') },
+      { key: 'squad', label: 'Convoqués', bg: '#dbeafe', color: '#1e40af', list: squadDefined ? displayPlayers : [] },
+    ];
+    return (
+      <div style={{ ...styles.panelCard, marginBottom: 20, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
+        <h4 style={{ margin: '0 0 12px 0', color: '#1e40af' }}>Présences du match</h4>
+        {!squadDefined && (
+          <div style={{ marginBottom: 10, padding: '8px 10px', borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: 12, fontWeight: 700 }}>
+            Convocation pas encore définie : la liste affiche les joueurs de l'équipe.
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10 }}>
+          {groups.map((group) => (
+            <div key={group.key} style={{ padding: 12, borderRadius: 14, background: group.bg, border: `1px solid ${group.color}22`, minHeight: 92 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 900, color: group.color }}>{group.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: group.color }}>{group.list.length}</span>
+              </div>
+              {group.list.length === 0 ? (
+                <div style={{ fontSize: 12, color: group.color, opacity: 0.72, fontStyle: 'italic' }}>Aucun joueur</div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {group.list.sort((a, b) => getPlayerName(a).localeCompare(getPlayerName(b), 'fr')).map((player) => {
+                    const isGuest = player.team_id !== match.team_id;
+                    const guestTeam = isGuest ? teams.find((t) => t.id === player.team_id) : null;
+                    return (
+                      <span key={player.id} title={guestTeam?.name || undefined} style={{ padding: '4px 9px', borderRadius: 999, background: 'white', color: group.color, fontSize: 12, fontWeight: 800, border: `1px solid ${group.color}33` }}>
+                        {getPlayerName(player)}{isGuest && guestTeam ? ` (${guestTeam.name})` : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
   function getLinkedParentsForPlayer(playerId: string) {
     const ids = parentLinks.filter((l) => l.player_id === playerId).map((l) => l.parent_id);
@@ -3758,7 +3821,9 @@ export default function App() {
   const selectedCoachTemplate = visibleTemplates.find((t) => t.id === selectedTrainingTemplateId) || null;
   const coachTemplateDates = selectedCoachTemplate ? getNextDatesForWeekday(selectedCoachTemplate.weekday, 8) : [];
   const coachTeamPlayers = selectedCoachTeamId ? getPlayersForTeam(selectedCoachTeamId).filter((p) => visibleTeams.some((vt) => vt.id === p.team_id)) : visiblePlayers;
-  const coachMatches = selectedCoachTeamId ? visibleMatches.filter((m) => m.team_id === selectedCoachTeamId) : visibleMatches;
+  const coachMatches = (selectedCoachTeamId ? visibleMatches.filter((m) => m.team_id === selectedCoachTeamId) : visibleMatches)
+    .slice()
+    .sort((a, b) => a.match_date.localeCompare(b.match_date));
   const coachPlanningMatches = visibleMatches.filter((m) => visibleTeams.some((t) => t.id === m.team_id));
   const coachTemplates = selectedCoachTeamId ? visibleTemplates.filter((t) => t.team_id === selectedCoachTeamId) : visibleTemplates;
   const eventPollTeams = isAdmin ? teams : visibleTeams;
@@ -3776,7 +3841,7 @@ export default function App() {
     if (nextTemplate) {
       setSelectedTrainingDate(getNextDatesForWeekday(nextTemplate.weekday, 1)[0] || '');
     }
-    const nextMatch = visibleMatches.find((m) => m.team_id === teamId);
+    const nextMatch = getPreferredUpcomingMatch(visibleMatches.filter((m) => m.team_id === teamId));
     setSelectedMatchId(nextMatch?.id || '');
   }
 
@@ -4753,7 +4818,7 @@ export default function App() {
                     <div style={styles.formGrid}>
                       <div>
                         <label style={styles.inputLabel}>Équipe</label>
-                        <select value={selectedCoachTeamId} onChange={(e) => setSelectedCoachTeamId(e.target.value)} style={styles.select}>
+                        <select value={selectedCoachTeamId} onChange={(e) => chooseCoachTeam(e.target.value)} style={styles.select}>
                           {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                       </div>
@@ -4803,6 +4868,8 @@ export default function App() {
                               </button>
                             </div>
                           </div>
+
+                          {renderMatchPresenceOverview(selectedMatch)}
 
                           {/* Convocation */}
                           <div style={{ ...styles.panelCard, marginBottom: 20, background: '#f0f7ff' }}>
