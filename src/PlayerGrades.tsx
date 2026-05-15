@@ -469,7 +469,7 @@ export function FullScreenCard({ cards, initialIndex, onClose, clubLogo }: FullS
         position: 'fixed', inset: 0, zIndex: 9999,
         background: 'rgba(0,0,0,0.85)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16,
+        padding: '64px 14px 18px',
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
       }}
@@ -526,7 +526,9 @@ export function FullScreenCard({ cards, initialIndex, onClose, clubLogo }: FullS
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         style={{
-          width: '100%', maxWidth: 340,
+          width: 'min(100%, 340px)',
+          maxHeight: 'calc(100vh - 88px)',
+          overflowY: 'auto',
           transform: `translateX(${dragOffset}px) rotate(${dragOffset * 0.02}deg)`,
           transition: draggingRef.current ? 'none' : 'transform 0.25s ease',
           touchAction: 'pan-y',
@@ -574,12 +576,12 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
     <div style={{
       position: 'relative',
       width: '100%',
-      aspectRatio: '3 / 4.4',
+      minHeight: 0,
       borderRadius: 24,
       background: cardBg,
       boxShadow: '0 12px 50px rgba(217,119,6,0.5), 0 8px 24px rgba(0,0,0,0.4)',
       border: isMyChild ? '4px solid #0A5FB5' : '3px solid #b7791f',
-      padding: '20px 18px 22px',
+      padding: '16px 16px 18px',
       display: 'flex', flexDirection: 'column',
       overflow: 'hidden',
     }}>
@@ -602,7 +604,7 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
 
       {/* HEADER : Niveau + Position + Logo */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 122 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 96 }}>
           {hideStats ? (
             <div style={{ fontSize: 56, fontWeight: 900, color: textColor, lineHeight: 1, opacity: 0.35 }}>—</div>
           ) : (
@@ -619,7 +621,7 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
           }}>{positionLabel}</div>
           {clubLogo && (
             <img src={clubLogo} alt="" style={{
-              width: 136, height: 136, borderRadius: '50%', marginTop: 12,
+              width: 112, height: 112, borderRadius: '50%', marginTop: 10,
               objectFit: 'cover', border: `2px solid ${textColor === 'white' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)'}`,
               background: 'white',
               boxShadow: '0 5px 16px rgba(0,0,0,0.28)',
@@ -630,14 +632,14 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
           {p.photo_url ? (
             <img src={p.photo_url} alt={`${p.first_name} ${p.last_name}`} style={{
-              width: '100%', maxWidth: 200, aspectRatio: '1 / 1', objectFit: 'cover',
+              width: '100%', maxWidth: 178, aspectRatio: '1 / 1', objectFit: 'cover',
               objectPosition: 'top center',
               borderRadius: 14,
               boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
             }} />
           ) : (
             <div style={{
-              width: 180, height: 180, borderRadius: 14,
+              width: 168, height: 168, borderRadius: 14,
               background: 'linear-gradient(135deg,#0A5FB5,#062C5D)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 60, fontWeight: 900, color: 'white',
@@ -653,7 +655,7 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
 
       {/* NOM */}
       <div style={{
-        textAlign: 'center', marginTop: 16, paddingBottom: 12,
+        textAlign: 'center', marginTop: 12, paddingBottom: 10,
         borderBottom: `1.5px solid ${borderColor}`,
         position: 'relative', zIndex: 2,
       }}>
@@ -666,7 +668,7 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
       </div>
 
       {/* STATS */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 12, position: 'relative', zIndex: 2 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10, position: 'relative', zIndex: 2 }}>
         {hideStats ? (
           <PrivateStatsPanel player={p} textColor={textColor} subtleText={subtleText} />
         ) : (
