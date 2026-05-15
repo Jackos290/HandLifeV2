@@ -118,6 +118,25 @@ type TrainingAttendance = {
   status: 'present' | 'absent' | 'unknown';
 };
 
+type TrainingCancellation = {
+  id: string;
+  training_template_id: string;
+  training_date: string;
+  reason: string | null;
+  cancelled_by: string | null;
+  created_at: string;
+};
+
+type TrainingBreak = {
+  id: string;
+  team_id: string | null;
+  title: string;
+  start_date: string;
+  end_date: string;
+  reason: string | null;
+  created_at: string;
+};
+
 type UpcomingTraining = {
   templateId: string;
   teamId: string;
@@ -127,6 +146,8 @@ type UpcomingTraining = {
   endTime: string;
   location: string;
   date: string;
+  cancelled?: boolean;
+  cancellationReason?: string | null;
 };
 
 // CoachTab — 'admin' seulement visible pour isAdmin
@@ -511,6 +532,8 @@ export default function App() {
   const [parentLinks, setParentLinks] = useState<ParentPlayerLink[]>([]);
   const [trainingTemplates, setTrainingTemplates] = useState<TrainingTemplate[]>([]);
   const [trainingAttendance, setTrainingAttendance] = useState<TrainingAttendance[]>([]);
+  const [trainingCancellations, setTrainingCancellations] = useState<TrainingCancellation[]>([]);
+  const [trainingBreaks, setTrainingBreaks] = useState<TrainingBreak[]>([]);
   const [coachAccessList, setCoachAccessList] = useState<CoachAccess[]>([]);
 
   // ── Auth ──
@@ -610,6 +633,7 @@ export default function App() {
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [sendingTrainingReminder, setSendingTrainingReminder] = useState<string>(''); // key = templateId-date
+  const [cancelingTrainingKey, setCancelingTrainingKey] = useState('');
   const [showNewConvForm, setShowNewConvForm] = useState(false);
   const [newConvParentId, setNewConvParentId] = useState('');
   const [newConvTeamId, setNewConvTeamId] = useState('');
@@ -672,6 +696,11 @@ export default function App() {
   const [newTrainingStart, setNewTrainingStart] = useState('18:30');
   const [newTrainingEnd, setNewTrainingEnd] = useState('20:00');
   const [newTrainingLocation, setNewTrainingLocation] = useState('Gymnase de Gorcy');
+  const [newBreakTeamId, setNewBreakTeamId] = useState('');
+  const [newBreakTitle, setNewBreakTitle] = useState('Vacances');
+  const [newBreakStart, setNewBreakStart] = useState('');
+  const [newBreakEnd, setNewBreakEnd] = useState('');
+  const [newBreakReason, setNewBreakReason] = useState('');
 
   // Admin — match
   const [newMatchTeamId, setNewMatchTeamId] = useState('');
@@ -1015,6 +1044,13 @@ export default function App() {
     const { data: evAtt } = await supabase.from('event_attendance').select('*');
     if (evAtt) setEventAttendance(evAtt as EventAttendance[]);
 
+    try {
+      const { data: tcData } = await supabase.from('training_cancellations').select('*').order('training_date', { ascending: true });
+      if (tcData) setTrainingCancellations(tcData as TrainingCancellation[]);
+      const { data: tbData } = await supabase.from('training_breaks').select('*').order('start_date', { ascending: true });
+      if (tbData) setTrainingBreaks(tbData as TrainingBreak[]);
+    } catch (e) { console.warn('Training cancellations/breaks load failed (table missing?)', e); }
+
     // Load sponsors
     const { data: spData } = await supabase.from('sponsors').select('*').eq('active', true).order('display_order');
     if (spData) setSponsors(spData as Sponsor[]);
@@ -1271,6 +1307,10 @@ export default function App() {
         () => { loadDataSilent(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'training_attendance' },
         () => { loadDataSilent(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'training_cancellations' },
+        () => { loadDataSilent(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'training_breaks' },
+        () => { loadDataSilent(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_squads' },
         () => { loadDataSilent(); })
       .subscribe();
@@ -1358,7 +1398,7 @@ export default function App() {
   useEffect(() => {
     if (visibleTemplates.length > 0 && !selectedTrainingTemplateId) {
       setSelectedTrainingTemplateId(visibleTemplates[0].id);
-      setSelectedTrainingDate(getNextDatesForWeekday(visibleTemplates[0].weekday, 1)[0] || '');
+      setSelectedTrainingDate(getNextTrainingsForTemplate(visibleTemplates[0], 1, true)[0]?.date || '');
     }
   }, [visibleTemplates]);
 
@@ -1381,7 +1421,7 @@ export default function App() {
   useEffect(() => {
     if (!selectedTrainingTemplateId) return;
     const t = trainingTemplates.find((x) => x.id === selectedTrainingTemplateId);
-    if (t) setSelectedTrainingDate(getNextDatesForWeekday(t.weekday, 1)[0] || '');
+    if (t) setSelectedTrainingDate(getNextTrainingsForTemplate(t, 1, true)[0]?.date || '');
   }, [selectedTrainingTemplateId]);
 
   useEffect(() => {
@@ -1403,7 +1443,7 @@ export default function App() {
     // Refresh sans flash — ne passe pas loading à true
     const [
       teamsRes, playersRes, matchesRes, matchAttRes, statsRes,
-      usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes,
+      usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes,
     ] = await Promise.all([
       supabase.from('teams').select('*').order('name', { ascending: true }),
       supabase.from('players').select('*').order('last_name', { ascending: true }),
@@ -1418,6 +1458,8 @@ export default function App() {
       supabase.from('coaches').select('id, code, first_name, last_name, photo_url'),
       supabase.from('coach_teams').select('*'),
       supabase.from('match_squads').select('*'),
+      supabase.from('training_cancellations').select('*').order('training_date', { ascending: true }),
+      supabase.from('training_breaks').select('*').order('start_date', { ascending: true }),
     ]);
     setTeams(teamsRes.data || []);
     setPlayers(playersRes.data || []);
@@ -1429,6 +1471,8 @@ export default function App() {
     setParentLinks(linksRes.data || []);
     setTrainingTemplates(templatesRes.data || []);
     setTrainingAttendance(attendanceRes.data || []);
+    setTrainingCancellations(trainingCancelRes.data || []);
+    setTrainingBreaks(trainingBreakRes.data || []);
     const squads = squadsRes.data || [];
     const squadMap: Record<string, string[]> = {};
     const initializedMap: Record<string, boolean> = {};
@@ -1460,7 +1504,7 @@ export default function App() {
     try {
     const [
       teamsRes, playersRes, matchesRes, matchAttRes, statsRes,
-      usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes,
+      usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes,
     ] = await Promise.all([
       supabase.from('teams').select('*').order('name', { ascending: true }),
       supabase.from('players').select('*').order('last_name', { ascending: true }),
@@ -1475,6 +1519,8 @@ export default function App() {
       supabase.from('coaches').select('id, code, first_name, last_name, photo_url'),
       supabase.from('coach_teams').select('*'),
       supabase.from('match_squads').select('*'),
+      supabase.from('training_cancellations').select('*').order('training_date', { ascending: true }),
+      supabase.from('training_breaks').select('*').order('start_date', { ascending: true }),
     ]);
 
     setTeams(teamsRes.data || []);
@@ -1487,6 +1533,8 @@ export default function App() {
     setParentLinks(linksRes.data || []);
     setTrainingTemplates(templatesRes.data || []);
     setTrainingAttendance(attendanceRes.data || []);
+    setTrainingCancellations(trainingCancelRes.data || []);
+    setTrainingBreaks(trainingBreakRes.data || []);
 
     // Reconstituer matchSquad + squadInitialized depuis match_squads
     const squads = squadsRes.data || [];
@@ -2197,6 +2245,38 @@ export default function App() {
     }
     return result;
   }
+  function getTrainingCancellation(templateId: string, date: string) {
+    return trainingCancellations.find((c) => c.training_template_id === templateId && c.training_date === date) || null;
+  }
+  function isTrainingInBreak(template: TrainingTemplate, date: string) {
+    return trainingBreaks.some((b) => {
+      const appliesToTeam = !b.team_id || b.team_id === template.team_id;
+      return appliesToTeam && date >= b.start_date && date <= b.end_date;
+    });
+  }
+  function getNextTrainingsForTemplate(template: TrainingTemplate, count = 6, includeCancelled = true): UpcomingTraining[] {
+    const result: UpcomingTraining[] = [];
+    const dates = getNextDatesForWeekday(template.weekday, Math.max(count * 4, 12));
+    for (const date of dates) {
+      if (isTrainingInBreak(template, date)) continue;
+      const cancellation = getTrainingCancellation(template.id, date);
+      if (cancellation && !includeCancelled) continue;
+      result.push({
+        templateId: template.id,
+        teamId: template.team_id,
+        title: template.title,
+        weekday: template.weekday,
+        startTime: template.start_time,
+        endTime: template.end_time,
+        location: template.location,
+        date,
+        cancelled: !!cancellation,
+        cancellationReason: cancellation?.reason || null,
+      });
+      if (result.length >= count) break;
+    }
+    return result;
+  }
   function isFutureOrToday(date: string) {
     if (!date) return false;
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -2539,6 +2619,104 @@ export default function App() {
     } finally {
       setSendingTrainingReminder('');
     }
+  }
+
+  function getTrainingParentRecipients(teamId: string) {
+    const teamPlayers = players.filter((p) => p.team_id === teamId);
+    const allParentIds = new Set<string>();
+    teamPlayers.forEach((p) => {
+      parentLinks.filter((l) => l.player_id === p.id).forEach((l) => allParentIds.add(l.parent_id));
+    });
+    return users.filter((u) => u.role === 'parent' && allParentIds.has(u.id) && u.email);
+  }
+
+  async function cancelTraining(template: TrainingTemplate, date: string) {
+    const existing = getTrainingCancellation(template.id, date);
+    if (existing) {
+      if (!window.confirm(`Remettre l'entraînement du ${formatDate(date)} comme prévu ?`)) return;
+      const { error } = await supabase.from('training_cancellations').delete().eq('id', existing.id);
+      if (error) { alert("Erreur lors de la remise au planning"); return; }
+      await loadData();
+      return;
+    }
+    const reason = window.prompt(`Raison de l'annulation du ${formatDate(date)} (optionnel)`, '');
+    if (reason === null) return;
+    if (!window.confirm(`Annuler l'entraînement ${template.title || 'Entraînement'} du ${formatDate(date)} et prévenir les parents par email ?`)) return;
+    const key = `${template.id}-${date}`;
+    setCancelingTrainingKey(key);
+    try {
+      const { error } = await supabase.from('training_cancellations').upsert({
+        training_template_id: template.id,
+        training_date: date,
+        reason: reason.trim() || null,
+        cancelled_by: connectedCoachId || (isAdmin ? 'admin' : null),
+      }, { onConflict: 'training_template_id,training_date' });
+      if (error) throw error;
+
+      const recipients = getTrainingParentRecipients(template.team_id);
+      if (recipients.length > 0) {
+        const body = {
+          recipients: recipients.map((u) => ({
+            email: u.email,
+            name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+          })),
+          training: {
+            title: template.title || 'Entraînement',
+            date,
+            startTime: template.start_time,
+            endTime: template.end_time,
+            location: template.location || '',
+            teamName: getTeamName(template.team_id),
+            reason: reason.trim() || '',
+          },
+          reminderType: 'cancelled',
+          appUrl: appSettings.app_url,
+        };
+        const { error: mailError } = await supabase.functions.invoke('send-training-cancellation', { body });
+        if (mailError) {
+          await Promise.all(recipients.map((u) => supabase.functions.invoke('send-message-notification', {
+            body: {
+              recipientEmail: u.email,
+              recipientName: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+              senderName: 'Le Staff CA Gorcy',
+              message: `Entraînement annulé : ${template.title || 'Entraînement'} du ${formatDate(date)} (${template.start_time}-${template.end_time}) à ${template.location || '-'}.${reason.trim() ? ` Raison : ${reason.trim()}` : ''}`,
+              appUrl: appSettings.app_url,
+            },
+          }).catch(console.error)));
+        }
+      }
+
+      await loadData();
+      alert(`✅ Entraînement annulé${recipients.length > 0 ? `, email envoyé à ${recipients.length} parent(s).` : '. Aucun parent avec email trouvé.'}`);
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors de l'annulation de l'entraînement.");
+    } finally {
+      setCancelingTrainingKey('');
+    }
+  }
+
+  async function addTrainingBreak() {
+    if (!newBreakTitle.trim() || !newBreakStart || !newBreakEnd) { alert('Titre, début et fin obligatoires.'); return; }
+    if (newBreakEnd < newBreakStart) { alert('La date de fin doit être après la date de début.'); return; }
+    const targetTeamId = isAdmin ? (newBreakTeamId || null) : (selectedCoachTeamId || null);
+    const { error } = await supabase.from('training_breaks').insert({
+      team_id: targetTeamId,
+      title: newBreakTitle.trim(),
+      start_date: newBreakStart,
+      end_date: newBreakEnd,
+      reason: newBreakReason.trim() || null,
+    });
+    if (error) { alert("Erreur lors de l'ajout de la période."); return; }
+    setNewBreakTitle('Vacances'); setNewBreakStart(''); setNewBreakEnd(''); setNewBreakReason('');
+    await loadData();
+  }
+
+  async function deleteTrainingBreak(id: string) {
+    if (!window.confirm('Supprimer cette période de vacances ?')) return;
+    const { error } = await supabase.from('training_breaks').delete().eq('id', id);
+    if (error) { alert('Erreur lors de la suppression.'); return; }
+    await loadData();
   }
 
   // ── Actions ──
@@ -3915,7 +4093,7 @@ export default function App() {
   // ── Computed for coach UI ──
   const parentUsers = useMemo(() => users.filter((u) => u.role === 'parent' || u.role === 'player'), [users]);
   const selectedCoachTemplate = visibleTemplates.find((t) => t.id === selectedTrainingTemplateId) || null;
-  const coachTemplateDates = selectedCoachTemplate ? getNextDatesForWeekday(selectedCoachTemplate.weekday, 8) : [];
+  const coachTemplateDates = selectedCoachTemplate ? getNextTrainingsForTemplate(selectedCoachTemplate, 8, true).map((t) => t.date) : [];
   const coachTeamPlayers = selectedCoachTeamId ? getPlayersForTeam(selectedCoachTeamId).filter((p) => visibleTeams.some((vt) => vt.id === p.team_id)) : visiblePlayers;
   const coachMatches = (selectedCoachTeamId ? visibleMatches.filter((m) => m.team_id === selectedCoachTeamId) : visibleMatches)
     .slice()
@@ -3937,7 +4115,7 @@ export default function App() {
     const nextTemplate = visibleTemplates.find((t) => t.team_id === teamId);
     setSelectedTrainingTemplateId(nextTemplate?.id || '');
     if (nextTemplate) {
-      setSelectedTrainingDate(getNextDatesForWeekday(nextTemplate.weekday, 1)[0] || '');
+      setSelectedTrainingDate(getNextTrainingsForTemplate(nextTemplate, 1, true)[0]?.date || '');
     }
     const nextMatch = getPreferredUpcomingMatch(visibleMatches.filter((m) => m.team_id === teamId));
     setSelectedMatchId(nextMatch?.id || '');
@@ -4733,15 +4911,37 @@ export default function App() {
                   </select>
                 </div>
 
+                <div style={{ ...styles.panelCard, marginBottom: 20, background: '#f8fafc', border: '1px solid #dbe4ef' }}>
+                  <h3 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Périodes de vacances</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                    <div><label style={styles.inputLabel}>Titre</label><input value={newBreakTitle} onChange={(e) => setNewBreakTitle(e.target.value)} style={styles.input} placeholder="Vacances scolaires" /></div>
+                    <div><label style={styles.inputLabel}>Début</label><input type="date" value={newBreakStart} onChange={(e) => setNewBreakStart(e.target.value)} style={styles.input} /></div>
+                    <div><label style={styles.inputLabel}>Fin</label><input type="date" value={newBreakEnd} onChange={(e) => setNewBreakEnd(e.target.value)} style={styles.input} /></div>
+                    <div><label style={styles.inputLabel}>Note</label><input value={newBreakReason} onChange={(e) => setNewBreakReason(e.target.value)} style={styles.input} placeholder="Optionnel" /></div>
+                  </div>
+                  <button onClick={addTrainingBreak} style={{ ...styles.secondaryButton, marginTop: 10, background: '#0A5FB5' }}>Ajouter la période</button>
+                  <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+                    {trainingBreaks.filter((b) => !b.team_id || b.team_id === selectedCoachTeamId).map((b) => (
+                      <div key={b.id} style={{ ...styles.linkRow, background: 'white' }}>
+                        <div style={{ flex: 1 }}>
+                          <strong>{b.title}</strong>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{formatDate(b.start_date)} au {formatDate(b.end_date)} · {b.team_id ? getTeamName(b.team_id) : 'Toutes les équipes'}{b.reason ? ` · ${b.reason}` : ''}</div>
+                        </div>
+                        <button onClick={() => deleteTrainingBreak(b.id)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>Supprimer</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {(() => {
                   // Calculer les 2 prochaines séances toutes templates confondues
                   const today = new Date(); today.setHours(0,0,0,0);
-                  const upcoming: { template: TrainingTemplate; date: string }[] = [];
+                  const upcoming: { template: TrainingTemplate; date: string; cancelled?: boolean; cancellationReason?: string | null }[] = [];
                   for (const template of coachTemplates) {
-                    const dates = getNextDatesForWeekday(template.weekday, 4);
-                    for (const date of dates) {
-                      const d = new Date(date); d.setHours(0,0,0,0);
-                      if (d >= today) upcoming.push({ template, date });
+                    const trainings = getNextTrainingsForTemplate(template, 4, true);
+                    for (const training of trainings) {
+                      const d = new Date(training.date); d.setHours(0,0,0,0);
+                      if (d >= today) upcoming.push({ template, date: training.date, cancelled: training.cancelled, cancellationReason: training.cancellationReason });
                     }
                   }
                   upcoming.sort((a, b) => a.date.localeCompare(b.date));
@@ -4751,7 +4951,7 @@ export default function App() {
 
                   return (
                     <div style={{ display: 'grid', gap: 20 }}>
-                      {next2.map(({ template, date }) => {
+                      {next2.map(({ template, date, cancelled, cancellationReason }) => {
                         const teamPlayers = getPlayersForTeam(template.team_id).filter((p) => visibleTeams.some((vt) => vt.id === p.team_id));
                         const counts = getTrainingCounts(template.id, template.team_id, date);
                         const presentPlayers = teamPlayers.filter((p) => getAttendanceStatus(template.id, p.id, date) === 'present');
@@ -4766,6 +4966,11 @@ export default function App() {
                                 <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>
                                   📅 {formatDate(date)} · {getWeekdayLabel(template.weekday)} · {template.start_time}–{template.end_time} · 📍 {template.location || '-'}
                                 </p>
+                                {cancelled && (
+                                  <div style={{ marginTop: 8, display: 'inline-flex', padding: '6px 10px', borderRadius: 999, background: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 900 }}>
+                                    Annulé{cancellationReason ? ` · ${cancellationReason}` : ''}
+                                  </div>
+                                )}
                               </div>
                               <div style={{ display: 'flex', gap: 8 }}>
                                 <span style={{ ...styles.statusBadge, ...styles.badgeGreen }}>✅ {counts.present}</span>
@@ -4775,7 +4980,7 @@ export default function App() {
                             </div>
 
                             {/* Présents */}
-                            {presentPlayers.length > 0 && (
+                            {!cancelled && presentPlayers.length > 0 && (
                               <div style={{ marginBottom: 10 }}>
                                 <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', marginBottom: 6 }}>✅ Présents ({presentPlayers.length})</div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -4787,7 +4992,7 @@ export default function App() {
                             )}
 
                             {/* Absents */}
-                            {absentPlayers.length > 0 && (
+                            {!cancelled && absentPlayers.length > 0 && (
                               <div style={{ marginBottom: 10 }}>
                                 <div style={{ fontSize: 13, fontWeight: 700, color: '#991b1b', marginBottom: 6 }}>❌ Absents ({absentPlayers.length})</div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -4799,7 +5004,7 @@ export default function App() {
                             )}
 
                             {/* Sans réponse */}
-                            {unknownPlayers.length > 0 && (
+                            {!cancelled && unknownPlayers.length > 0 && (
                               <div>
                                 <div style={{ fontSize: 13, fontWeight: 700, color: '#526071', marginBottom: 6 }}>❓ Sans réponse ({unknownPlayers.length})</div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -4814,18 +5019,24 @@ export default function App() {
                             <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                               <button
                                 onClick={() => sendTrainingManualReminder(template, date)}
-                                disabled={sendingTrainingReminder === `${template.id}-${date}`}
+                                disabled={cancelled || sendingTrainingReminder === `${template.id}-${date}`}
                                 style={{
                                   display: 'flex', alignItems: 'center', gap: 8,
                                   padding: '10px 18px', borderRadius: 12, border: 'none',
-                                  background: sendingTrainingReminder === `${template.id}-${date}` ? '#94a3b8' : '#f59e0b',
-                                  color: 'white', fontWeight: 800, fontSize: 14, cursor: sendingTrainingReminder === `${template.id}-${date}` ? 'default' : 'pointer',
+                                  background: cancelled || sendingTrainingReminder === `${template.id}-${date}` ? '#94a3b8' : '#f59e0b',
+                                  color: 'white', fontWeight: 800, fontSize: 14, cursor: cancelled || sendingTrainingReminder === `${template.id}-${date}` ? 'default' : 'pointer',
                                   transition: 'background 0.15s',
                                 }}>
                                 {sendingTrainingReminder === `${template.id}-${date}` ? '⏳ Envoi...' : '📧 Envoyer un rappel aux parents'}
                               </button>
+                              <button
+                                onClick={() => cancelTraining(template, date)}
+                                disabled={cancelingTrainingKey === `${template.id}-${date}`}
+                                style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: cancelled ? '#16a34a' : '#dc2626', color: 'white', fontWeight: 800, fontSize: 14, cursor: cancelingTrainingKey === `${template.id}-${date}` ? 'default' : 'pointer' }}>
+                                {cancelingTrainingKey === `${template.id}-${date}` ? '⏳...' : cancelled ? 'Remettre au planning' : "Annuler l'entraînement"}
+                              </button>
                               <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>
-                                Même email que le rappel automatique
+                                {cancelled ? 'Les parents voient la séance annulée.' : 'Annulation avec email aux parents'}
                               </span>
                             </div>
                           </div>
@@ -6156,6 +6367,29 @@ export default function App() {
                     <div><label style={styles.inputLabel}>Lieu</label><input value={newTrainingLocation} onChange={(e) => setNewTrainingLocation(e.target.value)} style={styles.input} /></div>
                   </div>
                   <button onClick={addTrainingTemplate} style={styles.primaryButton}>{"Ajouter l'entraînement"}</button>
+
+                  <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #dbe4ef' }}>
+                    <h3 style={{ ...styles.panelTitle, fontSize: 18 }}>Périodes de vacances entraînement</h3>
+                    <div style={styles.formGrid}>
+                      <div><label style={styles.inputLabel}>Équipe</label><select value={newBreakTeamId} onChange={(e) => setNewBreakTeamId(e.target.value)} style={styles.select}><option value="">Toutes les équipes</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                      <div><label style={styles.inputLabel}>Titre</label><input value={newBreakTitle} onChange={(e) => setNewBreakTitle(e.target.value)} style={styles.input} placeholder="Vacances scolaires" /></div>
+                      <div><label style={styles.inputLabel}>Début</label><input type="date" value={newBreakStart} onChange={(e) => setNewBreakStart(e.target.value)} style={styles.input} /></div>
+                      <div><label style={styles.inputLabel}>Fin</label><input type="date" value={newBreakEnd} onChange={(e) => setNewBreakEnd(e.target.value)} style={styles.input} /></div>
+                      <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>Note</label><input value={newBreakReason} onChange={(e) => setNewBreakReason(e.target.value)} style={styles.input} placeholder="Optionnel" /></div>
+                    </div>
+                    <button onClick={addTrainingBreak} style={{ ...styles.secondaryButton, background: '#0A5FB5' }}>Ajouter la période</button>
+                    <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+                      {trainingBreaks.map((b) => (
+                        <div key={b.id} style={{ ...styles.linkRow, background: 'white' }}>
+                          <div style={{ flex: 1 }}>
+                            <strong>{b.title}</strong>
+                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{formatDate(b.start_date)} au {formatDate(b.end_date)} · {b.team_id ? getTeamName(b.team_id) : 'Toutes les équipes'}{b.reason ? ` · ${b.reason}` : ''}</div>
+                          </div>
+                          <button onClick={() => deleteTrainingBreak(b.id)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>Supprimer</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>}
 
                 {/* ── MATCHS ── */}
@@ -7543,11 +7777,7 @@ export default function App() {
                     const childTournaments = getTournamentsForTeam(childTeamIdForSeason).slice(0, 3);
                     const childTemplates = trainingTemplates.filter((t) => t.team_id === childTeamIdForSeason && t.active !== false);
                     const childUpcomingTrainings: UpcomingTraining[] = childTemplates.flatMap((template) =>
-                      getNextDatesForWeekday(template.weekday, 6).map((date) => ({
-                        templateId: template.id, teamId: template.team_id, title: template.title,
-                        weekday: template.weekday, startTime: template.start_time, endTime: template.end_time,
-                        location: template.location, date,
-                      }))
+                      getNextTrainingsForTemplate(template, 6, true)
                     ).sort((a, b) => a.date.localeCompare(b.date));
 
                     return (
@@ -7781,16 +8011,22 @@ export default function App() {
                                 const status = getAttendanceStatus(training.templateId, child.id, training.date);
                                 const counts = getTrainingCounts(training.templateId, training.teamId || '', training.date);
                                 return (
-                                  <div key={`${training.templateId}-${training.date}-${child.id}`} style={styles.trainingCard}>
+                                  <div key={`${training.templateId}-${training.date}-${child.id}`} style={{ ...styles.trainingCard, background: training.cancelled ? '#f8fafc' : 'white', border: training.cancelled ? '1px solid #fecaca' : styles.trainingCard.border }}>
                                     <div style={{ flex: 1 }}>
                                       <h4 style={{ margin: '0 0 6px 0' }}>{training.title || 'Entraînement'}</h4>
                                       <p style={{ margin: 0, color: '#5b6472' }}>{formatDate(training.date)} – {getWeekdayLabel(training.weekday)} – {training.startTime}–{training.endTime}</p>
                                       <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>{training.location || '-'}</p>
-                                      <div style={{ ...styles.attendanceRow, marginTop: 10, marginBottom: 0 }}>
-                                        <span>Présents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans réponse : {counts.unknown}</span>
-                                      </div>
+                                      {training.cancelled ? (
+                                        <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 12, background: '#fee2e2', color: '#991b1b', fontWeight: 900 }}>
+                                          Entraînement annulé{training.cancellationReason ? ` · ${training.cancellationReason}` : ''}
+                                        </div>
+                                      ) : (
+                                        <div style={{ ...styles.attendanceRow, marginTop: 10, marginBottom: 0 }}>
+                                          <span>Présents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans réponse : {counts.unknown}</span>
+                                        </div>
+                                      )}
                                       {/* Liste des joueurs présents à l'entraînement */}
-                                      {counts.present > 0 && (() => {
+                                      {!training.cancelled && counts.present > 0 && (() => {
                                         const presentPlayers = players.filter((p) =>
                                           p.team_id === training.teamId &&
                                           getAttendanceStatus(training.templateId, p.id, training.date) === 'present'
@@ -7810,11 +8046,11 @@ export default function App() {
                                         );
                                       })()}
                                     </div>
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    {!training.cancelled && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                       <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>{"Présent"}</button>
                                       <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>Absent</button>
                                       <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'unknown' as any)} style={{ ...styles.statusButton, background: status === 'unknown' ? '#64748b' : '#eef2f7', color: status === 'unknown' ? 'white' : '#526071' }}>Sans réponse</button>
-                                    </div>
+                                    </div>}
                                   </div>
                                 );
                               })}
