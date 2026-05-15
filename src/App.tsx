@@ -532,6 +532,7 @@ export default function App() {
   const [selectedTrainingDate, setSelectedTrainingDate] = useState('');
   const [selectedMatchId, setSelectedMatchId] = useState('');
   const [matchSubTab, setMatchSubTab] = useState<'planning' | 'convocation'>('planning');
+  const [matchDetailTab, setMatchDetailTab] = useState<'convocation' | 'presence' | 'stats'>('convocation');
   const [crossCategoryTeamId, setCrossCategoryTeamId] = useState<string>('');
   const [parentTab, setParentTab] = useState<'home' | 'team' | 'trainings' | 'matches' | 'events' | 'password' | 'player' | 'polls'>('home');
   const [parentChildTab, setParentChildTab] = useState<string>('');
@@ -3824,7 +3825,9 @@ export default function App() {
   const coachMatches = (selectedCoachTeamId ? visibleMatches.filter((m) => m.team_id === selectedCoachTeamId) : visibleMatches)
     .slice()
     .sort((a, b) => a.match_date.localeCompare(b.match_date));
-  const coachPlanningMatches = visibleMatches.filter((m) => visibleTeams.some((t) => t.id === m.team_id));
+  const coachPlanningMatches = selectedCoachTeamId
+    ? visibleMatches.filter((m) => m.team_id === selectedCoachTeamId)
+    : visibleMatches.filter((m) => visibleTeams.some((t) => t.id === m.team_id));
   const coachTemplates = selectedCoachTeamId ? visibleTemplates.filter((t) => t.team_id === selectedCoachTeamId) : visibleTemplates;
   const eventPollTeams = isAdmin ? teams : visibleTeams;
   const eventPollTeamIds = eventPollTeams.map((t) => t.id);
@@ -4786,6 +4789,12 @@ export default function App() {
 
                     <div style={styles.panelCard}>
                       <h3 style={styles.panelTitle}>📋 Liste des matchs</h3>
+                      <div style={{ ...styles.filterBar, marginBottom: 16 }}>
+                        <label style={styles.inputLabel}>Catégorie</label>
+                        <select value={selectedCoachTeamId} onChange={(e) => chooseCoachTeam(e.target.value)} style={styles.select}>
+                          {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                      </div>
                       {coachPlanningMatches.length === 0
                         ? <div style={styles.emptyState}>Aucun match.</div>
                         : <div style={{ display: 'grid', gap: 8 }}>
@@ -4840,7 +4849,21 @@ export default function App() {
                             {formatDate(selectedMatch.match_date)} {formatTime(selectedMatch.match_date)} – {selectedMatch.location || '-'} – {selectedMatch.home_away === 'home' ? 'Domicile' : 'Extérieur'}
                           </p>
 
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, margin: '14px 0 18px 0' }}>
+                            {([
+                              ['convocation', 'Convocation'],
+                              ['presence', 'Présence'],
+                              ['stats', 'Stats'],
+                            ] as const).map(([key, label]) => (
+                              <button key={key} onClick={() => setMatchDetailTab(key)}
+                                style={{ minHeight: 44, padding: '9px 12px', borderRadius: 12, border: matchDetailTab === key ? '2px solid #0A5FB5' : '1px solid #d6e1ec', background: matchDetailTab === key ? '#0A5FB5' : 'white', color: matchDetailTab === key ? 'white' : '#16304c', fontWeight: 900, cursor: 'pointer' }}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+
                           {/* Résultat */}
+                          {matchDetailTab === 'stats' && (
                           <div style={{ ...styles.panelCard, marginBottom: 20, background: '#fffbeb', border: '1px solid #fde68a' }}>
                             <h4 style={{ margin: '0 0 12px 0', color: '#92400e' }}>Résultat du match</h4>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -4868,10 +4891,12 @@ export default function App() {
                               </button>
                             </div>
                           </div>
+                          )}
 
-                          {renderMatchPresenceOverview(selectedMatch)}
+                          {matchDetailTab === 'presence' && renderMatchPresenceOverview(selectedMatch)}
 
                           {/* Convocation */}
+                          {matchDetailTab === 'convocation' && (
                           <div style={{ ...styles.panelCard, marginBottom: 20, background: '#f0f7ff' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
                               <h4 style={{ margin: 0 }}>📣 Convocation</h4>
@@ -5020,9 +5045,13 @@ export default function App() {
                             })()}
                           </div>
 
+                          )}
+
                           {/* Présences & stats */}
                           {playersForSelectedMatch.length > 0 && (
                             <>
+                              {matchDetailTab === 'presence' && (
+                                <>
                               <div style={styles.attendanceRow}>
                                 {(() => {
                                   const counts = getMatchCounts(selectedMatch.id, selectedMatch.team_id || '');
@@ -5073,8 +5102,10 @@ export default function App() {
                                   });
                                 })()}
                               </div>
+                                </>
+                              )}
 
-                              {isSquadDefined(selectedMatch.id) && squadForSelectedMatch.length > 0 && (
+                              {matchDetailTab === 'stats' && isSquadDefined(selectedMatch.id) && squadForSelectedMatch.length > 0 && (
                                 <div style={{ ...styles.panelCard, background: '#f0f7ff', border: '1px solid #bfdbfe' }}>
                                   <h4 style={{ margin: '0 0 14px 0', color: '#1e40af' }}>📊 Stats du match — tableau groupé</h4>
                                   {(() => {
