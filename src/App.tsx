@@ -533,7 +533,7 @@ export default function App() {
   const [selectedMatchId, setSelectedMatchId] = useState('');
   const [matchSubTab, setMatchSubTab] = useState<'planning' | 'convocation'>('planning');
   const [crossCategoryTeamId, setCrossCategoryTeamId] = useState<string>('');
-  const [parentTab, setParentTab] = useState<'home' | 'team' | 'password' | 'player' | 'polls'>('home');
+  const [parentTab, setParentTab] = useState<'home' | 'team' | 'trainings' | 'matches' | 'events' | 'password' | 'player' | 'polls'>('home');
   const [parentChildTab, setParentChildTab] = useState<string>('');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showParentMessages, setShowParentMessages] = useState(false);
@@ -4204,9 +4204,9 @@ export default function App() {
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#c4b5fd', letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center', marginBottom: 8 }}>Nos partenaires</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                   <a href={sponsor.website_url || undefined} target="_blank" rel="noopener noreferrer"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, textDecoration: 'none', minHeight: 120 }}>
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, textDecoration: 'none', minHeight: 156 }}>
                     <img src={sponsor.photo_url} alt={sponsor.name}
-                      style={{ maxWidth: '95%', maxHeight: 150, width: 'auto', height: 'auto', objectFit: 'contain' }} />
+                      style={{ maxWidth: '100%', maxHeight: 195, width: 'auto', height: 'auto', objectFit: 'contain' }} />
                   </a>
                   {sponsors.length > 1 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
@@ -4345,7 +4345,7 @@ export default function App() {
                 );
               })()}
               <button onClick={() => setShowCalendar(true)} title="Calendrier" aria-label="Calendrier" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>📅</button>
-              <button onClick={handleLogout} title="Déconnexion" aria-label="Déconnexion" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'white', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>🚪</button>
+              <button onClick={handleLogout} title="Déconnexion" aria-label="Déconnexion" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'white', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>⏻</button>
             </div>
           </div>
         </div>
@@ -6726,9 +6726,12 @@ export default function App() {
             {/* Onglets parent */}
             <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid #e5e7eb', paddingBottom: 0, overflowX: 'auto' }}>
               {(() => {
-                const tabs: { key: 'home' | 'team' | 'polls'; label: string }[] = [
+                const tabs: { key: 'home' | 'team' | 'trainings' | 'matches' | 'events' | 'polls'; label: string }[] = [
                   { key: 'home', label: '👪 Mon espace' },
                   { key: 'team', label: '👕 Mon équipe' },
+                  { key: 'trainings', label: '🏃 Entraînements' },
+                  { key: 'matches', label: '⚽ Matchs' },
+                  { key: 'events', label: '🎉 Événements' },
                 ];
                 // Onglet sondages si au moins un sondage me concerne
                 const myTeamIds = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)).filter(Boolean) as string[])];
@@ -6891,28 +6894,62 @@ export default function App() {
                           );
                         })()}
 
-                        <div style={{ overflowX: 'auto', padding: '4px 2px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 22, padding: 4 }}>
-                            {(() => {
-                              const teamCards = buildFifaCardsForTeam(teamId, true, seasonForFilter);
-                              return teamCards.map((c, idx) => (
-                                <FifaPlayerCard
-                                  key={c.player.id}
-                                  player={c.player}
-                                  totalTrainingPresences={c.totalTrainingPresences}
-                                  totalGoals={c.totalGoals}
-                                  totalShots={c.totalShots}
-                                  totalMatches={c.totalMatches}
-                                  isMyChild={c.isMyChild}
-                                  hideStats={c.hideStats}
-                                  age={c.age}
-                                  clubLogo={CLUB_LOGO}
-                                  onClick={() => setFullScreenCardData({ cards: teamCards, index: idx })}
-                                />
-                              ));
-                            })()}
-                          </div>
-                        </div>
+                        {(() => {
+                          const teamCards = buildFifaCardsForTeam(teamId, true, seasonForFilter);
+                          return (
+                            <>
+                              <div style={{ overflowX: 'auto', padding: '6px 2px 18px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' as any }}>
+                                <div style={{ display: 'flex', gap: 18, padding: '4px 8px 8px' }}>
+                                  {teamCards.map((c, idx) => (
+                                    <div key={c.player.id} style={{ flex: '0 0 min(76vw, 280px)', maxWidth: 300, scrollSnapAlign: 'center' }}>
+                                      <FifaPlayerCard
+                                        player={c.player}
+                                        totalTrainingPresences={c.totalTrainingPresences}
+                                        totalGoals={c.totalGoals}
+                                        totalShots={c.totalShots}
+                                        totalMatches={c.totalMatches}
+                                        isMyChild={c.isMyChild}
+                                        hideStats={c.hideStats}
+                                        age={c.age}
+                                        clubLogo={CLUB_LOGO}
+                                        onClick={() => setFullScreenCardData({ cards: teamCards, index: idx })}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div style={{ ...styles.panelCard, marginTop: 10 }}>
+                                <h4 style={{ margin: '0 0 12px 0', color: '#062C5D', fontSize: 16 }}>Liste de l'équipe</h4>
+                                <div style={{ display: 'grid', gap: 10 }}>
+                                  {teamPlayers
+                                    .slice()
+                                    .sort((a, b) => getPlayerName(a).localeCompare(getPlayerName(b), 'fr'))
+                                    .map((player) => {
+                                      const isMyChild = parentPlayers.some((child) => child.id === player.id);
+                                      const initials = `${player.first_name?.[0] || ''}${player.last_name?.[0] || ''}`.toUpperCase();
+                                      return (
+                                        <div key={player.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 14, background: isMyChild ? '#eaf4ff' : 'white', border: isMyChild ? '2px solid #0A5FB5' : '1px solid #d8e5f2' }}>
+                                          {player.photo_url
+                                            ? <img src={player.photo_url} alt={getPlayerName(player)} style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: '2px solid white', boxShadow: '0 1px 6px rgba(16,35,59,0.16)' }} />
+                                            : <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 15, flexShrink: 0 }}>{initials || '👤'}</div>}
+                                          <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: 900, color: '#10233b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                              {player.first_name} {player.last_name?.toUpperCase()}
+                                            </div>
+                                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                                              {player.position || 'Poste non défini'}{player.jersey_number != null ? ` · #${player.jersey_number}` : ''}
+                                            </div>
+                                          </div>
+                                          {isMyChild && <span style={{ fontSize: 11, fontWeight: 900, color: '#0A5FB5', background: 'white', borderRadius: 999, padding: '4px 8px' }}>Mon enfant</span>}
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     );
                   })}
@@ -7119,8 +7156,8 @@ export default function App() {
               </div>
             )}
 
-            {/* ── MON ESPACE (vue classique) ── */}
-            {parentTab === 'home' && (
+            {/* ── MON ESPACE / ENTRAÎNEMENTS / MATCHS / ÉVÉNEMENTS ── */}
+            {(['home', 'trainings', 'matches', 'events'] as const).includes(parentTab as any) && (
             <>{parentPlayers.length === 0
               ? <div style={styles.emptyState}>{"Aucun enfant lié à ce compte parent."}</div>
               : (
@@ -7146,6 +7183,8 @@ export default function App() {
 
                     return (
                       <div key={child.id} style={styles.childSection}>
+                        {parentTab === 'home' && (
+                          <>
                         <div style={styles.profileCard}>
                           {/* Photo de profil avec upload */}
                           <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -7360,6 +7399,10 @@ export default function App() {
                           );
                         })()}
 
+                          </>
+                        )}
+
+                        {parentTab === 'trainings' && (
                         <div style={styles.panelCard}>
                           <h3 style={styles.panelTitle}>{"2 prochains entraînements"}</h3>
                           {childUpcomingTrainings.slice(0, 2).length === 0
@@ -7408,7 +7451,9 @@ export default function App() {
                               })}
                             </div>}
                         </div>
+                        )}
 
+                        {parentTab === 'matches' && (
                         <div style={{ ...styles.panelCard, marginTop: 16 }}>
                           <h3 style={styles.panelTitle}>2 prochains matchs</h3>
                           {childMatches.length === 0
@@ -7483,9 +7528,10 @@ export default function App() {
                               })}
                             </div>}
                         </div>
+                        )}
 
                         {/* ── Événements du club ── */}
-                        {(() => {
+                        {parentTab === 'events' && (() => {
                           const childTeamId = childTeamIdForSeason;
                           const relevantEvents = clubEvents.filter((ev) => {
                             const future = new Date(ev.event_date) >= new Date(new Date().setHours(0,0,0,0));
@@ -7602,7 +7648,7 @@ export default function App() {
                         })()}
 
                         {/* Lien championnat */}
-                        {(() => {
+                        {parentTab === 'matches' && (() => {
                           const cat = childTeam?.category?.toLowerCase() || childTeam?.name?.toLowerCase() || '';
                           const link =
                             cat.includes('u9') ? appSettings.championship_u9 :
