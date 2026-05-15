@@ -1812,6 +1812,14 @@ export default function App() {
     );
   }
 
+  function getTournamentsForTeam(teamId: string) {
+    return clubEvents
+      .filter((ev) => ev.type === 'tournament')
+      .filter((ev) => !ev.team_ids || ev.team_ids.length === 0 || ev.team_ids.includes(teamId))
+      .filter((ev) => isFutureOrToday(ev.event_date))
+      .sort((a, b) => a.event_date.localeCompare(b.event_date));
+  }
+
   // ────────────── HELPERS PRÉSENCE EN LIGNE ──────────────
   function getOnlineCounts() {
     const cutoff = presenceTick - PRESENCE_ONLINE_WINDOW_MS;
@@ -4816,6 +4824,29 @@ export default function App() {
                             </div>
                           ))}
                         </div>}
+                      {selectedCoachTeamId && getTournamentsForTeam(selectedCoachTeamId).length > 0 && (
+                        <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
+                          <h4 style={{ margin: '0 0 4px 0', color: '#92400e' }}>🏆 Tournois</h4>
+                          {getTournamentsForTeam(selectedCoachTeamId).map((ev) => {
+                            const counts = getEventCounts(ev.id);
+                            const teamLabel = ev.team_ids?.length > 0 ? ev.team_ids.map(getTeamName).join(', ') : 'Toutes les catégories';
+                            return (
+                              <div key={ev.id} style={{ ...styles.linkRow, background: '#fffbeb', border: '1px solid #fde68a', flexWrap: 'wrap' }}>
+                                <div style={{ flex: 1 }}>
+                                  <strong>🏆 {ev.title}</strong>
+                                  <div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{formatDate(ev.event_date)} {formatTime(ev.event_date)} · {ev.location || '-'} · {teamLabel}</div>
+                                  {ev.description && <div style={{ fontSize: 13, color: '#374151', marginTop: 4 }}>{ev.description}</div>}
+                                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8, fontSize: 12, fontWeight: 800 }}>
+                                    <span style={{ color: '#16a34a' }}>✅ {counts.present} présents</span>
+                                    <span style={{ color: '#dc2626' }}>❌ {counts.absent} absents</span>
+                                    <span style={{ color: '#64748b' }}>⏳ {counts.pending} sans réponse</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -7367,6 +7398,7 @@ export default function App() {
                     const ownMatches = matches.filter((m) => m.team_id === childTeamIdForSeason && isFutureOrToday(m.match_date));
                     const guestMatches = matches.filter((m) => m.team_id !== childTeamIdForSeason && isFutureOrToday(m.match_date) && (matchSquad[m.id] || []).includes(child.id));
                     const childMatches = [...ownMatches, ...guestMatches].sort((a, b) => (a.match_date || '').localeCompare(b.match_date || '')).slice(0, 3);
+                    const childTournaments = getTournamentsForTeam(childTeamIdForSeason).slice(0, 3);
                     const childTemplates = trainingTemplates.filter((t) => t.team_id === childTeamIdForSeason && t.active !== false);
                     const childUpcomingTrainings: UpcomingTraining[] = childTemplates.flatMap((template) =>
                       getNextDatesForWeekday(template.weekday, 6).map((date) => ({
@@ -7650,9 +7682,9 @@ export default function App() {
 
                         {parentTab === 'matches' && (
                         <div style={{ ...styles.panelCard, marginTop: 16 }}>
-                          <h3 style={styles.panelTitle}>2 prochains matchs</h3>
-                          {childMatches.length === 0
-                            ? <p style={styles.emptyText}>{"Aucun match programmé."}</p>
+                          <h3 style={styles.panelTitle}>Matchs & tournois</h3>
+                          {childMatches.length === 0 && childTournaments.length === 0
+                            ? <p style={styles.emptyText}>{"Aucun match ou tournoi programmé."}</p>
                             : <div style={{ display: 'grid', gap: 12 }}>
                               {childMatches.map((match) => {
                                 const squad = getSquadForMatch(match.id);
@@ -7718,6 +7750,27 @@ export default function App() {
                                         <button onClick={() => saveMatchAttendance(match.id, child.id, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>Absent</button>
                                         <button onClick={() => saveMatchAttendance(match.id, child.id, 'unknown')} style={{ ...styles.statusButton, background: status === 'unknown' ? '#64748b' : '#eef2f7', color: status === 'unknown' ? 'white' : '#526071' }}>Sans réponse</button>
                                       </div>}
+                                  </div>
+                                );
+                              })}
+                              {childTournaments.map((ev) => {
+                                const status = getEventAttendanceStatus(ev.id, child.id);
+                                const counts = getEventCounts(ev.id);
+                                return (
+                                  <div key={`tournament-${ev.id}-${child.id}`} style={{ ...styles.trainingCard, background: '#fffbeb', border: '1px solid #fde68a' }}>
+                                    <div style={{ flex: 1 }}>
+                                      <h4 style={{ margin: '0 0 6px 0', color: '#92400e' }}>🏆 {ev.title}</h4>
+                                      <p style={{ margin: 0, color: '#5b6472' }}>{formatDate(ev.event_date)} {formatTime(ev.event_date)} · {ev.location || '-'}</p>
+                                      {ev.description && <p style={{ margin: '6px 0 0 0', color: '#374151', fontSize: 13 }}>{ev.description}</p>}
+                                      <div style={{ ...styles.attendanceRow, marginTop: 10, marginBottom: 0 }}>
+                                        <span>Présents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans réponse : {counts.pending}</span>
+                                      </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                      <button onClick={() => saveEventAttendance(ev.id, child.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>Présent</button>
+                                      <button onClick={() => saveEventAttendance(ev.id, child.id, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>Absent</button>
+                                      <button onClick={() => saveEventAttendance(ev.id, child.id, 'pending')} style={{ ...styles.statusButton, background: status === 'pending' ? '#64748b' : '#eef2f7', color: status === 'pending' ? 'white' : '#526071' }}>Sans réponse</button>
+                                    </div>
                                   </div>
                                 );
                               })}
