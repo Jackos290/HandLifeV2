@@ -45,6 +45,13 @@ type CoachAccess = {
   photo_url: string | null;
 };
 
+type AdminDelegate = {
+  id: string;
+  target_type: 'user' | 'coach';
+  target_id: string;
+  created_at: string;
+};
+
 type MatchAttendance = {
   id: string;
   match_id: string;
@@ -536,6 +543,7 @@ export default function App() {
   const [trainingCancellations, setTrainingCancellations] = useState<TrainingCancellation[]>([]);
   const [trainingBreaks, setTrainingBreaks] = useState<TrainingBreak[]>([]);
   const [coachAccessList, setCoachAccessList] = useState<CoachAccess[]>([]);
+  const [adminDelegates, setAdminDelegates] = useState<AdminDelegate[]>([]);
 
   // ── Auth ──
   const [loggedIn, setLoggedIn] = useState(false);
@@ -572,7 +580,7 @@ export default function App() {
   const [parentChildTab, setParentChildTab] = useState<string>('');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showParentMessages, setShowParentMessages] = useState(false);
-  const [adminSubTab, setAdminSubTab] = useState<'coaches' | 'trainings' | 'matches' | 'players' | 'roster' | 'accounts' | 'seasons' | 'settings' | 'licenses' | 'registrations' | 'events' | 'polls' | 'online'>('coaches');
+  const [adminSubTab, setAdminSubTab] = useState<'coaches' | 'adminAccess' | 'trainings' | 'matches' | 'players' | 'roster' | 'accounts' | 'seasons' | 'settings' | 'licenses' | 'registrations' | 'events' | 'polls' | 'online'>('coaches');
   const [matchesExpanded, setMatchesExpanded] = useState(false);
   const [clubEvents, setClubEvents] = useState<ClubEvent[]>([]);
   const [eventAttendance, setEventAttendance] = useState<EventAttendance[]>([]);
@@ -612,6 +620,7 @@ export default function App() {
   const [newAdminEmail, setNewAdminEmail] = useState('admin@cag.fr');
   const [newAdminPassword, setNewAdminPassword] = useState('cagh1965');
   const [savingAdminAccess, setSavingAdminAccess] = useState(false);
+  const [savingAdminDelegate, setSavingAdminDelegate] = useState('');
 
   // Messagerie
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -1447,7 +1456,7 @@ export default function App() {
     // Refresh sans flash — ne passe pas loading à true
     const [
       teamsRes, playersRes, matchesRes, matchAttRes, statsRes,
-      usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes,
+      usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes, adminDelegatesRes,
     ] = await Promise.all([
       supabase.from('teams').select('*').order('name', { ascending: true }),
       supabase.from('players').select('*').order('last_name', { ascending: true }),
@@ -1464,6 +1473,7 @@ export default function App() {
       supabase.from('match_squads').select('*'),
       supabase.from('training_cancellations').select('*').order('training_date', { ascending: true }),
       supabase.from('training_breaks').select('*').order('start_date', { ascending: true }),
+      supabase.from('admin_delegates').select('*').order('created_at', { ascending: false }),
     ]);
     setTeams(teamsRes.data || []);
     setPlayers(playersRes.data || []);
@@ -1477,6 +1487,7 @@ export default function App() {
     setTrainingAttendance(attendanceRes.data || []);
     setTrainingCancellations(trainingCancelRes.data || []);
     setTrainingBreaks(trainingBreakRes.data || []);
+    setAdminDelegates((adminDelegatesRes.data || []) as AdminDelegate[]);
     const squads = squadsRes.data || [];
     const squadMap: Record<string, string[]> = {};
     const initializedMap: Record<string, boolean> = {};
@@ -1508,7 +1519,7 @@ export default function App() {
     try {
     const [
       teamsRes, playersRes, matchesRes, matchAttRes, statsRes,
-      usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes,
+      usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes, adminDelegatesRes,
     ] = await Promise.all([
       supabase.from('teams').select('*').order('name', { ascending: true }),
       supabase.from('players').select('*').order('last_name', { ascending: true }),
@@ -1525,6 +1536,7 @@ export default function App() {
       supabase.from('match_squads').select('*'),
       supabase.from('training_cancellations').select('*').order('training_date', { ascending: true }),
       supabase.from('training_breaks').select('*').order('start_date', { ascending: true }),
+      supabase.from('admin_delegates').select('*').order('created_at', { ascending: false }),
     ]);
 
     setTeams(teamsRes.data || []);
@@ -1539,6 +1551,7 @@ export default function App() {
     setTrainingAttendance(attendanceRes.data || []);
     setTrainingCancellations(trainingCancelRes.data || []);
     setTrainingBreaks(trainingBreakRes.data || []);
+    setAdminDelegates((adminDelegatesRes.data || []) as AdminDelegate[]);
 
     // Reconstituer matchSquad + squadInitialized depuis match_squads
     const squads = squadsRes.data || [];
@@ -3297,6 +3310,63 @@ export default function App() {
     }
   }
 
+  function hasAdminDelegate(targetType: 'user' | 'coach', targetId: string) {
+    return adminDelegates.some((d) => d.target_type === targetType && d.target_id === targetId);
+  }
+
+  function getCurrentAdminDelegateTarget() {
+    if (isAdmin) return null;
+    if (activeRole === 'coach' && connectedCoachId && hasAdminDelegate('coach', connectedCoachId)) {
+      return { targetType: 'coach' as const, targetId: connectedCoachId };
+    }
+    if (activeRole === 'parent' && selectedParentId && hasAdminDelegate('user', selectedParentId)) {
+      return { targetType: 'user' as const, targetId: selectedParentId };
+    }
+    return null;
+  }
+
+  function enterDelegatedAdminAccess() {
+    const delegate = getCurrentAdminDelegateTarget();
+    if (!delegate) {
+      alert("Acces admin non autorise pour ce compte.");
+      return;
+    }
+    setIsAdmin(true);
+    setActiveRole('coach');
+    setCoachTab('admin');
+    setAdminSubTab('coaches');
+    setShowParentMessages(false);
+  }
+
+  async function toggleAdminDelegate(targetType: 'user' | 'coach', targetId: string, enabled: boolean) {
+    if (!targetId) return;
+    const key = `${targetType}-${targetId}`;
+    setSavingAdminDelegate(key);
+    try {
+      if (enabled) {
+        const { error } = await supabase.from('admin_delegates').insert({
+          target_type: targetType,
+          target_id: targetId,
+        });
+        if (error && !String(error.message || '').toLowerCase().includes('duplicate')) throw error;
+      } else {
+        const { error } = await supabase
+          .from('admin_delegates')
+          .delete()
+          .eq('target_type', targetType)
+          .eq('target_id', targetId);
+        if (error) throw error;
+      }
+      const { data } = await supabase.from('admin_delegates').select('*').order('created_at', { ascending: false });
+      setAdminDelegates((data || []) as AdminDelegate[]);
+    } catch (e: any) {
+      console.error(e);
+      alert("Erreur acces admin : applique le fichier SQL supabase-admin-delegates.sql puis reessaie.");
+    } finally {
+      setSavingAdminDelegate('');
+    }
+  }
+
   async function deleteCoachAccess(coachId: string, coachName: string) {
     if (!window.confirm(`Supprimer le coach ${coachName} ? Son compte de connexion sera aussi supprimé.`)) return;
     const { data: coach } = await supabase.from('coaches').select('id, auth_id').eq('id', coachId).maybeSingle();
@@ -4922,6 +4992,13 @@ export default function App() {
                   </div>
                 );
               })()}
+              {getCurrentAdminDelegateTarget() && (
+                <button onClick={enterDelegatedAdminAccess}
+                  title="Acces direct admin" aria-label="Acces direct admin"
+                  style={{ height: 48, padding: '0 14px', borderRadius: 14, border: 'none', background: '#facc15', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span>Admin</span>
+                </button>
+              )}
               {/* Message icon with badge */}
               {(() => {
                 const unreadCount = getUnreadMessageConversations().length;
@@ -6434,6 +6511,7 @@ export default function App() {
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 24, borderBottom: '2px solid #e5e7eb', paddingBottom: 0 }}>
                   {([
                     ...(isAdmin ? [
+                    ['adminAccess', 'Acces admin'],
                     ['coaches', '👤 Coaches'],
                     ['trainings', '📅 Entraînements'],
                     ['matches', '⚽ Matchs'],
@@ -6465,6 +6543,65 @@ export default function App() {
                 </div>
 
                 {/* ── COACHES ── */}
+                {adminSubTab === 'adminAccess' && (
+                  <div style={{ display: 'grid', gap: 18 }}>
+                    <div style={{ ...styles.formCard, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
+                      <h3 style={{ margin: '0 0 6px 0', color: '#0A5FB5' }}>Acces direct au compte admin</h3>
+                      <p style={{ margin: '0 0 14px 0', color: '#475569', fontSize: 14 }}>
+                        Choisis les parents, joueurs ou coachs qui verront un bouton Admin dans le header apres connexion.
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          <div style={styles.miniTitle}>Utilisateurs</div>
+                          {parentUsers.length === 0 ? (
+                            <div style={styles.emptyState}>Aucun utilisateur parent/joueur.</div>
+                          ) : parentUsers.map((u) => {
+                            const allowed = hasAdminDelegate('user', u.id);
+                            const key = `user-${u.id}`;
+                            return (
+                              <div key={u.id} style={{ ...styles.linkRow, alignItems: 'center', gap: 12 }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontWeight: 900, color: '#062C5D' }}>{u.first_name} {u.last_name}</div>
+                                  <div style={{ fontSize: 12, color: '#64748b', overflowWrap: 'anywhere' }}>{u.email || 'Email non renseigne'} - {u.role}</div>
+                                </div>
+                                <button
+                                  onClick={() => toggleAdminDelegate('user', u.id, !allowed)}
+                                  disabled={savingAdminDelegate === key}
+                                  style={{ ...(allowed ? styles.linkRemoveButton : styles.secondaryButton), fontSize: 12, padding: '8px 12px', flexShrink: 0 }}>
+                                  {savingAdminDelegate === key ? '...' : allowed ? 'Retirer' : 'Donner acces'}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          <div style={styles.miniTitle}>Coachs</div>
+                          {Object.keys(coachSummary).length === 0 ? (
+                            <div style={styles.emptyState}>Aucun coach cree.</div>
+                          ) : Object.entries(coachSummary).map(([coachId, info]) => {
+                            const allowed = hasAdminDelegate('coach', coachId);
+                            const key = `coach-${coachId}`;
+                            return (
+                              <div key={coachId} style={{ ...styles.linkRow, alignItems: 'center', gap: 12 }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontWeight: 900, color: '#062C5D' }}>{info.firstName} {info.lastName}</div>
+                                  <div style={{ fontSize: 12, color: '#64748b' }}>Equipes : {info.teamIds.map(getTeamName).join(', ') || 'Aucune'}</div>
+                                </div>
+                                <button
+                                  onClick={() => toggleAdminDelegate('coach', coachId, !allowed)}
+                                  disabled={savingAdminDelegate === key}
+                                  style={{ ...(allowed ? styles.linkRemoveButton : styles.secondaryButton), fontSize: 12, padding: '8px 12px', flexShrink: 0 }}>
+                                  {savingAdminDelegate === key ? '...' : allowed ? 'Retirer' : 'Donner acces'}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {adminSubTab === 'coaches' && <>
                   <div style={{ ...styles.formCard, background: '#fef2f2', border: '1px solid #fecaca' }}>
                     <h3 style={{ margin: '0 0 6px 0', color: '#991b1b' }}>Accès admin partagé</h3>
