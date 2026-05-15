@@ -6699,6 +6699,50 @@ export default function App() {
             </div>
           );
         })()}
+        {activeRole === 'parent' && parentPlayers.length > 1 && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(116px, 1fr))',
+            gap: 10,
+            marginBottom: 14,
+            padding: 10,
+            borderRadius: 20,
+            background: 'rgba(255,255,255,0.96)',
+            border: '1px solid #dbe6f2',
+            boxShadow: '0 8px 20px rgba(16,35,59,0.08)',
+          }}>
+            {parentPlayers.map((child) => {
+              const activeChildId = parentChildTab || parentPlayers[0]?.id;
+              const isActive = child.id === activeChildId;
+              return (
+                <button
+                  key={child.id}
+                  onClick={() => setParentChildTab(child.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    minHeight: 48,
+                    padding: '8px 10px',
+                    borderRadius: 14,
+                    border: isActive ? '2px solid #0A5FB5' : '1px solid #d8e5f2',
+                    background: isActive ? '#eaf4ff' : '#f8fbff',
+                    color: isActive ? '#0A5FB5' : '#475569',
+                    fontWeight: 900,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {child.photo_url
+                    ? <img src={child.photo_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    : <span style={{ fontSize: 18 }}>👤</span>}
+                  <span>{child.first_name || getPlayerName(child)}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         {activeRole === 'parent' && (
           <div style={styles.contentCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -6723,8 +6767,8 @@ export default function App() {
               </button>
             </div>
 
-            {/* Onglets parent */}
-            <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid #e5e7eb', paddingBottom: 0, overflowX: 'auto' }}>
+            {/* Boutons parent */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))', gap: 10, marginBottom: 20 }}>
               {(() => {
                 const tabs: { key: 'home' | 'team' | 'trainings' | 'matches' | 'events' | 'polls'; label: string }[] = [
                   { key: 'home', label: '👪 Mon espace' },
@@ -6761,7 +6805,7 @@ export default function App() {
                   })();
                   return (
                     <button key={tab} onClick={() => setParentTab(tab)}
-                      style={{ padding: '10px 22px', border: 'none', background: 'none', fontWeight: 800, fontSize: 15, cursor: 'pointer', color: parentTab === tab ? '#0A5FB5' : '#94a3b8', borderBottom: parentTab === tab ? '3px solid #0A5FB5' : '3px solid transparent', marginBottom: -2, transition: 'all 0.15s', position: 'relative', whiteSpace: 'nowrap' }}>
+                      style={{ minHeight: 48, padding: '10px 12px', borderRadius: 14, border: parentTab === tab ? '2px solid #0A5FB5' : '1px solid #d6e1ec', background: parentTab === tab ? '#0A5FB5' : 'white', fontWeight: 900, fontSize: 14, cursor: 'pointer', color: parentTab === tab ? 'white' : '#16304c', boxShadow: parentTab === tab ? '0 8px 18px rgba(10,95,181,0.18)' : 'none', transition: 'all 0.15s', position: 'relative', whiteSpace: 'normal', lineHeight: 1.15 }}>
                       {label}
                       {hasUnread && (
                         <span style={{ position: 'absolute', top: 4, right: 4, background: '#dc2626', borderRadius: '50%', width: 10, height: 10, display: 'inline-block', boxShadow: '0 1px 4px rgba(220,38,38,0.5)' }} />
@@ -6774,79 +6818,6 @@ export default function App() {
                 });
               })()}
             </div>
-
-            {seasons.length > 0 && (
-              <div style={{ ...styles.panelCard, background: '#f0f7ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
-                <span style={{ fontWeight: 800, color: '#1e40af', fontSize: 14 }}>Saison :</span>
-                <select value={parentSelectedSeasonId} onChange={(e) => setParentSelectedSeasonId(e.target.value)}
-                  style={{ ...styles.select, maxWidth: 260, minHeight: 44, padding: '10px 14px' }}>
-                  {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <span style={{ fontSize: 12, color: '#5b6472' }}>
-                  L'equipe affichee suit les affectations preparees pour la saison choisie.
-                </span>
-              </div>
-            )}
-
-            {(() => {
-              const profileButtons = parentPlayers.map((child) => ({
-                key: child.id,
-                label: child.first_name || getPlayerName(child),
-                photoUrl: child.photo_url,
-              }));
-              if (profileButtons.length <= 1) return null;
-              return (
-                <div style={{
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 20,
-                  display: 'flex',
-                  gap: 8,
-                  margin: '0 0 18px 0',
-                  padding: '8px',
-                  borderRadius: 18,
-                  background: 'rgba(255,255,255,0.96)',
-                  border: '1px solid #dbe6f2',
-                  boxShadow: '0 8px 20px rgba(16,35,59,0.08)',
-                  overflowX: 'auto',
-                  backdropFilter: 'blur(8px)',
-                }}>
-                  {profileButtons.map((profile) => {
-                    const isActive = parentTab === 'home' && profile.key === (parentChildTab || parentPlayers[0]?.id);
-                    return (
-                      <button
-                        key={profile.key}
-                        onClick={() => {
-                          setParentTab('home');
-                          setParentChildTab(profile.key);
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 8,
-                          minWidth: 116,
-                          padding: '9px 12px',
-                          borderRadius: 14,
-                          border: isActive ? '2px solid #0A5FB5' : '1px solid #d8e5f2',
-                          background: isActive ? '#eaf4ff' : '#f8fbff',
-                          color: isActive ? '#0A5FB5' : '#475569',
-                          fontWeight: 900,
-                          fontSize: 13,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                        }}
-                        >
-                        {profile.photoUrl
-                          ? <img src={profile.photoUrl} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                          : <span style={{ fontSize: 18 }}>👤</span>}
-                        <span>{profile.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })()}
 
             {/* ── MON ÉQUIPE côté parent ── */}
             {parentTab === 'team' && (() => {
@@ -6896,26 +6867,30 @@ export default function App() {
 
                         {(() => {
                           const teamCards = buildFifaCardsForTeam(teamId, true, seasonForFilter);
+                          const activeChildId = parentChildTab || parentPlayers[0]?.id;
+                          const selectedCardIndex = Math.max(0, teamCards.findIndex((c) => c.player.id === activeChildId));
+                          const selectedCard = teamCards[selectedCardIndex] || teamCards[0];
+                          if (!selectedCard) return null;
                           return (
                             <>
-                              <div style={{ overflowX: 'auto', padding: '6px 2px 18px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' as any }}>
-                                <div style={{ display: 'flex', gap: 18, padding: '4px 8px 8px' }}>
-                                  {teamCards.map((c, idx) => (
-                                    <div key={c.player.id} style={{ flex: '0 0 min(76vw, 280px)', maxWidth: 300, scrollSnapAlign: 'center' }}>
-                                      <FifaPlayerCard
-                                        player={c.player}
-                                        totalTrainingPresences={c.totalTrainingPresences}
-                                        totalGoals={c.totalGoals}
-                                        totalShots={c.totalShots}
-                                        totalMatches={c.totalMatches}
-                                        isMyChild={c.isMyChild}
-                                        hideStats={c.hideStats}
-                                        age={c.age}
-                                        clubLogo={CLUB_LOGO}
-                                        onClick={() => setFullScreenCardData({ cards: teamCards, index: idx })}
-                                      />
-                                    </div>
-                                  ))}
+                              <div style={{ ...styles.panelCard, marginBottom: 14, background: '#fffdf4', border: '1px solid #fde68a' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                                  <h4 style={{ margin: 0, color: '#062C5D', fontSize: 16 }}>Carte joueur</h4>
+                                  <span style={{ fontSize: 12, color: '#92400e', fontWeight: 800 }}>Clique sur la carte pour voir toute l'équipe</span>
+                                </div>
+                                <div style={{ width: 'min(100%, 320px)', margin: '0 auto' }}>
+                                  <FifaPlayerCard
+                                    player={selectedCard.player}
+                                    totalTrainingPresences={selectedCard.totalTrainingPresences}
+                                    totalGoals={selectedCard.totalGoals}
+                                    totalShots={selectedCard.totalShots}
+                                    totalMatches={selectedCard.totalMatches}
+                                    isMyChild={selectedCard.isMyChild}
+                                    hideStats={selectedCard.hideStats}
+                                    age={selectedCard.age}
+                                    clubLogo={CLUB_LOGO}
+                                    onClick={() => setFullScreenCardData({ cards: teamCards, index: selectedCardIndex })}
+                                  />
                                 </div>
                               </div>
 
@@ -7680,6 +7655,18 @@ export default function App() {
                 </>
               )}
             </>
+            )}
+            {seasons.length > 0 && (
+              <div style={{ ...styles.panelCard, background: '#f0f7ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 24 }}>
+                <span style={{ fontWeight: 800, color: '#1e40af', fontSize: 14 }}>Saison :</span>
+                <select value={parentSelectedSeasonId} onChange={(e) => setParentSelectedSeasonId(e.target.value)}
+                  style={{ ...styles.select, maxWidth: 260, minHeight: 44, padding: '10px 14px' }}>
+                  {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <span style={{ fontSize: 12, color: '#5b6472' }}>
+                  L'équipe affichée suit les affectations préparées pour la saison choisie.
+                </span>
+              </div>
             )}
           </div>
         )}
