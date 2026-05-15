@@ -3446,6 +3446,26 @@ export default function App() {
     finally { setSavingManagedParent(false); }
   }
 
+  function startJerseyEdit(player: Player) {
+    setJerseyEditId(player.id);
+    setJerseyEditValue(player.jersey_number != null ? String(player.jersey_number) : '');
+  }
+
+  async function saveJerseyNumber(playerId: string) {
+    const trimmed = jerseyEditValue.trim();
+    const jerseyNumber = trimmed ? Number(trimmed) : null;
+    if (jerseyNumber !== null && (!Number.isInteger(jerseyNumber) || jerseyNumber < 1 || jerseyNumber > 99)) {
+      alert('Numéro de maillot entre 1 et 99.');
+      return;
+    }
+    const { error } = await supabase.from('players').update({ jersey_number: jerseyNumber }).eq('id', playerId);
+    if (error) { alert('Erreur lors de la mise à jour du numéro.'); return; }
+    setPlayers((prev) => prev.map((p) => p.id === playerId ? { ...p, jersey_number: jerseyNumber } : p));
+    setJerseyEditId(null);
+    setJerseyEditValue('');
+    await loadDataSilent();
+  }
+
   // ── Helper : créer un compte Auth via Edge Function ──
   async function callEdgeFunction(body: object): Promise<any> {
     const session = (await supabase.auth.getSession()).data.session;
@@ -6253,19 +6273,40 @@ export default function App() {
                           // Coach/admin → forParent=false, donc tout est visible
                           const teamCards = buildFifaCardsForTeam(selectedCoachTeamId, false);
                           return teamCards.map((c, idx) => (
-                            <FifaPlayerCard
-                              key={c.player.id}
-                              player={c.player}
-                              totalTrainingPresences={c.totalTrainingPresences}
-                              totalGoals={c.totalGoals}
-                              totalShots={c.totalShots}
-                              totalMatches={c.totalMatches}
-                              isMyChild={false}
-                              hideStats={false}
-                              age={c.age}
-                              clubLogo={CLUB_LOGO}
-                              onClick={() => setFullScreenCardData({ cards: teamCards, index: idx })}
-                            />
+                            <div key={c.player.id} style={{ position: 'relative' }}>
+                              <FifaPlayerCard
+                                player={c.player}
+                                totalTrainingPresences={c.totalTrainingPresences}
+                                totalGoals={c.totalGoals}
+                                totalShots={c.totalShots}
+                                totalMatches={c.totalMatches}
+                                isMyChild={false}
+                                hideStats={false}
+                                age={c.age}
+                                clubLogo={CLUB_LOGO}
+                                onClick={() => setFullScreenCardData({ cards: teamCards, index: idx })}
+                                onJerseyClick={() => startJerseyEdit(c.player)}
+                              />
+                              {jerseyEditId === c.player.id && (
+                                <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', left: 8, right: 8, bottom: 8, zIndex: 6, padding: 10, borderRadius: 12, background: 'rgba(255,255,255,0.96)', boxShadow: '0 8px 24px rgba(0,0,0,0.22)', display: 'grid', gap: 8 }}>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={99}
+                                    value={jerseyEditValue}
+                                    onChange={(e) => setJerseyEditValue(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') saveJerseyNumber(c.player.id); if (e.key === 'Escape') setJerseyEditId(null); }}
+                                    autoFocus
+                                    placeholder="N°"
+                                    style={{ ...styles.input, minHeight: 34, padding: '6px 10px', textAlign: 'center', fontWeight: 900 }}
+                                  />
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <button onClick={() => saveJerseyNumber(c.player.id)} style={{ ...styles.secondaryButton, flex: 1, padding: '7px 8px', fontSize: 12, background: '#16a34a' }}>OK</button>
+                                    <button onClick={() => setJerseyEditId(null)} style={{ ...styles.linkRemoveButton, flex: 1, padding: '7px 8px', fontSize: 12 }}>Annuler</button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           ));
                         })()}
                       </div>

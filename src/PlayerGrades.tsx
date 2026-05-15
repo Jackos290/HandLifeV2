@@ -121,6 +121,7 @@ type FifaPlayerCardProps = {
   age: number | null;
   clubLogo?: string;
   onClick?: () => void;
+  onJerseyClick?: () => void;
 };
 
 // ─── JerseyBadge : numéro de maillot façon tissu avec coutures ────────────────
@@ -196,6 +197,7 @@ export function FifaPlayerCard({
   age,
   clubLogo,
   onClick,
+  onJerseyClick,
 }: FifaPlayerCardProps) {
   const { grade, starsInLevel, isRainbow } = computeGrade(totalTrainingPresences, totalGoals, totalMatches);
   const initials = `${p.first_name?.[0] || ''}${p.last_name?.[0] || ''}`.toUpperCase();
@@ -244,7 +246,7 @@ export function FifaPlayerCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, position: 'relative', zIndex: 2 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 36 }}>
           {hideStats ? (
-            <div style={{ fontSize: 22, fontWeight: 900, color: textColor, lineHeight: 1, opacity: 0.4 }}>—</div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: textColor, lineHeight: 1, opacity: 0.72 }}>ID</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
               <span style={{ fontSize: 9, fontWeight: 800, color: mainColor, letterSpacing: 0.6, opacity: 0.9, marginBottom: 2 }}>LV</span>
@@ -283,7 +285,14 @@ export function FifaPlayerCard({
             }}>{initials}</div>
           )}
           {p.jersey_number != null && (
-            <div style={{ position: 'absolute', bottom: -4, right: 0 }}>
+            <div
+              onClick={(e) => {
+                if (!onJerseyClick) return;
+                e.stopPropagation();
+                onJerseyClick();
+              }}
+              title={onJerseyClick ? 'Modifier le numéro de maillot' : undefined}
+              style={{ position: 'absolute', bottom: -4, right: 0, cursor: onJerseyClick ? 'pointer' : 'default' }}>
               <JerseyBadge number={p.jersey_number} size="small" />
             </div>
           )}
@@ -307,12 +316,7 @@ export function FifaPlayerCard({
       {/* STATS en texte naturel : "19 buts · 12 matchs · 14 entr." */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 4, position: 'relative', zIndex: 2, padding: '0 4px' }}>
         {hideStats ? (
-          <div style={{ textAlign: 'center', padding: '4px' }}>
-            <div style={{ fontSize: 18, marginBottom: 2 }}>🔒</div>
-            <div style={{ fontSize: 8, fontWeight: 700, color: subtleText, letterSpacing: 0.4, lineHeight: 1.3 }}>
-              STATS<br/>PRIVÉES
-            </div>
-          </div>
+          <PrivateStatsPanel player={p} textColor={textColor} subtleText={subtleText} compact />
         ) : (
           <div style={{
             display: 'flex', flexDirection: 'column', gap: 4,
@@ -502,6 +506,41 @@ export function FullScreenCard({ cards, initialIndex, onClose, clubLogo }: FullS
   );
 }
 
+function PrivateStatsPanel({ player, textColor, subtleText, compact = false }: { player: Player; textColor: string; subtleText: string; compact?: boolean }) {
+  const identityRows = [
+    ['Poste', player.position || 'A définir'],
+    ['N°', player.jersey_number != null ? String(player.jersey_number) : 'A définir'],
+  ];
+  const badges = [
+    ['Fair-play', '⭐'],
+    ['Collectif', '🤝'],
+    ['Motivation', '🔥'],
+  ];
+  return (
+    <div style={{ width: '100%', display: 'grid', gap: compact ? 6 : 12, color: textColor }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: compact ? 5 : 10 }}>
+        {identityRows.map(([label, value]) => (
+          <div key={label} style={{ padding: compact ? '5px 5px' : '10px 12px', borderRadius: compact ? 8 : 14, background: 'rgba(255,255,255,0.28)', border: '1px solid rgba(120,53,15,0.16)', textAlign: 'center' }}>
+            <div style={{ fontSize: compact ? 7 : 11, fontWeight: 900, textTransform: 'uppercase', color: subtleText }}>{label}</div>
+            <div style={{ fontSize: compact ? 9 : 16, fontWeight: 900, marginTop: compact ? 1 : 4 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gap: compact ? 4 : 8 }}>
+        {badges.map(([label, icon]) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: compact ? 5 : 10, padding: compact ? '4px 6px' : '9px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.24)', border: '1px solid rgba(120,53,15,0.12)' }}>
+            <span style={{ fontSize: compact ? 10 : 18 }}>{icon}</span>
+            <span style={{ fontSize: compact ? 7 : 12, fontWeight: 900, letterSpacing: compact ? 0.2 : 0.6, textTransform: 'uppercase' }}>{label}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ textAlign: 'center', fontSize: compact ? 7 : 11, fontWeight: 900, letterSpacing: compact ? 0.6 : 1, textTransform: 'uppercase', color: subtleText }}>
+        🔒 Stats sportives privées
+      </div>
+    </div>
+  );
+}
+
 // ─── Grande carte (utilisée dans la modale) ──────────────────────────────────
 function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string }) {
   const { player: p, totalTrainingPresences, totalGoals, totalShots, totalMatches, isMyChild, hideStats, age } = data;
@@ -609,15 +648,7 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
       {/* STATS */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 12, position: 'relative', zIndex: 2 }}>
         {hideStats ? (
-          <div style={{ textAlign: 'center', padding: 16 }}>
-            <div style={{ fontSize: 56, marginBottom: 8 }}>🔒</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: subtleText, letterSpacing: 0.5, lineHeight: 1.4 }}>
-              Statistiques privées<br/>
-              <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.8 }}>
-                Seuls les parents de cet enfant<br/>peuvent voir ses stats.
-              </span>
-            </div>
-          </div>
+          <PrivateStatsPanel player={p} textColor={textColor} subtleText={subtleText} />
         ) : (
           <div style={{
             display: 'flex', flexDirection: 'column', gap: 10,
