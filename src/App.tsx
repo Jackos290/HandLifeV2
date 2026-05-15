@@ -180,6 +180,8 @@ type Poll = {
   id: string;
   question: string;
   description: string | null;
+  external_url?: string | null;
+  questions?: PollQuestion[] | null;
   team_ids: string[];
   created_by: string | null;
   closed: boolean;
@@ -187,9 +189,17 @@ type Poll = {
   created_at: string;
 };
 
+type PollQuestion = {
+  id: string;
+  question: string;
+  options: string[];
+  multiple_choice: boolean;
+};
+
 type PollOption = {
   id: string;
   poll_id: string;
+  question_key?: string | null;
   label: string;
   display_order: number;
 };
@@ -967,7 +977,11 @@ export default function App() {
   const [pollVotes, setPollVotes] = useState<PollVote[]>([]);
   const [newPollQuestion, setNewPollQuestion] = useState('');
   const [newPollDescription, setNewPollDescription] = useState('');
+  const [newPollExternalUrl, setNewPollExternalUrl] = useState('');
   const [newPollOptions, setNewPollOptions] = useState<string[]>(['', '']);
+  const [newPollQuestions, setNewPollQuestions] = useState<PollQuestion[]>([
+    { id: 'q-1', question: '', options: ['', ''], multiple_choice: false },
+  ]);
   const [newPollTeamIds, setNewPollTeamIds] = useState<string[]>([]);
   const [newPollMultiple, setNewPollMultiple] = useState(false);
   const [savingPoll, setSavingPoll] = useState(false);
@@ -1875,37 +1889,90 @@ export default function App() {
   }
 
   // ────────────── HELPERS SONDAGES ──────────────
+  function resetPollForm() {
+    setEditingPollId('');
+    setNewPollQuestion('');
+    setNewPollDescription('');
+    setNewPollExternalUrl('');
+    setNewPollOptions(['', '']);
+    setNewPollQuestions([{ id: 'q-1', question: '', options: ['', ''], multiple_choice: false }]);
+    setNewPollTeamIds([]);
+    setNewPollMultiple(false);
+  }
+
+  function normalizePollQuestions(poll: Poll): PollQuestion[] {
+    if (Array.isArray(poll.questions) && poll.questions.length > 0) {
+      return poll.questions.map((q, idx) => ({
+        id: q.id || `q-${idx + 1}`,
+        question: q.question || `Question ${idx + 1}`,
+        options: Array.isArray(q.options) ? q.options : [],
+        multiple_choice: !!q.multiple_choice,
+      }));
+    }
+    const legacyOptions = pollOptions.filter((o) => o.poll_id === poll.id);
+    return [{
+      id: 'q-1',
+      question: poll.question,
+      options: legacyOptions.map((o) => o.label),
+      multiple_choice: !!poll.multiple_choice,
+    }];
+  }
+
+  function getPollOptionsForQuestion(pollId: string, questionId: string): PollOption[] {
+    const opts = pollOptions.filter((o) => o.poll_id === pollId);
+    const questionOpts = opts.filter((o) => (o.question_key || 'q-1') === questionId);
+    return questionOpts.length > 0 ? questionOpts : opts.filter((o) => !o.question_key);
+  }
+
   async function addPoll() {
-    if (!newPollQuestion.trim()) { alert('La question est obligatoire.'); return; }
-    const validOptions = newPollOptions.map((o) => o.trim()).filter((o) => o.length > 0);
-    if (validOptions.length < 2) { alert('Au moins 2 options de réponse.'); return; }
+    const cleanQuestions = newPollQuestions
+      .map((q, idx) => ({
+        id: q.id || `q-${idx + 1}`,
+        question: q.question.trim(),
+        options: q.options.map((o) => o.trim()).filter((o) => o.length > 0),
+        multiple_choice: q.multiple_choice,
+      }))
+      .filter((q) => q.question.length > 0 || q.options.length > 0);
+    if (cleanQuestions.length === 0) { alert('Ajoute au moins une question.'); return; }
+    if (cleanQuestions.some((q) => !q.question)) { alert('Chaque question doit avoir un intitulé.'); return; }
+    if (cleanQuestions.some((q) => q.options.length < 2)) { alert('Chaque question doit avoir au moins 2 options de réponse.'); return; }
     setSavingPoll(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const createdBy = session?.user?.id || null;
       const pollTeamIds = !isAdmin && newPollTeamIds.length === 0 ? visibleTeams.map((t) => t.id) : newPollTeamIds;
+      const mainQuestion = newPollQuestion.trim() || cleanQuestions[0].question;
       let pollId = editingPollId;
       if (editingPollId) {
         await supabase.from('polls').update({
-          question: newPollQuestion.trim(),
+          question: mainQuestion,
           description: newPollDescription.trim() || null,
+          external_url: newPollExternalUrl.trim() || null,
+          questions: cleanQuestions,
           team_ids: pollTeamIds,
-          multiple_choice: newPollMultiple,
+          multiple_choice: cleanQuestions.some((q) => q.multiple_choice),
         }).eq('id', editingPollId);
         // Supprimer anciennes options et leurs votes pour repartir propre
         await supabase.from('poll_options').delete().eq('poll_id', editingPollId);
       } else {
         const { data: np, error } = await supabase.from('polls').insert({
-          question: newPollQuestion.trim(),
+          question: mainQuestion,
           description: newPollDescription.trim() || null,
+          external_url: newPollExternalUrl.trim() || null,
+          questions: cleanQuestions,
           team_ids: pollTeamIds,
-          multiple_choice: newPollMultiple,
+          multiple_choice: cleanQuestions.some((q) => q.multiple_choice),
           created_by: createdBy,
         }).select().single();
         if (error || !np) throw error || new Error('Impossible de créer le sondage');
         pollId = np.id;
       }
-      const optsRows = validOptions.map((label, idx) => ({ poll_id: pollId, label, display_order: idx }));
+      const optsRows = cleanQuestions.flatMap((q) => q.options.map((label, idx) => ({
+        poll_id: pollId,
+        question_key: q.id,
+        label,
+        display_order: idx,
+      })));
       await supabase.from('poll_options').insert(optsRows);
       // Reload
       const { data: pData } = await supabase.from('polls').select('*').order('created_at', { ascending: false });
@@ -1914,8 +1981,7 @@ export default function App() {
       if (poData) setPollOptions(poData as PollOption[]);
       const { data: pvData } = await supabase.from('poll_votes').select('*');
       if (pvData) setPollVotes(pvData as PollVote[]);
-      setNewPollQuestion(''); setNewPollDescription(''); setNewPollOptions(['', '']);
-      setNewPollTeamIds([]); setNewPollMultiple(false); setEditingPollId('');
+      resetPollForm();
       alert(editingPollId ? '✅ Sondage modifié' : '✅ Sondage créé et envoyé');
     } catch (e: any) { console.error(e); alert('Erreur : ' + (e?.message || 'inconnue')); }
     finally { setSavingPoll(false); }
@@ -1938,6 +2004,27 @@ export default function App() {
     // Supprimer anciens votes du même voter
     if (voterUserId) await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('voter_user_id', voterUserId);
     if (voterPlayerId) await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('voter_player_id', voterPlayerId);
+    const rows = optionIds.map((option_id) => ({
+      poll_id: pollId, option_id,
+      voter_user_id: voterUserId, voter_player_id: voterPlayerId,
+      voter_label: voterLabel,
+    }));
+    if (rows.length > 0) {
+      const { error } = await supabase.from('poll_votes').insert(rows);
+      if (error) { alert('Erreur lors du vote : ' + error.message); return; }
+    }
+    const { data: pvData } = await supabase.from('poll_votes').select('*');
+    if (pvData) setPollVotes(pvData as PollVote[]);
+  }
+
+  async function votePollQuestion(pollId: string, optionIds: string[], questionOptionIds: string[], voterUserId: string | null, voterPlayerId: string | null, voterLabel: string) {
+    if (questionOptionIds.length === 0) return;
+    if (voterUserId) {
+      await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('voter_user_id', voterUserId).in('option_id', questionOptionIds);
+    }
+    if (voterPlayerId) {
+      await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('voter_player_id', voterPlayerId).in('option_id', questionOptionIds);
+    }
     const rows = optionIds.map((option_id) => ({
       poll_id: pollId, option_id,
       voter_user_id: voterUserId, voter_player_id: voterPlayerId,
@@ -6714,24 +6801,46 @@ export default function App() {
                     <p style={{ margin: '0 0 14px 0', fontSize: 13, color: '#92400e' }}>Le sondage sera visible par les catégories sélectionnées (parents et joueurs).</p>
                     <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
                       <div>
-                        <label style={styles.inputLabel}>Question</label>
-                        <input value={newPollQuestion} onChange={(e) => setNewPollQuestion(e.target.value)} style={styles.input} placeholder="Ex : Préférez-vous le tournoi du 15/05 ou du 22/05 ?" />
+                        <label style={styles.inputLabel}>Titre du sondage</label>
+                        <input value={newPollQuestion} onChange={(e) => setNewPollQuestion(e.target.value)} style={styles.input} placeholder="Ex : Organisation tournoi de mai" />
                       </div>
                       <div>
                         <label style={styles.inputLabel}>Description (optionnel)</label>
                         <textarea value={newPollDescription} onChange={(e) => setNewPollDescription(e.target.value)} style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} placeholder="Précisions sur le sondage" />
                       </div>
                       <div>
-                        <label style={styles.inputLabel}>Options de réponse (min. 2)</label>
-                        {newPollOptions.map((opt, idx) => (
-                          <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                            <input value={opt} onChange={(e) => setNewPollOptions((p) => p.map((x, i) => i === idx ? e.target.value : x))} placeholder={`Option ${idx + 1}`} style={{ ...styles.input, flex: 1 }} />
-                            {newPollOptions.length > 2 && (
-                              <button onClick={() => setNewPollOptions((p) => p.filter((_, i) => i !== idx))} style={{ ...styles.linkRemoveButton, padding: '6px 12px' }}>✕</button>
-                            )}
+                        <label style={styles.inputLabel}>Lien vers un sondage externe (optionnel)</label>
+                        <input value={newPollExternalUrl} onChange={(e) => setNewPollExternalUrl(e.target.value)} style={styles.input} placeholder="https://forms.gle/..." />
+                      </div>
+                      <div style={{ display: 'grid', gap: 10 }}>
+                        <label style={styles.inputLabel}>Questions du sondage</label>
+                        {newPollQuestions.map((q, qIdx) => (
+                          <div key={q.id} style={{ padding: 12, borderRadius: 14, background: 'white', border: '1px solid #fde68a', display: 'grid', gap: 8 }}>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <input value={q.question} onChange={(e) => setNewPollQuestions((p) => p.map((x, i) => i === qIdx ? { ...x, question: e.target.value } : x))} placeholder={`Question ${qIdx + 1}`} style={{ ...styles.input, flex: 1 }} />
+                              {newPollQuestions.length > 1 && (
+                                <button onClick={() => setNewPollQuestions((p) => p.filter((_, i) => i !== qIdx))} style={{ ...styles.linkRemoveButton, padding: '6px 12px' }}>✕</button>
+                              )}
+                            </div>
+                            <div style={{ display: 'grid', gap: 6 }}>
+                              {q.options.map((opt, optIdx) => (
+                                <div key={`${q.id}-${optIdx}`} style={{ display: 'flex', gap: 6 }}>
+                                  <input value={opt} onChange={(e) => setNewPollQuestions((p) => p.map((x, i) => i === qIdx ? { ...x, options: x.options.map((o, oi) => oi === optIdx ? e.target.value : o) } : x))} placeholder={`Option ${optIdx + 1}`} style={{ ...styles.input, flex: 1 }} />
+                                  {q.options.length > 2 && (
+                                    <button onClick={() => setNewPollQuestions((p) => p.map((x, i) => i === qIdx ? { ...x, options: x.options.filter((_, oi) => oi !== optIdx) } : x))} style={{ ...styles.linkRemoveButton, padding: '6px 12px' }}>✕</button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                              <button onClick={() => setNewPollQuestions((p) => p.map((x, i) => i === qIdx ? { ...x, options: [...x.options, ''] } : x))} style={{ ...styles.secondaryOutlineButton, fontSize: 12, padding: '8px 14px' }}>+ Ajouter une option</button>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#92400e' }}>
+                                <input type="checkbox" checked={q.multiple_choice} onChange={(e) => setNewPollQuestions((p) => p.map((x, i) => i === qIdx ? { ...x, multiple_choice: e.target.checked } : x))} /> Plusieurs choix
+                              </label>
+                            </div>
                           </div>
                         ))}
-                        <button onClick={() => setNewPollOptions((p) => [...p, ''])} style={{ ...styles.secondaryOutlineButton, fontSize: 12, padding: '8px 14px' }}>+ Ajouter une option</button>
+                        <button onClick={() => setNewPollQuestions((p) => [...p, { id: `q-${Date.now()}`, question: '', options: ['', ''], multiple_choice: false }])} style={{ ...styles.secondaryOutlineButton, fontSize: 13 }}>+ Ajouter une question</button>
                       </div>
                       <div>
                         <label style={styles.inputLabel}>Catégories concernées (vide = {isAdmin ? 'toutes' : 'vos équipes'})</label>
@@ -6744,16 +6853,11 @@ export default function App() {
                           ))}
                         </div>
                       </div>
-                      <div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#92400e' }}>
-                          <input type="checkbox" checked={newPollMultiple} onChange={(e) => setNewPollMultiple(e.target.checked)} /> Autoriser plusieurs choix par votant
-                        </label>
-                      </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                       <button onClick={addPoll} disabled={savingPoll} style={{ ...styles.primaryButton, background: '#92400e' }}>{savingPoll ? '...' : editingPollId ? '💾 Enregistrer' : '➕ Envoyer le sondage'}</button>
                       {editingPollId && (
-                        <button onClick={() => { setEditingPollId(''); setNewPollQuestion(''); setNewPollDescription(''); setNewPollOptions(['', '']); setNewPollTeamIds([]); setNewPollMultiple(false); }} style={styles.secondaryOutlineButton}>Annuler</button>
+                        <button onClick={resetPollForm} style={styles.secondaryOutlineButton}>Annuler</button>
                       )}
                     </div>
                   </div>
@@ -6764,7 +6868,7 @@ export default function App() {
                       ? <div style={styles.emptyState}>Aucun sondage créé.</div>
                       : <div style={{ display: 'grid', gap: 10 }}>
                           {manageablePolls.map((poll) => {
-                            const results = getPollResults(poll.id);
+                            const pollQuestions = normalizePollQuestions(poll);
                             const totalVotes = pollVotes.filter((v) => v.poll_id === poll.id).length;
                             const targetTeams = poll.team_ids.length === 0 ? 'Toutes' : poll.team_ids.map(getTeamName).join(', ');
                             const showResults = viewingPollResultsId === poll.id;
@@ -6774,15 +6878,17 @@ export default function App() {
                                   <div style={{ flex: 1 }}>
                                     <div style={{ fontWeight: 900, fontSize: 15, color: '#062C5D' }}>{poll.question}</div>
                                     {poll.description && <div style={{ fontSize: 13, color: '#5b6472', marginTop: 4 }}>{poll.description}</div>}
-                                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>Catégories : {targetTeams} · {totalVotes} vote{totalVotes > 1 ? 's' : ''} {poll.multiple_choice && '· choix multiples'}</div>
+                                    {poll.external_url && <a href={poll.external_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 800, color: '#0A5FB5' }}>Ouvrir le sondage externe</a>}
+                                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>Catégories : {targetTeams} · {pollQuestions.length} question{pollQuestions.length > 1 ? 's' : ''} · {totalVotes} vote{totalVotes > 1 ? 's' : ''}</div>
                                   </div>
                                   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                                     <button onClick={() => setViewingPollResultsId(showResults ? '' : poll.id)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px', background: '#0891b2' }}>{showResults ? '🔽' : '📊'}</button>
                                     <button onClick={() => togglePollClosed(poll.id, poll.closed)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px', background: poll.closed ? '#16a34a' : '#dc2626' }}>{poll.closed ? '🔓' : '🔒'}</button>
                                     <button onClick={() => {
-                                      const opts = pollOptions.filter((o) => o.poll_id === poll.id);
                                       setEditingPollId(poll.id); setNewPollQuestion(poll.question); setNewPollDescription(poll.description || '');
-                                      setNewPollOptions(opts.map((o) => o.label)); setNewPollTeamIds(poll.team_ids || []); setNewPollMultiple(poll.multiple_choice);
+                                      setNewPollExternalUrl(poll.external_url || '');
+                                      setNewPollQuestions(normalizePollQuestions(poll).map((q, idx) => ({ ...q, id: q.id || `q-${idx + 1}`, options: q.options.length >= 2 ? q.options : ['', ''] })));
+                                      setNewPollOptions(pollOptions.filter((o) => o.poll_id === poll.id).map((o) => o.label)); setNewPollTeamIds(poll.team_ids || []); setNewPollMultiple(poll.multiple_choice);
                                       window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>✏️</button>
                                     <button onClick={() => deletePoll(poll.id)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>🗑</button>
@@ -6790,22 +6896,36 @@ export default function App() {
                                 </div>
                                 {showResults && (
                                   <div style={{ marginTop: 12, padding: 12, background: 'white', border: '1px solid #e2e8f0', borderRadius: 12 }}>
-                                    {results.map((r) => (
-                                      <div key={r.option.id} style={{ marginBottom: 10 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: '#10233b', marginBottom: 4 }}>
-                                          <span>{r.option.label}</span>
-                                          <span>{r.count} ({r.percent}%)</span>
+                                    {pollQuestions.map((q) => {
+                                      const qOptions = getPollOptionsForQuestion(poll.id, q.id);
+                                      const qVotes = pollVotes.filter((v) => qOptions.some((o) => o.id === v.option_id));
+                                      const qTotal = qVotes.length;
+                                      return (
+                                        <div key={q.id} style={{ marginBottom: 14 }}>
+                                          <div style={{ fontWeight: 900, color: '#062C5D', marginBottom: 8 }}>{q.question}</div>
+                                          {qOptions.map((o) => {
+                                            const optVotes = qVotes.filter((v) => v.option_id === o.id);
+                                            const percent = qTotal > 0 ? Math.round((optVotes.length / qTotal) * 100) : 0;
+                                            return (
+                                              <div key={o.id} style={{ marginBottom: 10 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: '#10233b', marginBottom: 4 }}>
+                                                  <span>{o.label}</span>
+                                                  <span>{optVotes.length} ({percent}%)</span>
+                                                </div>
+                                                <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                                                  <div style={{ width: `${percent}%`, height: '100%', background: '#0A5FB5' }} />
+                                                </div>
+                                                {optVotes.length > 0 && (
+                                                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontStyle: 'italic' }}>
+                                                    {optVotes.map((v) => v.voter_label || '?').join(', ')}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                          })}
                                         </div>
-                                        <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-                                          <div style={{ width: `${r.percent}%`, height: '100%', background: '#0A5FB5' }} />
-                                        </div>
-                                        {r.voters.length > 0 && (
-                                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontStyle: 'italic' }}>
-                                            {r.voters.map((v) => v.voter_label || '?').join(', ')}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
@@ -7051,7 +7171,10 @@ export default function App() {
                     return visiblePolls.filter((p) => {
                       if (p.closed) return false;
                       const myVotes = getMyVotesForPoll(p.id, selectedParentId, playerId);
-                      return myVotes.length === 0;
+                      return normalizePollQuestions(p).some((q) => {
+                        const qOptions = getPollOptionsForQuestion(p.id, q.id);
+                        return !qOptions.some((o) => myVotes.includes(o.id));
+                      });
                     }).length;
                   })();
                   return (
@@ -7293,7 +7416,7 @@ export default function App() {
                   {visiblePolls.length === 0
                     ? <div style={styles.emptyState}>Aucun sondage disponible pour le moment.</div>
                     : visiblePolls.map((poll) => {
-                        const opts = pollOptions.filter((o) => o.poll_id === poll.id);
+                        const pollQuestions = normalizePollQuestions(poll);
                         const myVotes = getMyVotesForPoll(poll.id, voterUserId, voterPlayerId);
                         const totalVotes = pollVotes.filter((v) => v.poll_id === poll.id).length;
                         const hasVoted = myVotes.length > 0;
@@ -7303,38 +7426,57 @@ export default function App() {
                               <div style={{ flex: 1, minWidth: 200 }}>
                                 <h3 style={{ margin: '0 0 4px 0', color: '#062C5D' }}>{poll.question}</h3>
                                 {poll.description && <p style={{ margin: 0, color: '#5b6472', fontSize: 13 }}>{poll.description}</p>}
+                                {poll.external_url && (
+                                  <a href={poll.external_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 8, padding: '8px 12px', borderRadius: 10, background: '#0A5FB5', color: 'white', textDecoration: 'none', fontSize: 13, fontWeight: 900 }}>
+                                    Ouvrir le sondage externe
+                                  </a>
+                                )}
                               </div>
                               {poll.closed && <span style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800 }}>FERMÉ</span>}
                             </div>
                             <div style={{ display: 'grid', gap: 8 }}>
-                              {opts.map((o) => {
-                                const optVotes = pollVotes.filter((v) => v.option_id === o.id).length;
-                                const pct = totalVotes > 0 ? Math.round((optVotes / totalVotes) * 100) : 0;
-                                const selected = myVotes.includes(o.id);
+                              {pollQuestions.map((q) => {
+                                const qOptions = getPollOptionsForQuestion(poll.id, q.id);
+                                const qVotes = pollVotes.filter((v) => qOptions.some((o) => o.id === v.option_id));
+                                const qTotal = qVotes.length;
                                 return (
-                                  <button key={o.id} disabled={poll.closed}
-                                    onClick={async () => {
-                                      if (poll.closed) return;
-                                      let next: string[] = [];
-                                      if (poll.multiple_choice) {
-                                        next = selected ? myVotes.filter((x) => x !== o.id) : [...myVotes, o.id];
-                                      } else {
-                                        next = selected ? [] : [o.id];
-                                      }
-                                      await votePoll(poll.id, next, voterUserId || null, voterPlayerId || null, voterLabel);
-                                    }}
-                                    style={{ position: 'relative', textAlign: 'left', padding: '12px 14px', borderRadius: 12, border: `2px solid ${selected ? '#0A5FB5' : '#cfd8e3'}`, background: selected ? '#eaf4ff' : 'white', cursor: poll.closed ? 'not-allowed' : 'pointer', overflow: 'hidden', fontWeight: 700, color: '#10233b' }}>
-                                    <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, ${selected ? '#bfdbfe' : '#e0eaf5'} ${pct}%, transparent ${pct}%)`, opacity: hasVoted ? 0.45 : 0, transition: 'opacity 0.2s' }} />
-                                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                                      <span>{selected ? '✅ ' : ''}{o.label}</span>
-                                      {hasVoted && <span style={{ fontSize: 13, color: '#5b6472', fontWeight: 800 }}>{pct}% ({optVotes})</span>}
+                                  <div key={q.id} style={{ display: 'grid', gap: 8, padding: pollQuestions.length > 1 ? 12 : 0, borderRadius: 14, background: pollQuestions.length > 1 ? '#f8fafc' : 'transparent' }}>
+                                    <div style={{ fontWeight: 900, color: '#062C5D', fontSize: 15 }}>{q.question}</div>
+                                    {qOptions.map((o) => {
+                                      const optVotes = qVotes.filter((v) => v.option_id === o.id).length;
+                                      const pct = qTotal > 0 ? Math.round((optVotes / qTotal) * 100) : 0;
+                                      const selected = myVotes.includes(o.id);
+                                      const selectedInQuestion = myVotes.filter((id) => qOptions.some((qo) => qo.id === id));
+                                      return (
+                                        <button key={o.id} disabled={poll.closed}
+                                          onClick={async () => {
+                                            if (poll.closed) return;
+                                            let next: string[] = [];
+                                            if (q.multiple_choice) {
+                                              next = selected ? selectedInQuestion.filter((x) => x !== o.id) : [...selectedInQuestion, o.id];
+                                            } else {
+                                              next = selected ? [] : [o.id];
+                                            }
+                                            await votePollQuestion(poll.id, next, qOptions.map((qo) => qo.id), voterUserId || null, voterPlayerId || null, voterLabel);
+                                          }}
+                                          style={{ position: 'relative', textAlign: 'left', padding: '12px 14px', borderRadius: 12, border: `2px solid ${selected ? '#0A5FB5' : '#cfd8e3'}`, background: selected ? '#eaf4ff' : 'white', cursor: poll.closed ? 'not-allowed' : 'pointer', overflow: 'hidden', fontWeight: 700, color: '#10233b' }}>
+                                          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, ${selected ? '#bfdbfe' : '#e0eaf5'} ${pct}%, transparent ${pct}%)`, opacity: selectedInQuestion.length > 0 ? 0.45 : 0, transition: 'opacity 0.2s' }} />
+                                          <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                                            <span>{selected ? '✅ ' : ''}{o.label}</span>
+                                            {selectedInQuestion.length > 0 && <span style={{ fontSize: 13, color: '#5b6472', fontWeight: 800 }}>{pct}% ({optVotes})</span>}
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>
+                                      {qTotal} réponse{qTotal > 1 ? 's' : ''}{q.multiple_choice ? ' · plusieurs choix possibles' : ''}
                                     </div>
-                                  </button>
+                                  </div>
                                 );
                               })}
                             </div>
                             <div style={{ marginTop: 8, fontSize: 12, color: '#5b6472' }}>
-                              {totalVotes} vote{totalVotes > 1 ? 's' : ''} {poll.multiple_choice && '· choix multiples autorisés'}
+                              {totalVotes} vote{totalVotes > 1 ? 's' : ''} au total
                             </div>
                           </div>
                         );
