@@ -4,6 +4,8 @@ import Calendar from './Calendar';
 import MatchComposition from './MatchComposition';
 import HandLifeLogo from './HandLifeLogo';
 import { GRADES, PlayerCard, FifaPlayerCard, FullScreenCard, GradeModal, computeGrade, POSITIONS, HANDBALL_POWERS } from './PlayerGrades';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 type Team = {
   id: string;
@@ -2940,15 +2942,16 @@ export default function App() {
 
   function extractFdmActionsFromText(rawText: string) {
     const text = rawText
+      .replace(/\u00a0/g, ' ')
       .replace(/\\r|\\n/g, ' ')
       .replace(/\s+/g, ' ')
       .replace(/\(([^)]{1,160})\)/g, ' $1 ');
     const lines: string[] = [];
-    const actionRegex = /(\d{1,2}:\d{2})\s+(\d{1,2}\s*-\s*\d{1,2})\s+(.{8,180}?)(?=\d{1,2}:\d{2}\s+\d{1,2}\s*-\s*\d{1,2}|$)/g;
+    const actionRegex = /(\d{1,2}:\d{2})\s+(\d{1,2}\s*-\s*\d{1,2})\s+(.{3,180}?)(?=\s+\d{1,2}:\d{2}\s+\d{1,2}\s*-\s*\d{1,2}\s+|$)/g;
     let match: RegExpExecArray | null;
     while ((match = actionRegex.exec(text)) !== null) {
       const action = `${match[1]} ${match[2].replace(/\s+/g, '')} ${match[3].trim()}`.replace(/\s+/g, ' ');
-      if (/(but|tir|aru|7m|n[°oº]|avt|2mn)/i.test(action)) lines.push(action);
+      if (/(but|tir|arr|7m|n\s*[^\w\s]?\s*\d+|avt|2mn)/i.test(action)) lines.push(action);
       if (lines.length > 220) break;
     }
     if (lines.length > 0) return lines.join('\n');
@@ -2960,8 +2963,160 @@ export default function App() {
       .join('\n');
   }
 
-  function extractReadablePdfText(buffer: ArrayBuffer) {
+  async function extractPdfTextWithPdfJs(buffer: ArrayBuffer) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(buffer.slice(0)),
+      disableFontFace: true,
+      isEvalSupported: false,
+    });
+    const pdf = await loadingTask.promise;
+    const pages: string[] = [];
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item) => ('str' in item ? item.str : ''))
+        .filter(Boolean)
+        .join(' ');
+      pages.push(pageText);
+    }
+    return pages.join('\n');
+  }
+
+  function decodePdfBytes(bytes: Uint8Array) {
+    let text = '';
+    for (let i = 0; i < bytes.length; i += 12000) {
+      text += String.fromCharCode(...bytes.slice(i, i + 12000));
+    }
+    return text;
+  }
+
+  function decodePdfLiteralString(value: string) {
+    let text = '';
+    for (let i = 0; i < value.length; i += 1) {
+      const char = value[i];
+      if (char !== '\\') {
+        text += char;
+        continue;
+      }
+      const next = value[i + 1];
+      if (!next) continue;
+      if (next === 'n') { text += '\n'; i += 1; continue; }
+      if (next === 'r') { text += '\r'; i += 1; continue; }
+      if (next === 't') { text += '\t'; i += 1; continue; }
+      if (next === 'b') { text += '\b'; i += 1; continue; }
+      if (next === 'f') { text += '\f'; i += 1; continue; }
+      if (next === '(' || next === ')' || next === '\\') { text += next; i += 1; continue; }
+      const octal = value.slice(i + 1, i + 4).match(/^[0-7]{1,3}/)?.[0];
+      if (octal) {
+        text += String.fromCharCode(parseInt(octal, 8));
+        i += octal.length;
+        continue;
+      }
+      text += next;
+      i += 1;
+    }
+    return text;
+  }
+
+  function extractPdfLiteralStrings(content: string) {
+    const values: string[] = [];
+    for (let i = 0; i < content.length; i += 1) {
+      if (content[i] !== '(') continue;
+      let depth = 1;
+      let value = '';
+      i += 1;
+      for (; i < content.length; i += 1) {
+        const char = content[i];
+        if (char === '\\') {
+          value += char + (content[i + 1] || '');
+          i += 1;
+          continue;
+        }
+        if (char === '(') depth += 1;
+        if (char === ')') depth -= 1;
+        if (depth === 0) break;
+        value += char;
+      }
+      const decoded = decodePdfLiteralString(value).trim();
+      if (decoded.length > 0) values.push(decoded);
+    }
+    return values;
+  }
+
+  function decodePdfHexString(hex: string) {
+    const clean = hex.replace(/\s+/g, '');
+    if (clean.length < 4 || clean.length % 2 !== 0) return '';
+    const bytes = new Uint8Array(clean.length / 2);
+    for (let i = 0; i < clean.length; i += 2) bytes[i / 2] = parseInt(clean.slice(i, i + 2), 16);
+    try {
+      if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be').decode(bytes.slice(2));
+      if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder('utf-16le').decode(bytes.slice(2));
+      return new TextDecoder('latin1').decode(bytes);
+    } catch {
+      return decodePdfBytes(bytes);
+    }
+  }
+
+  function extractPdfHexStrings(content: string) {
+    const values: string[] = [];
+    const regex = /<([0-9a-fA-F\s]{4,})>/g;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(content)) !== null) {
+      const decoded = decodePdfHexString(match[1]).trim();
+      if (decoded.length > 0 && /[A-Za-z0-9]/.test(decoded)) values.push(decoded);
+    }
+    return values;
+  }
+
+  async function inflatePdfStream(streamBytes: Uint8Array) {
+    const Decompression = (window as any).DecompressionStream;
+    if (!Decompression) return null;
+    for (const format of ['deflate', 'deflate-raw']) {
+      try {
+        const stream = new Blob([streamBytes]).stream().pipeThrough(new Decompression(format));
+        return new Uint8Array(await new Response(stream).arrayBuffer());
+      } catch {
+        // Try the next supported deflate variant.
+      }
+    }
+    return null;
+  }
+
+  async function extractReadablePdfText(buffer: ArrayBuffer) {
+    try {
+      const pdfJsText = await extractPdfTextWithPdfJs(buffer);
+      if (pdfJsText.trim()) return pdfJsText;
+    } catch (e) {
+      console.warn('PDF.js extraction failed, using fallback reader', e);
+    }
+
     const bytes = new Uint8Array(buffer);
+    const pdfText = decodePdfBytes(bytes);
+    const extracted: string[] = [];
+    let searchIndex = 0;
+    while (searchIndex < pdfText.length) {
+      const streamStart = pdfText.indexOf('stream', searchIndex);
+      if (streamStart < 0) break;
+      let dataStart = streamStart + 6;
+      if (pdfText[dataStart] === '\r' && pdfText[dataStart + 1] === '\n') dataStart += 2;
+      else if (pdfText[dataStart] === '\n' || pdfText[dataStart] === '\r') dataStart += 1;
+      const streamEnd = pdfText.indexOf('endstream', dataStart);
+      if (streamEnd < 0) break;
+      let dataEnd = streamEnd;
+      if (pdfText[dataEnd - 1] === '\n') dataEnd -= 1;
+      if (pdfText[dataEnd - 1] === '\r') dataEnd -= 1;
+      const header = pdfText.slice(Math.max(0, streamStart - 500), streamStart);
+      const rawStream = bytes.slice(dataStart, dataEnd);
+      const readableStream = /\/FlateDecode/.test(header) ? await inflatePdfStream(rawStream) : rawStream;
+      if (readableStream) {
+        const content = decodePdfBytes(readableStream);
+        extracted.push(...extractPdfLiteralStrings(content), ...extractPdfHexStrings(content));
+      }
+      searchIndex = streamEnd + 9;
+    }
+
     let text = '';
     let chunk = '';
     for (let i = 0; i < bytes.length; i += 1) {
@@ -2975,7 +3130,7 @@ export default function App() {
       }
     }
     if (chunk.length > 2) text += chunk;
-    return text;
+    return `${extracted.join('\n')}\n${extracted.join(' ')}\n${text}`;
   }
 
   async function analyzeFdmPdfFile(file: File, match: MatchItem) {
@@ -2986,7 +3141,7 @@ export default function App() {
     setAnalyzingFdmFile(true);
     try {
       const buffer = await file.arrayBuffer();
-      const rawText = extractReadablePdfText(buffer);
+      const rawText = await extractReadablePdfText(buffer);
       const actions = extractFdmActionsFromText(rawText);
       setNewMatchFdmFileName(file.name);
       setNewMatchFdmUrl('');
@@ -2994,7 +3149,7 @@ export default function App() {
       const summary = buildSupporterSummary(match, actions);
       setNewMatchSupporterSummary(summary);
       if (!actions) {
-        alert("Je n'ai pas réussi à lire les lignes Temps / Score / Action dans ce PDF. On peut ajouter une lecture PDF plus robuste ensuite.");
+        alert("Je n'ai pas reussi a lire les lignes Temps / Score / Action dans ce PDF. Tu peux me l'envoyer pour que j'ajuste encore le lecteur.");
       }
     } catch (e) {
       console.error(e);
