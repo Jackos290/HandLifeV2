@@ -34,6 +34,8 @@ type MatchItem = {
   team_id: string;
   score_home: string | number | null;
   score_away: string | number | null;
+  fdm_url?: string | null;
+  supporter_summary?: string | null;
 };
 
 type CoachAccess = {
@@ -720,6 +722,8 @@ export default function App() {
   const [newMatchDate, setNewMatchDate] = useState('');
   const [newMatchLocation, setNewMatchLocation] = useState('');
   const [newMatchHomeAway, setNewMatchHomeAway] = useState<'home' | 'away'>('home');
+  const [newMatchFdmUrl, setNewMatchFdmUrl] = useState('');
+  const [newMatchSupporterSummary, setNewMatchSupporterSummary] = useState('');
   const [editingMatchId, setEditingMatchId] = useState('');
 
   // Admin — joueur
@@ -2908,23 +2912,44 @@ export default function App() {
 
   async function addMatch() {
     if (!newMatchTeamId || !newMatchOpponent.trim() || !newMatchDate) { alert('Remplir équipe, adversaire et date'); return; }
+    const matchSupporterPayload: any = {
+      fdm_url: newMatchFdmUrl.trim() || null,
+      supporter_summary: newMatchSupporterSummary.trim() || null,
+    };
     if (editingMatchId) {
-      const { error } = await supabase.from('matches').update({
+      let { error } = await supabase.from('matches').update({
         team_id: newMatchTeamId, opponent: newMatchOpponent.trim(),
         match_date: newMatchDate, location: newMatchLocation.trim() || null, home_away: newMatchHomeAway,
+        ...matchSupporterPayload,
       }).eq('id', editingMatchId);
+      if (error && String(error.message || '').includes('fdm_url')) {
+        const retry = await supabase.from('matches').update({
+          team_id: newMatchTeamId, opponent: newMatchOpponent.trim(),
+          match_date: newMatchDate, location: newMatchLocation.trim() || null, home_away: newMatchHomeAway,
+        }).eq('id', editingMatchId);
+        error = retry.error;
+      }
       if (error) { alert("Erreur lors de la modification du match"); return; }
       setEditingMatchId('');
-      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home');
+      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary('');
       await loadData();
       alert('Match modifié');
     } else {
-      const { data: newMatch, error } = await supabase.from('matches').insert({
+      let { data: newMatch, error } = await supabase.from('matches').insert({
         team_id: newMatchTeamId, opponent: newMatchOpponent.trim(),
         match_date: newMatchDate, location: newMatchLocation.trim() || null, home_away: newMatchHomeAway,
+        ...matchSupporterPayload,
       }).select().single();
+      if (error && String(error.message || '').includes('fdm_url')) {
+        const retry = await supabase.from('matches').insert({
+          team_id: newMatchTeamId, opponent: newMatchOpponent.trim(),
+          match_date: newMatchDate, location: newMatchLocation.trim() || null, home_away: newMatchHomeAway,
+        }).select().single();
+        newMatch = retry.data;
+        error = retry.error;
+      }
       if (error) { alert("Erreur lors de la création du match"); return; }
-      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home');
+      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary('');
       await loadData();
       // Notifier les coaches concernés par email
       if (newMatch) {
@@ -2970,6 +2995,38 @@ export default function App() {
     }
     await loadData();
     alert('Match supprimé');
+  }
+
+  function startEditMatch(match: MatchItem, targetAdminTab = false) {
+    setEditingMatchId(match.id);
+    setNewMatchTeamId(match.team_id);
+    setNewMatchOpponent(match.opponent || '');
+    setNewMatchDate(match.match_date ? match.match_date.slice(0, 16) : '');
+    setNewMatchLocation(match.location || '');
+    setNewMatchHomeAway(match.home_away as 'home' | 'away');
+    setNewMatchFdmUrl(match.fdm_url || '');
+    setNewMatchSupporterSummary(match.supporter_summary || '');
+    if (targetAdminTab) setAdminSubTab('matches');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function resetMatchForm() {
+    setEditingMatchId('');
+    setNewMatchOpponent('');
+    setNewMatchDate('');
+    setNewMatchLocation('');
+    setNewMatchHomeAway('home');
+    setNewMatchFdmUrl('');
+    setNewMatchSupporterSummary('');
+  }
+
+  function getMatchPlayerLinkPreview(match: MatchItem) {
+    const teamPlayers = players.filter((p) => p.team_id === match.team_id);
+    return {
+      teamPlayers,
+      exactCount: teamPlayers.length,
+      method: "Rapprochement prevu : equipe du match + nom/prenom normalises depuis la feuille FFHB. En cas de doute, le coach valide manuellement.",
+    };
   }
 
   async function toggleTemplateActive(template: TrainingTemplate) {
@@ -5316,6 +5373,19 @@ export default function App() {
                         <div><label style={styles.inputLabel}>Fin</label><input type="time" value={newTrainingEnd} onChange={(e) => setNewTrainingEnd(e.target.value)} style={styles.input} /></div>
                         <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>Lieu</label><input value={newTrainingLocation} onChange={(e) => setNewTrainingLocation(e.target.value)} style={styles.input} /></div>
                       </div>
+                      <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                        <div>
+                          <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
+                          <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
+                        </div>
+                        <div>
+                          <label style={styles.inputLabel}>Resume supporter</label>
+                          <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Belle victoire collective, avec une defense solide et une fin de match maitrisee." />
+                        </div>
+                        <div style={{ padding: 12, borderRadius: 12, background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a', fontSize: 13, fontWeight: 700 }}>
+                          Import stats prevu : categorie du match + nom/prenom normalises depuis la feuille FFHB. Les cas incertains seront valides par le coach.
+                        </div>
+                      </div>
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                         <button onClick={addTrainingTemplate} disabled={savingTrainingTemplate} style={styles.primaryButton}>{savingTrainingTemplate ? 'Enregistrement...' : 'Enregistrer'}</button>
                         <button onClick={resetTrainingTemplateForm} style={styles.secondaryOutlineButton}>Annuler</button>
@@ -5388,7 +5458,7 @@ export default function App() {
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                         <button onClick={addMatch} style={styles.primaryButton}>{editingMatchId ? '💾 Enregistrer' : 'Ajouter le match'}</button>
                         {editingMatchId && (
-                          <button onClick={() => { setEditingMatchId(''); setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); }} style={styles.secondaryOutlineButton}>Annuler</button>
+                          <button onClick={resetMatchForm} style={styles.secondaryOutlineButton}>Annuler</button>
                         )}
                       </div>
                     </div>
@@ -5416,7 +5486,7 @@ export default function App() {
                                 })()}
                               </div>
                               <div style={{ display: 'flex', gap: 8 }}>
-                                <button onClick={() => { setEditingMatchId(m.id); setNewMatchTeamId(m.team_id); setNewMatchOpponent(m.opponent || ''); setNewMatchDate(m.match_date ? m.match_date.slice(0, 16) : ''); setNewMatchLocation(m.location || ''); setNewMatchHomeAway(m.home_away as 'home' | 'away'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ ...styles.secondaryButton, fontSize: 13, padding: '8px 12px' }}>✏️</button>
+                                <button onClick={() => startEditMatch(m)} style={{ ...styles.secondaryButton, fontSize: 13, padding: '8px 12px' }}>Modifier</button>
                                 <button onClick={() => deleteMatch(m)} style={{ ...styles.linkRemoveButton, fontSize: 13 }}>🗑</button>
                               </div>
                             </div>
@@ -6718,6 +6788,16 @@ export default function App() {
                         ))}
                       </div>
                     </div>
+                    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                      <div>
+                        <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
+                        <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
+                      </div>
+                      <div>
+                        <label style={styles.inputLabel}>Resume supporter</label>
+                        <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Resume visible dans le futur espace Supporter." />
+                      </div>
+                    </div>
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button onClick={addCoachAccess} style={styles.primaryButton} disabled={savingCoach}>{savingCoach ? '⏳...' : editingCoachId ? '💾 Enregistrer' : '➕ Créer le coach'}</button>
                       {editingCoachId && <button onClick={() => { setEditingCoachId(''); setNewCoachFirstName(''); setNewCoachLastName(''); setNewCoachEmail(''); setNewCoachPassword(''); setNewCoachTeamIds([]); }} style={styles.secondaryOutlineButton}>Annuler</button>}
@@ -6843,7 +6923,7 @@ export default function App() {
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button onClick={addMatch} style={styles.primaryButton}>{editingMatchId ? '💾 Enregistrer' : 'Ajouter le match'}</button>
-                      {editingMatchId && <button onClick={() => { setEditingMatchId(''); setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); }} style={styles.secondaryOutlineButton}>Annuler</button>}
+                      {editingMatchId && <button onClick={resetMatchForm} style={styles.secondaryOutlineButton}>Annuler</button>}
                     </div>
                   </div>
                   {/* Liste déroulante matchs */}
@@ -6864,13 +6944,12 @@ export default function App() {
                                 {m.score_home !== null && m.score_home !== '' && <div style={{ fontSize: 13, fontWeight: 700, color: '#0A5FB5', marginTop: 2 }}>Score : {m.score_home} – {m.score_away}</div>}
                               </div>
                               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                                <button onClick={() => { setEditingMatchId(m.id); setNewMatchTeamId(m.team_id); setNewMatchOpponent(m.opponent || ''); setNewMatchDate(m.match_date ? m.match_date.slice(0, 16) : ''); setNewMatchLocation(m.location || ''); setNewMatchHomeAway(m.home_away as 'home' | 'away'); setAdminSubTab('matches'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>✏️ Modifier</button>
+                                <button onClick={() => startEditMatch(m, true)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>Modifier</button>
                                 <button onClick={() => deleteMatch(m)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>🗑</button>
                               </div>
                             </div>
                           ))}
                         </div>
-                    )}
                   </div>
                 </>}
 
