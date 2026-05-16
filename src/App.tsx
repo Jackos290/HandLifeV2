@@ -36,6 +36,7 @@ type MatchItem = {
   score_away: string | number | null;
   fdm_url?: string | null;
   supporter_summary?: string | null;
+  fdm_actions_text?: string | null;
 };
 
 type CoachAccess = {
@@ -724,6 +725,7 @@ export default function App() {
   const [newMatchHomeAway, setNewMatchHomeAway] = useState<'home' | 'away'>('home');
   const [newMatchFdmUrl, setNewMatchFdmUrl] = useState('');
   const [newMatchSupporterSummary, setNewMatchSupporterSummary] = useState('');
+  const [newMatchFdmActions, setNewMatchFdmActions] = useState('');
   const [savingFdmImport, setSavingFdmImport] = useState(false);
   const [editingMatchId, setEditingMatchId] = useState('');
 
@@ -1450,6 +1452,7 @@ export default function App() {
       initMatchResult(m);
       setNewMatchFdmUrl(m.fdm_url || '');
       setNewMatchSupporterSummary(m.supporter_summary || '');
+      setNewMatchFdmActions(m.fdm_actions_text || '');
     }
   }, [selectedMatchId, matches]);
 
@@ -2853,12 +2856,50 @@ export default function App() {
     finally { setSavingMatchResult(false); }
   }
 
-  function buildSupporterSummary(match: MatchItem) {
+  function buildSupporterSummary(match: MatchItem, actionText = '') {
     const result = matchResults[match.id];
     const home = Number(result?.score_home ?? match.score_home ?? 0);
     const away = Number(result?.score_away ?? match.score_away ?? 0);
     const teamName = getTeamName(match.team_id);
     const opponent = match.opponent || 'adversaire';
+    const actionLines = actionText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /\b\d{1,2}\s*-\s*\d{1,2}\b/.test(line));
+
+    if (actionLines.length > 0) {
+      const scores = actionLines
+        .map((line) => {
+          const matchScore = line.match(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/);
+          return matchScore ? { home: Number(matchScore[1]), away: Number(matchScore[2]), line } : null;
+        })
+        .filter(Boolean) as { home: number; away: number; line: string }[];
+      const first = scores[0];
+      const last = scores[scores.length - 1];
+      const teamGoals = Math.max(0, (last?.home || home) - (first?.home || 0));
+      const oppGoals = Math.max(0, (last?.away || away) - (first?.away || 0));
+      const scoringPlayers: Record<string, number> = {};
+      let previous = first;
+      for (const current of scores.slice(1)) {
+        if (previous && current.home > previous.home) {
+          const playerMatch = current.line.match(/N[°º]\s*\d+\s+([A-ZÀ-Ÿ][A-ZÀ-Ÿ'\- ]{2,})/i);
+          const playerName = (playerMatch?.[1] || '').trim().replace(/\s+/g, ' ');
+          if (playerName) scoringPlayers[playerName] = (scoringPlayers[playerName] || 0) + (current.home - previous.home);
+        }
+        previous = current;
+      }
+      const topScorers = Object.entries(scoringPlayers)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([name, goals]) => `${name} (${goals})`);
+      const trend = home > away
+        ? `s'impose ${home}-${away}`
+        : home < away
+          ? `s'incline ${home}-${away}`
+          : `termine à égalité ${home}-${away}`;
+      return `${teamName} ${trend} face à ${opponent}. La feuille de match montre ${actionLines.length} actions suivies, avec ${teamGoals} buts marqués contre ${oppGoals} encaissés sur les lignes analysées.${topScorers.length ? ` Joueurs en vue : ${topScorers.join(', ')}.` : ''} Ce résumé est généré à partir du déroulé Temps / Score / Action.`;
+    }
+
     if (!Number.isFinite(home) || !Number.isFinite(away)) {
       return `${teamName} a disputé son match face à ${opponent}. Le résumé sera complété après l'import de la feuille de match.`;
     }
@@ -2876,10 +2917,11 @@ export default function App() {
     if (!url) { alert('Colle le lien de la feuille de match FFHB.'); return; }
     setSavingFdmImport(true);
     try {
-      const summary = newMatchSupporterSummary.trim() || buildSupporterSummary(match);
+      const summary = newMatchSupporterSummary.trim() || buildSupporterSummary(match, newMatchFdmActions);
       const { error } = await supabase.from('matches').update({
         fdm_url: url,
         supporter_summary: summary,
+        fdm_actions_text: newMatchFdmActions.trim() || null,
       }).eq('id', match.id);
       if (error) throw error;
       setNewMatchSupporterSummary(summary);
@@ -2960,6 +3002,7 @@ export default function App() {
     const matchSupporterPayload: any = {
       fdm_url: newMatchFdmUrl.trim() || null,
       supporter_summary: newMatchSupporterSummary.trim() || null,
+      fdm_actions_text: newMatchFdmActions.trim() || null,
     };
     if (editingMatchId) {
       let { error } = await supabase.from('matches').update({
@@ -2976,7 +3019,7 @@ export default function App() {
       }
       if (error) { alert("Erreur lors de la modification du match"); return; }
       setEditingMatchId('');
-      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary('');
+      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary(''); setNewMatchFdmActions('');
       await loadData();
       alert('Match modifié');
     } else {
@@ -2994,7 +3037,7 @@ export default function App() {
         error = retry.error;
       }
       if (error) { alert("Erreur lors de la création du match"); return; }
-      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary('');
+      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary(''); setNewMatchFdmActions('');
       await loadData();
       // Notifier les coaches concernés par email
       if (newMatch) {
@@ -3051,6 +3094,7 @@ export default function App() {
     setNewMatchHomeAway(match.home_away as 'home' | 'away');
     setNewMatchFdmUrl(match.fdm_url || '');
     setNewMatchSupporterSummary(match.supporter_summary || '');
+    setNewMatchFdmActions(match.fdm_actions_text || '');
     if (targetAdminTab) setAdminSubTab('matches');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -3063,6 +3107,7 @@ export default function App() {
     setNewMatchHomeAway('home');
     setNewMatchFdmUrl('');
     setNewMatchSupporterSummary('');
+    setNewMatchFdmActions('');
   }
 
   function getMatchPlayerLinkPreview(match: MatchItem) {
@@ -5627,9 +5672,15 @@ export default function App() {
                                 <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
                                 <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
                               </div>
+                              <div>
+                                <label style={styles.inputLabel}>Lignes Temps / Score / Action</label>
+                                <textarea value={newMatchFdmActions} onChange={(e) => setNewMatchFdmActions(e.target.value)}
+                                  style={{ ...styles.input, minHeight: 120, resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12 }}
+                                  placeholder={"Colle ici les lignes de la feuille :\n12:48 14-21 ArU N°... NOM prenom\n26:17 15-22 Tir JR N°... NOM prenom"} />
+                              </div>
                               <button onClick={() => importFdmForMatch(selectedMatch)}
-                                disabled={savingFdmImport || !newMatchFdmUrl.trim()}
-                                style={{ ...styles.primaryButton, background: '#92400e', opacity: savingFdmImport || !newMatchFdmUrl.trim() ? 0.65 : 1 }}>
+                                disabled={savingFdmImport || (!newMatchFdmUrl.trim() && !newMatchFdmActions.trim())}
+                                style={{ ...styles.primaryButton, background: '#92400e', opacity: savingFdmImport || (!newMatchFdmUrl.trim() && !newMatchFdmActions.trim()) ? 0.65 : 1 }}>
                                 {savingFdmImport ? 'Import en cours...' : 'Importer stats + résumé'}
                               </button>
                               {newMatchSupporterSummary && (
