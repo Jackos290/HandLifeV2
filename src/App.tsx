@@ -5373,19 +5373,7 @@ export default function App() {
                         <div><label style={styles.inputLabel}>Fin</label><input type="time" value={newTrainingEnd} onChange={(e) => setNewTrainingEnd(e.target.value)} style={styles.input} /></div>
                         <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>Lieu</label><input value={newTrainingLocation} onChange={(e) => setNewTrainingLocation(e.target.value)} style={styles.input} /></div>
                       </div>
-                      <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-                        <div>
-                          <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
-                          <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
-                        </div>
-                        <div>
-                          <label style={styles.inputLabel}>Resume supporter</label>
-                          <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Belle victoire collective, avec une defense solide et une fin de match maitrisee." />
-                        </div>
-                        <div style={{ padding: 12, borderRadius: 12, background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a', fontSize: 13, fontWeight: 700 }}>
-                          Import stats prevu : categorie du match + nom/prenom normalises depuis la feuille FFHB. Les cas incertains seront valides par le coach.
-                        </div>
-                      </div>
+
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                         <button onClick={addTrainingTemplate} disabled={savingTrainingTemplate} style={styles.primaryButton}>{savingTrainingTemplate ? 'Enregistrement...' : 'Enregistrer'}</button>
                         <button onClick={resetTrainingTemplateForm} style={styles.secondaryOutlineButton}>Annuler</button>
@@ -5453,6 +5441,16 @@ export default function App() {
                           <select value={newMatchHomeAway} onChange={(e) => setNewMatchHomeAway(e.target.value as 'home' | 'away')} style={styles.select}>
                             <option value="home">Domicile</option><option value="away">Extérieur</option>
                           </select>
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                        <div>
+                          <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
+                          <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
+                        </div>
+                        <div>
+                          <label style={styles.inputLabel}>Resume supporter</label>
+                          <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Belle victoire collective, avec une defense solide et une fin de match maitrisee." />
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -6798,6 +6796,26 @@ export default function App() {
                         <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Resume visible dans le futur espace Supporter." />
                       </div>
                     </div>
+                    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                      <div>
+                        <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
+                        <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
+                      </div>
+                      <div>
+                        <label style={styles.inputLabel}>Resume supporter</label>
+                        <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Resume visible dans le futur espace Supporter." />
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                      <div>
+                        <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
+                        <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
+                      </div>
+                      <div>
+                        <label style={styles.inputLabel}>Resume supporter</label>
+                        <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Resume visible dans le futur espace Supporter." />
+                      </div>
+                    </div>
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button onClick={addCoachAccess} style={styles.primaryButton} disabled={savingCoach}>{savingCoach ? '⏳...' : editingCoachId ? '💾 Enregistrer' : '➕ Créer le coach'}</button>
                       {editingCoachId && <button onClick={() => { setEditingCoachId(''); setNewCoachFirstName(''); setNewCoachLastName(''); setNewCoachEmail(''); setNewCoachPassword(''); setNewCoachTeamIds([]); }} style={styles.secondaryOutlineButton}>Annuler</button>}
@@ -6882,6 +6900,7 @@ export default function App() {
                             </button>
                           </div>
                         </div>
+                    )}
                       ))}
                     </div>
                   </div>
@@ -6921,6 +6940,16 @@ export default function App() {
                       <div><label style={styles.inputLabel}>Lieu</label><input value={newMatchLocation} onChange={(e) => setNewMatchLocation(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Type</label><select value={newMatchHomeAway} onChange={(e) => setNewMatchHomeAway(e.target.value as 'home' | 'away')} style={styles.select}><option value="home">Domicile</option><option value="away">{"Extérieur"}</option></select></div>
                     </div>
+                    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                      <div>
+                        <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
+                        <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
+                      </div>
+                      <div>
+                        <label style={styles.inputLabel}>Resume supporter</label>
+                        <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Resume visible dans le futur espace Supporter." />
+                      </div>
+                    </div>
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button onClick={addMatch} style={styles.primaryButton}>{editingMatchId ? '💾 Enregistrer' : 'Ajouter le match'}</button>
                       {editingMatchId && <button onClick={resetMatchForm} style={styles.secondaryOutlineButton}>Annuler</button>}
@@ -6950,6 +6979,7 @@ export default function App() {
                             </div>
                           ))}
                         </div>
+                    )}
                   </div>
                 </>}
 
