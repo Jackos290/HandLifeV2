@@ -726,6 +726,8 @@ export default function App() {
   const [newMatchFdmUrl, setNewMatchFdmUrl] = useState('');
   const [newMatchSupporterSummary, setNewMatchSupporterSummary] = useState('');
   const [newMatchFdmActions, setNewMatchFdmActions] = useState('');
+  const [newMatchFdmFileName, setNewMatchFdmFileName] = useState('');
+  const [analyzingFdmFile, setAnalyzingFdmFile] = useState(false);
   const [savingFdmImport, setSavingFdmImport] = useState(false);
   const [editingMatchId, setEditingMatchId] = useState('');
 
@@ -1453,6 +1455,7 @@ export default function App() {
       setNewMatchFdmUrl(m.fdm_url || '');
       setNewMatchSupporterSummary(m.supporter_summary || '');
       setNewMatchFdmActions(m.fdm_actions_text || '');
+      setNewMatchFdmFileName('');
     }
   }, [selectedMatchId, matches]);
 
@@ -2914,12 +2917,12 @@ export default function App() {
 
   async function importFdmForMatch(match: MatchItem) {
     const url = newMatchFdmUrl.trim();
-    if (!url) { alert('Colle le lien de la feuille de match FFHB.'); return; }
+    if (!url && !newMatchFdmActions.trim()) { alert('Ajoute le PDF ou colle le lien de la feuille de match FFHB.'); return; }
     setSavingFdmImport(true);
     try {
       const summary = newMatchSupporterSummary.trim() || buildSupporterSummary(match, newMatchFdmActions);
       const { error } = await supabase.from('matches').update({
-        fdm_url: url,
+        fdm_url: url || newMatchFdmFileName || null,
         supporter_summary: summary,
         fdm_actions_text: newMatchFdmActions.trim() || null,
       }).eq('id', match.id);
@@ -2932,6 +2935,72 @@ export default function App() {
       alert("Erreur : vérifie que le SQL supabase-match-supporter-fields.sql a bien été exécuté.");
     } finally {
       setSavingFdmImport(false);
+    }
+  }
+
+  function extractFdmActionsFromText(rawText: string) {
+    const text = rawText
+      .replace(/\\r|\\n/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\(([^)]{1,160})\)/g, ' $1 ');
+    const lines: string[] = [];
+    const actionRegex = /(\d{1,2}:\d{2})\s+(\d{1,2}\s*-\s*\d{1,2})\s+(.{8,180}?)(?=\d{1,2}:\d{2}\s+\d{1,2}\s*-\s*\d{1,2}|$)/g;
+    let match: RegExpExecArray | null;
+    while ((match = actionRegex.exec(text)) !== null) {
+      const action = `${match[1]} ${match[2].replace(/\s+/g, '')} ${match[3].trim()}`.replace(/\s+/g, ' ');
+      if (/(but|tir|aru|7m|n[°oº]|avt|2mn)/i.test(action)) lines.push(action);
+      if (lines.length > 220) break;
+    }
+    if (lines.length > 0) return lines.join('\n');
+    return rawText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /\d{1,2}:\d{2}.*\d{1,2}\s*-\s*\d{1,2}/.test(line))
+      .slice(0, 220)
+      .join('\n');
+  }
+
+  function extractReadablePdfText(buffer: ArrayBuffer) {
+    const bytes = new Uint8Array(buffer);
+    let text = '';
+    let chunk = '';
+    for (let i = 0; i < bytes.length; i += 1) {
+      const b = bytes[i];
+      const readable = (b >= 32 && b <= 126) || (b >= 160 && b <= 255) || b === 10 || b === 13 || b === 9;
+      if (readable) {
+        chunk += String.fromCharCode(b);
+      } else if (chunk.length > 0) {
+        if (chunk.length > 2) text += chunk + '\n';
+        chunk = '';
+      }
+    }
+    if (chunk.length > 2) text += chunk;
+    return text;
+  }
+
+  async function analyzeFdmPdfFile(file: File, match: MatchItem) {
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      alert('Choisis une feuille de match au format PDF.');
+      return;
+    }
+    setAnalyzingFdmFile(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const rawText = extractReadablePdfText(buffer);
+      const actions = extractFdmActionsFromText(rawText);
+      setNewMatchFdmFileName(file.name);
+      setNewMatchFdmUrl('');
+      setNewMatchFdmActions(actions);
+      const summary = buildSupporterSummary(match, actions);
+      setNewMatchSupporterSummary(summary);
+      if (!actions) {
+        alert("Je n'ai pas réussi à lire les lignes Temps / Score / Action dans ce PDF. On peut ajouter une lecture PDF plus robuste ensuite.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Impossible d'analyser ce PDF.");
+    } finally {
+      setAnalyzingFdmFile(false);
     }
   }
 
@@ -5669,14 +5738,34 @@ export default function App() {
                             </div>
                             <div style={{ display: 'grid', gap: 10, marginTop: 16, paddingTop: 14, borderTop: '1px solid #fde68a' }}>
                               <div>
-                                <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
-                                <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
+                                <label style={styles.inputLabel}>Feuille de match PDF</label>
+                                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                                  <label htmlFor="fdm-pdf-file" style={{ ...styles.primaryButton, background: '#0A5FB5', cursor: analyzingFdmFile ? 'default' : 'pointer', opacity: analyzingFdmFile ? 0.7 : 1 }}>
+                                    {analyzingFdmFile ? 'Analyse...' : 'Ajouter le PDF'}
+                                  </label>
+                                  <input id="fdm-pdf-file" type="file" accept="application/pdf,.pdf" style={{ display: 'none' }}
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) await analyzeFdmPdfFile(file, selectedMatch);
+                                      e.target.value = '';
+                                    }} />
+                                  {(newMatchFdmFileName || newMatchFdmUrl) && (
+                                    <span style={{ fontSize: 12, fontWeight: 800, color: '#78350f' }}>
+                                      {newMatchFdmFileName || newMatchFdmUrl}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               <div>
-                                <label style={styles.inputLabel}>Lignes Temps / Score / Action</label>
+                                <label style={styles.inputLabel}>Lignes détectées Temps / Score / Action</label>
                                 <textarea value={newMatchFdmActions} onChange={(e) => setNewMatchFdmActions(e.target.value)}
                                   style={{ ...styles.input, minHeight: 120, resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12 }}
-                                  placeholder={"Colle ici les lignes de la feuille :\n12:48 14-21 ArU N°... NOM prenom\n26:17 15-22 Tir JR N°... NOM prenom"} />
+                                  placeholder="Les lignes importantes de la feuille apparaitront ici apres analyse du PDF." />
+                                {newMatchFdmActions && (
+                                  <div style={{ marginTop: 6, fontSize: 12, color: '#78350f', fontWeight: 800 }}>
+                                    {newMatchFdmActions.split(/\r?\n/).filter(Boolean).length} ligne(s) detectee(s)
+                                  </div>
+                                )}
                               </div>
                               <button onClick={() => importFdmForMatch(selectedMatch)}
                                 disabled={savingFdmImport || (!newMatchFdmUrl.trim() && !newMatchFdmActions.trim())}
