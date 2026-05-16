@@ -2941,6 +2941,24 @@ export default function App() {
   }
 
   function extractFdmActionsFromText(rawText: string) {
+    const normalizedLines = rawText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const rebuiltLines: string[] = [];
+    for (let i = 0; i < normalizedLines.length; i += 1) {
+      const time = normalizedLines[i];
+      const score = normalizedLines[i + 1];
+      const action = normalizedLines[i + 2];
+      if (/^\d{1,2}:\d{2}$/.test(time) && /^\d{1,2}\s*-\s*\d{1,2}$/.test(score) && action && !/^\d{1,2}:\d{2}$/.test(action)) {
+        const line = `${time} ${score.replace(/\s+/g, '')} ${action}`.replace(/\s+/g, ' ');
+        if (/(but|tir|arr|7m|n\s*[^\w\s]?\s*\d+|avt|2mn)/i.test(line)) rebuiltLines.push(line);
+        i += 2;
+      }
+      if (rebuiltLines.length > 220) break;
+    }
+    if (rebuiltLines.length > 0) return rebuiltLines.join('\n');
+
     const text = rawText
       .replace(/\u00a0/g, ' ')
       .replace(/\\r|\\n/g, ' ')
@@ -3149,11 +3167,13 @@ export default function App() {
       const summary = buildSupporterSummary(match, actions);
       setNewMatchSupporterSummary(summary);
       if (!actions) {
-        alert("Je n'ai pas reussi a lire les lignes Temps / Score / Action dans ce PDF. Tu peux me l'envoyer pour que j'ajuste encore le lecteur.");
+        alert(`PDF lu, mais aucune action trouvee. Texte extrait : ${rawText.trim().length} caracteres. Envoie-moi ce message si ca bloque encore.`);
+      } else {
+        alert(`${actions.split(/\r?\n/).filter(Boolean).length} actions trouvees dans le PDF.`);
       }
     } catch (e) {
       console.error(e);
-      alert("Impossible d'analyser ce PDF.");
+      alert(`Impossible d'analyser ce PDF : ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setAnalyzingFdmFile(false);
     }
