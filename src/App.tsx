@@ -5896,7 +5896,7 @@ export default function App() {
                                 <label style={styles.inputLabel}>Feuille de match PDF</label>
                                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                                   <label htmlFor="fdm-pdf-file" style={{ ...styles.primaryButton, background: '#0A5FB5', cursor: analyzingFdmFile ? 'default' : 'pointer', opacity: analyzingFdmFile ? 0.7 : 1 }}>
-                                    {analyzingFdmFile ? 'Analyse...' : 'Ajouter le PDF'}
+                                    {analyzingFdmFile ? 'Lecture PDF...' : 'Lire une feuille PDF'}
                                   </label>
                                   <input id="fdm-pdf-file" type="file" accept="application/pdf,.pdf" style={{ display: 'none' }}
                                     onChange={async (e) => {
@@ -5913,6 +5913,9 @@ export default function App() {
                               </div>
                               <div>
                                 <label style={styles.inputLabel}>Lignes détectées Temps / Score / Action</label>
+                                <div style={{ fontSize: 12, color: '#78350f', fontWeight: 700, marginBottom: 6 }}>
+                                  Nouvelle lecture PDF FFHB active : choisis le fichier, les actions doivent apparaitre ici.
+                                </div>
                                 <textarea value={newMatchFdmActions} onChange={(e) => setNewMatchFdmActions(e.target.value)}
                                   style={{ ...styles.input, minHeight: 120, resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12 }}
                                   placeholder="Les lignes importantes de la feuille apparaitront ici apres analyse du PDF." />
