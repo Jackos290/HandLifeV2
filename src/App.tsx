@@ -724,6 +724,7 @@ export default function App() {
   const [newMatchHomeAway, setNewMatchHomeAway] = useState<'home' | 'away'>('home');
   const [newMatchFdmUrl, setNewMatchFdmUrl] = useState('');
   const [newMatchSupporterSummary, setNewMatchSupporterSummary] = useState('');
+  const [savingFdmImport, setSavingFdmImport] = useState(false);
   const [editingMatchId, setEditingMatchId] = useState('');
 
   // Admin — joueur
@@ -1445,7 +1446,11 @@ export default function App() {
 
   useEffect(() => {
     const m = matches.find((x) => x.id === selectedMatchId);
-    if (m) initMatchResult(m);
+    if (m) {
+      initMatchResult(m);
+      setNewMatchFdmUrl(m.fdm_url || '');
+      setNewMatchSupporterSummary(m.supporter_summary || '');
+    }
   }, [selectedMatchId, matches]);
 
   useEffect(() => {
@@ -2846,6 +2851,46 @@ export default function App() {
       alert('Résultat enregistré');
     } catch (e) { console.error(e); alert("Erreur lors de l'enregistrement du résultat"); }
     finally { setSavingMatchResult(false); }
+  }
+
+  function buildSupporterSummary(match: MatchItem) {
+    const result = matchResults[match.id];
+    const home = Number(result?.score_home ?? match.score_home ?? 0);
+    const away = Number(result?.score_away ?? match.score_away ?? 0);
+    const teamName = getTeamName(match.team_id);
+    const opponent = match.opponent || 'adversaire';
+    if (!Number.isFinite(home) || !Number.isFinite(away)) {
+      return `${teamName} a disputé son match face à ${opponent}. Le résumé sera complété après l'import de la feuille de match.`;
+    }
+    if (home > away) {
+      return `${teamName} s'impose ${home}-${away} face à ${opponent}. Une prestation collective solide, à retrouver avec les statistiques détaillées de la feuille de match.`;
+    }
+    if (home < away) {
+      return `${teamName} s'incline ${home}-${away} face à ${opponent}. Le groupe a continué à se battre, avec les statistiques détaillées disponibles depuis la feuille de match.`;
+    }
+    return `${teamName} partage les points avec ${opponent} sur le score de ${home}-${away}. Un match accroché, à analyser avec les statistiques de la feuille de match.`;
+  }
+
+  async function importFdmForMatch(match: MatchItem) {
+    const url = newMatchFdmUrl.trim();
+    if (!url) { alert('Colle le lien de la feuille de match FFHB.'); return; }
+    setSavingFdmImport(true);
+    try {
+      const summary = newMatchSupporterSummary.trim() || buildSupporterSummary(match);
+      const { error } = await supabase.from('matches').update({
+        fdm_url: url,
+        supporter_summary: summary,
+      }).eq('id', match.id);
+      if (error) throw error;
+      setNewMatchSupporterSummary(summary);
+      await loadData();
+      alert("Lien FFHB enregistré et résumé supporter généré. L'import automatique des stats joueur sera branché sur ce bouton.");
+    } catch (e: any) {
+      console.error(e);
+      alert("Erreur : vérifie que le SQL supabase-match-supporter-fields.sql a bien été exécuté.");
+    } finally {
+      setSavingFdmImport(false);
+    }
   }
 
   function resetTrainingTemplateForm() {
@@ -5443,16 +5488,6 @@ export default function App() {
                           </select>
                         </div>
                       </div>
-                      <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-                        <div>
-                          <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
-                          <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
-                        </div>
-                        <div>
-                          <label style={styles.inputLabel}>Resume supporter</label>
-                          <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Belle victoire collective, avec une defense solide et une fin de match maitrisee." />
-                        </div>
-                      </div>
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                         <button onClick={addMatch} style={styles.primaryButton}>{editingMatchId ? '💾 Enregistrer' : 'Ajouter le match'}</button>
                         {editingMatchId && (
@@ -5586,6 +5621,22 @@ export default function App() {
                                 disabled={savingMatchResult}>
                                 {savingMatchResult ? 'Enregistrement...' : 'Enregistrer le score'}
                               </button>
+                            </div>
+                            <div style={{ display: 'grid', gap: 10, marginTop: 16, paddingTop: 14, borderTop: '1px solid #fde68a' }}>
+                              <div>
+                                <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
+                                <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
+                              </div>
+                              <button onClick={() => importFdmForMatch(selectedMatch)}
+                                disabled={savingFdmImport || !newMatchFdmUrl.trim()}
+                                style={{ ...styles.primaryButton, background: '#92400e', opacity: savingFdmImport || !newMatchFdmUrl.trim() ? 0.65 : 1 }}>
+                                {savingFdmImport ? 'Import en cours...' : 'Importer stats + résumé'}
+                              </button>
+                              {newMatchSupporterSummary && (
+                                <div style={{ padding: 12, borderRadius: 12, background: 'white', border: '1px solid #fde68a', color: '#78350f', fontSize: 13, fontWeight: 700 }}>
+                                  {newMatchSupporterSummary}
+                                </div>
+                              )}
                             </div>
                           </div>
                           )}
@@ -6784,36 +6835,6 @@ export default function App() {
                             {t.name}
                           </label>
                         ))}
-                      </div>
-                    </div>
-                    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-                      <div>
-                        <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
-                        <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
-                      </div>
-                      <div>
-                        <label style={styles.inputLabel}>Resume supporter</label>
-                        <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Resume visible dans le futur espace Supporter." />
-                      </div>
-                    </div>
-                    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-                      <div>
-                        <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
-                        <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
-                      </div>
-                      <div>
-                        <label style={styles.inputLabel}>Resume supporter</label>
-                        <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Resume visible dans le futur espace Supporter." />
-                      </div>
-                    </div>
-                    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-                      <div>
-                        <label style={styles.inputLabel}>Lien feuille de match FFHB</label>
-                        <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
-                      </div>
-                      <div>
-                        <label style={styles.inputLabel}>Resume supporter</label>
-                        <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Resume visible dans le futur espace Supporter." />
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
