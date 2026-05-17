@@ -3160,7 +3160,6 @@ export default function App() {
         fdm_url: url || newMatchFdmFileName || null,
         supporter_summary: summary,
         fdm_actions_text: newMatchFdmActions.trim() || null,
-        ...(detectedScore ? { score_home: detectedScore.team, score_away: detectedScore.opponent } : {}),
       }).eq('id', match.id);
       if (error) throw error;
       if (detectedScore) {
@@ -3546,12 +3545,10 @@ export default function App() {
 
   async function addMatch() {
     if (!newMatchTeamId || !newMatchOpponent.trim() || !newMatchDate) { alert('Remplir équipe, adversaire et date'); return; }
-    const detectedScore = getFinalScoreFromActions(newMatchFdmActions, newMatchHomeAway);
     const matchSupporterPayload: any = {
       fdm_url: newMatchFdmUrl.trim() || null,
       supporter_summary: newMatchSupporterSummary.trim() || null,
       fdm_actions_text: newMatchFdmActions.trim() || null,
-      ...(detectedScore ? { score_home: detectedScore.team, score_away: detectedScore.opponent } : {}),
     };
     if (editingMatchId) {
       let { error } = await supabase.from('matches').update({
