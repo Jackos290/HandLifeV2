@@ -806,11 +806,10 @@ export function GradeModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} style={{ border: 'none', background: '#f1f5f9', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>✕</button>
         </div>
         <p style={{ margin: '0 0 16px 0', fontSize: 13, color: '#5b6472' }}>
-          Les étoiles ★ viennent de <strong>trois sources</strong> :<br/>
+          Les étoiles ★ viennent de <strong>deux sources</strong> :<br/>
           🏃 <strong>1 étoile tous les 2 entraînements</strong> présents<br/>
-          🎯 <strong>1 étoile par but</strong> marqué<br/>
-          ⚽ <strong>1 étoile par match joué</strong><br/>
-          Après <strong>5 étoiles</strong> cumulées, tu passes au niveau suivant !
+          ⚽ <strong>2 étoiles par match joué</strong><br/>
+          Les buts ne font plus monter le niveau : la progression récompense surtout l'assiduité, les matchs joués et l'engagement dans l'équipe.
         </p>
         {GRADES.map((g, idx) => {
           const isRainbow = g.color === 'rainbow';

@@ -164,7 +164,7 @@ type UpcomingTraining = {
 };
 
 // CoachTab — 'admin' seulement visible pour isAdmin
-type CoachTab = 'trainings' | 'matches' | 'stats' | 'composition' | 'players' | 'users' | 'messages' | 'licenses' | 'team' | 'accessibility' | 'admin' | 'password' | 'events' | 'polls' | 'supporter';
+type CoachTab = 'trainings' | 'matches' | 'stats' | 'composition' | 'players' | 'users' | 'messages' | 'licenses' | 'team' | 'mycard' | 'accessibility' | 'admin' | 'password' | 'events' | 'polls' | 'supporter';
 
 type Sponsor = {
   id: string;
@@ -2614,6 +2614,52 @@ export default function App() {
       };
     });
   }
+
+  function normalizePersonKey(firstName = '', lastName = '') {
+    return `${firstName} ${lastName}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  function getCoachLinkedPlayer() {
+    if (!connectedCoachId) return null;
+    const coach = coachAccessList.find((c) => c.id === connectedCoachId && (c.first_name || c.last_name));
+    if (!coach) return null;
+    const coachKey = normalizePersonKey(coach.first_name, coach.last_name);
+    const teamIds = new Set(isAdmin ? teams.map((t) => t.id) : allowedTeamIds);
+    return players.find((p) =>
+      normalizePersonKey(p.first_name, p.last_name) === coachKey &&
+      (!teamIds.size || teamIds.has(getPlayerTeamIdForSeason(p, parentSelectedSeasonId) || p.team_id))
+    ) || null;
+  }
+
+  async function createCoachPlayerProfile() {
+    if (!connectedCoachId) return;
+    const coach = coachAccessList.find((c) => c.id === connectedCoachId && (c.first_name || c.last_name));
+    if (!coach) { alert("Impossible de retrouver ton profil coach."); return; }
+    const teamId = selectedCoachTeamId || allowedTeamIds[0] || visibleTeams[0]?.id || teams[0]?.id || '';
+    if (!teamId) { alert("Choisis une categorie avant de creer ton profil joueur."); return; }
+    const existing = players.find((p) => normalizePersonKey(p.first_name, p.last_name) === normalizePersonKey(coach.first_name, coach.last_name) && p.team_id === teamId);
+    if (existing) { setCoachTab('mycard'); return; }
+    const payload = {
+      first_name: coach.first_name.trim(),
+      last_name: coach.last_name.trim(),
+      team_id: teamId,
+      birth_date: null,
+      jersey_number: null,
+      position: null,
+      gender: null,
+    };
+    let res = await supabase.from('players').insert(payload).select().single();
+    if (res.error && isMissingGenderColumnError(res.error)) {
+      const { gender, ...payloadWithoutGender } = payload;
+      res = await supabase.from('players').insert(payloadWithoutGender).select().single();
+    }
+    if (res.error || !res.data) { alert("Erreur lors de la creation du profil joueur."); return; }
+    await supabase.from('player_stats').insert({ player_id: res.data.id, goals: 0, assists: 0, saves: 0, matches_played: 0 });
+    await loadData();
+    setCoachTab('mycard');
+    alert("Profil joueur cree.");
+  }
+
   function generateFourDigitPin() { return String(Math.floor(1000 + Math.random() * 9000)); }
 
   function initMatchResult(match: MatchItem) {
@@ -5744,6 +5790,13 @@ export default function App() {
                   <span>Admin</span>
                 </button>
               )}
+              {activeRole === 'coach' && !isAdmin && connectedCoachId && (
+                <button onClick={() => setCoachTab('mycard')}
+                  title="Acces joueur" aria-label="Acces joueur"
+                  style={{ height: 48, padding: '0 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span>Joueur</span>
+                </button>
+              )}
               {/* Message icon with badge */}
               {(() => {
                 const unreadCount = getUnreadMessageConversations().length;
@@ -5821,11 +5874,12 @@ export default function App() {
             )}
             {/* Menu onglets */}
             <div style={styles.coachMenu}>
-              {(['trainings', 'matches', 'stats', 'composition', 'team', 'players', 'users', 'messages', 'licenses', 'events', 'polls', 'supporter', 'password', ...(isAdmin ? ['admin'] : [])] as CoachTab[]).map((tab) => {
+              {(['trainings', 'matches', 'stats', 'composition', 'team', 'mycard', 'players', 'users', 'messages', 'licenses', 'events', 'polls', 'supporter', 'password', ...(isAdmin ? ['admin'] : [])] as CoachTab[]).map((tab) => {
                 const labels: Record<CoachTab, string> = {
                   trainings: '📅 Entraînements', matches: '⚽ Matchs', stats: '📊 Stats',
                   composition: '🏐 Composition',
                   team: '👕 Mon équipe', players: '👥 Joueurs', users: '🔒 Utilisateurs',
+                  mycard: '🃏 Ma carte',
                   messages: '💬 Messages', licenses: '🪪 Licences', password: '🔑 Mot de passe',
                   accessibility: '⚙️ Administration', admin: '⚙️ Administration',
                   events: '🎉 Événements',
@@ -7292,6 +7346,94 @@ export default function App() {
             )}
 
             {/* ── MOT DE PASSE COACH ── */}
+            {coachTab === 'mycard' && (() => {
+              const coachPlayer = getCoachLinkedPlayer();
+              const coach = connectedCoachId ? coachAccessList.find((c) => c.id === connectedCoachId && (c.first_name || c.last_name)) : null;
+              if (!coachPlayer) {
+                return (
+                  <div style={styles.contentCard}>
+                    <h2 style={styles.blockTitle}>🃏 Ma carte joueur</h2>
+                    <p style={styles.blockSubtitle}>Si tu es aussi joueur, cree ton profil joueur a ton nom pour acceder a ta carte et a tes super pouvoirs.</p>
+                    <div style={{ ...styles.panelCard, display: 'grid', gap: 12, background: '#fffdf4', border: '1px solid #fde68a' }}>
+                      <div>
+                        <strong style={{ color: '#062C5D' }}>{coach ? `${coach.first_name} ${coach.last_name}` : 'Coach'}</strong>
+                        <div style={{ marginTop: 4, color: '#64748b', fontWeight: 700, fontSize: 13 }}>
+                          Le joueur sera cree dans la categorie affichee : {getTeamName(selectedCoachTeamId || allowedTeamIds[0] || '') || 'a choisir'}.
+                        </div>
+                      </div>
+                      <button onClick={createCoachPlayerProfile} style={{ ...styles.primaryButton, maxWidth: 320 }}>
+                        ➕ Creer mon joueur
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+              const teamId = getPlayerTeamIdForSeason(coachPlayer, parentSelectedSeasonId) || coachPlayer.team_id;
+              const teamCards = teamId ? buildFifaCardsForTeam(teamId, false, parentSelectedSeasonId) : [];
+              const cardIndex = Math.max(0, teamCards.findIndex((c) => c.player.id === coachPlayer.id));
+              const card = teamCards[cardIndex];
+              if (!card) return <div style={styles.contentCard}><div style={styles.emptyState}>Carte joueur introuvable.</div></div>;
+              const selectedPowers = card.player.card_powers || [];
+              const unlockedPowerCount = Math.min(HANDBALL_POWERS.length, 3 + Math.floor(card.totalTrainingPresences / 4) + Math.floor(card.totalMatches / 2));
+              return (
+                <div style={styles.contentCard}>
+                  <h2 style={styles.blockTitle}>🃏 Ma carte joueur</h2>
+                  <p style={styles.blockSubtitle}>{getTeamName(teamId)} - pouvoirs debloques avec les entrainements et matchs joues.</p>
+                  <div style={{ ...styles.panelCard, background: '#fffdf4', border: '1px solid #fde68a' }}>
+                    <div style={{ width: 'min(100%, 340px)', margin: '0 auto' }}>
+                      <FifaPlayerCard
+                        player={card.player}
+                        totalTrainingPresences={card.totalTrainingPresences}
+                        totalGoals={card.totalGoals}
+                        totalShots={card.totalShots}
+                        totalMatches={card.totalMatches}
+                        isMyChild={false}
+                        hideStats={false}
+                        age={card.age}
+                        clubLogo={CLUB_LOGO}
+                        onClick={() => setFullScreenCardData({ cards: teamCards, index: cardIndex })}
+                        onJerseyClick={() => startJerseyEdit(card.player)}
+                      />
+                    </div>
+                  </div>
+                  <div style={styles.panelCard}>
+                    <h3 style={styles.panelTitle}>Progression des pouvoirs</h3>
+                    <div style={styles.statsGrid}>
+                      {[
+                        ['🏃 Entrainements', `${card.totalTrainingPresences}`],
+                        ['⚽ Matchs joues', String(card.totalMatches)],
+                        ['✨ Pouvoirs debloques', `${unlockedPowerCount}/${HANDBALL_POWERS.length}`],
+                        ['🔥 Pouvoirs actifs', `${selectedPowers.length}/3`],
+                      ].map(([label, value]) => (
+                        <div key={label} style={{ background: '#f0f7ff', borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: '1px solid #bfdbfe' }}>
+                          <div style={{ fontSize: 22, fontWeight: 900, color: '#1e40af' }}>{value}</div>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: '#1e40af', opacity: 0.85, marginTop: 3 }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={styles.panelCard}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+                      <h3 style={{ ...styles.panelTitle, margin: 0 }}>Mes super pouvoirs</h3>
+                      <span style={{ color: '#92400e', fontSize: 12, fontWeight: 900 }}>{selectedPowers.length}/3 actifs</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: 8 }}>
+                      {HANDBALL_POWERS.map((power, index) => {
+                        const unlocked = index < unlockedPowerCount;
+                        const selected = selectedPowers.includes(power.id);
+                        return (
+                          <button key={power.id} disabled={!unlocked} onClick={() => unlocked && togglePlayerCardPower(card.player, power.id)}
+                            style={{ minHeight: 46, padding: '9px 10px', borderRadius: 13, border: `2px solid ${selected ? '#0A5FB5' : unlocked ? '#dbe4ef' : '#e5e7eb'}`, background: selected ? '#eaf4ff' : unlocked ? 'white' : '#f1f5f9', color: unlocked ? '#10233b' : '#94a3b8', fontWeight: 900, fontSize: 12, cursor: unlocked ? 'pointer' : 'not-allowed', textAlign: 'center', opacity: unlocked ? 1 : 0.75 }}>
+                            <span style={{ fontSize: 15, marginRight: 5 }}>{unlocked ? power.icon : '🔒'}</span>{power.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {coachTab === 'supporter' && (
               <div style={styles.contentCard}>
                 <h2 style={styles.blockTitle}>Supporter</h2>
