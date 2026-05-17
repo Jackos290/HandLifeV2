@@ -2944,7 +2944,9 @@ export default function App() {
     if (!url && !newMatchFdmActions.trim()) { alert('Ajoute le PDF ou colle le lien de la feuille de match FFHB.'); return; }
     setSavingFdmImport(true);
     try {
-      const summary = newMatchSupporterSummary.trim() || buildSupporterSummary(match, newMatchFdmActions);
+      const summary = newMatchFdmActions.trim()
+        ? buildSupporterSummary(match, newMatchFdmActions)
+        : (newMatchSupporterSummary.trim() || buildSupporterSummary(match, newMatchFdmActions));
       const { error } = await supabase.from('matches').update({
         fdm_url: url || newMatchFdmFileName || null,
         supporter_summary: summary,
@@ -5971,7 +5973,7 @@ export default function App() {
                               <button onClick={() => importFdmForMatch(selectedMatch)}
                                 disabled={savingFdmImport || (!newMatchFdmUrl.trim() && !newMatchFdmActions.trim())}
                                 style={{ ...styles.primaryButton, background: '#92400e', opacity: savingFdmImport || (!newMatchFdmUrl.trim() && !newMatchFdmActions.trim()) ? 0.65 : 1 }}>
-                                {savingFdmImport ? 'Import en cours...' : 'Importer stats + résumé'}
+                                {savingFdmImport ? 'Import en cours...' : 'Regenerer stats + resume'}
                               </button>
                               {newMatchSupporterSummary && (
                                 <div style={{ padding: 12, borderRadius: 12, background: 'white', border: '1px solid #fde68a', color: '#78350f', fontSize: 13, fontWeight: 700 }}>
