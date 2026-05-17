@@ -322,6 +322,10 @@ function MatchStatsTable({
   isCoach?: boolean;
 }) {
   const squadKey = squadPlayers.map((p) => p.id).join(',');
+  const initialStatsKey = squadPlayers.map((p) => {
+    const s = initialStats[p.id];
+    return `${p.id}:${s?.goals || 0}:${s?.assists || 0}:${s?.shots || 0}:${s?.saves || 0}:${s?.penalty_scored || 0}:${s?.two_minutes || 0}`;
+  }).join('|');
   const [fullscreen, setFullscreen] = useState(false);
   const [rows, setRows] = useState<PlayerStatRow[]>(() =>
     squadPlayers.map((p) => ({
@@ -346,7 +350,7 @@ function MatchStatsTable({
       two_minutes: initialStats[p.id]?.two_minutes || 0,
     })));
     setSaved(false);
-  }, [squadKey]);
+  }, [squadKey, initialStatsKey]);
 
   function updateCell(idx: number, field: keyof Omit<PlayerStatRow, 'playerId' | 'playerName'>, value: number) {
     setRows((prev) => prev.map((r, i) => i === idx ? { ...r, [field]: Math.max(0, value) } : r));
@@ -2888,6 +2892,31 @@ export default function App() {
     await loadData();
   }
 
+  async function saveImportedMatchStats(matchId: string, rows: PlayerStatRow[]) {
+    if (rows.length === 0) return;
+    for (const row of rows) {
+      const { error } = await supabase.from('match_player_stats').upsert(
+        { match_id: matchId, player_id: row.playerId, goals: row.goals, assists: row.assists, shots: row.shots, saves: row.saves, penalty_scored: row.penalty_scored, two_minutes: row.two_minutes },
+        { onConflict: 'match_id,player_id' }
+      );
+      if (error) throw error;
+    }
+    for (const row of rows) {
+      const { data: allMatchStats } = await supabase.from('match_player_stats').select('goals, assists, shots, saves').eq('player_id', row.playerId);
+      if (!allMatchStats) continue;
+      const totalGoals = allMatchStats.reduce((s: number, r: any) => s + (r.goals || 0), 0);
+      const totalAssists = allMatchStats.reduce((s: number, r: any) => s + (r.assists || 0), 0);
+      const totalSaves = allMatchStats.reduce((s: number, r: any) => s + (r.saves || 0), 0);
+      const matchesPlayed = allMatchStats.length;
+      const { data: existingStat } = await supabase.from('player_stats').select('id').eq('player_id', row.playerId).maybeSingle();
+      if (existingStat) {
+        await supabase.from('player_stats').update({ goals: totalGoals, assists: totalAssists, saves: totalSaves, matches_played: matchesPlayed }).eq('player_id', row.playerId);
+      } else {
+        await supabase.from('player_stats').insert({ player_id: row.playerId, goals: totalGoals, assists: totalAssists, saves: totalSaves, matches_played: matchesPlayed });
+      }
+    }
+  }
+
   async function saveMatchResult(matchId: string) {
     const result = matchResults[matchId];
     if (!result) return;
@@ -3038,6 +3067,85 @@ export default function App() {
     return `${teamName} partage les points avec ${opponent} sur le score de ${home}-${away}. Un match accroch\u00E9, \u00E0 analyser avec les statistiques de la feuille de match.`;
   }
 
+  function buildImportedStatsRows(match: MatchItem, actionText = ''): PlayerStatRow[] {
+    const actionLines = actionText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /\b\d{1,2}\s*-\s*\d{1,2}\b/.test(line));
+    if (actionLines.length === 0) return [];
+
+    const cleanName = (value: string) => value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9 ]/g, ' ')
+      .replace(/\b(u\d{1,2}|garcon|fille|senior|loisir|masculin|feminin)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    const rawActionPlayerName = (line: string) => {
+      const m = line.match(/N[^0-9]{0,3}\s*\d+\s+([A-Z\u00C0-\u017F][A-Z\u00C0-\u017F'\- ]{2,}(?:\s+[a-z\u00E0-\u017F][a-z\u00E0-\u017F'\-]+)?)/i);
+      return (m?.[1] || '').replace(/\s+-\s+.*$/, '').trim();
+    };
+    const rosterIds = isSquadDefined(match.id) ? getSquadForMatch(match.id) : getPlayersForTeam(match.team_id).map((p) => p.id);
+    const roster = rosterIds
+      .map((id) => players.find((p) => p.id === id))
+      .filter(Boolean) as Player[];
+    const nameIndex = roster.map((p) => {
+      const full = cleanName(getPlayerName(p));
+      const reverse = cleanName(`${p.last_name || ''} ${p.first_name || ''}`);
+      return { player: p, keys: [full, reverse].filter(Boolean) };
+    });
+    const findPlayer = (rawName: string) => {
+      const name = cleanName(rawName);
+      if (!name) return null;
+      return nameIndex.find((entry) => entry.keys.some((key) => key === name || key.includes(name) || name.includes(key)))?.player || null;
+    };
+
+    const rows = new Map<string, PlayerStatRow>();
+    const ensureRow = (player: Player) => {
+      if (!rows.has(player.id)) {
+        rows.set(player.id, {
+          playerId: player.id,
+          playerName: getPlayerName(player),
+          goals: 0,
+          assists: 0,
+          shots: 0,
+          saves: 0,
+          penalty_scored: 0,
+          two_minutes: 0,
+        });
+      }
+      return rows.get(player.id)!;
+    };
+    const teamIsAway = match.home_away === 'away';
+    let previousScore: { home: number; away: number } | null = null;
+
+    for (const line of actionLines) {
+      const scoreMatch = line.match(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/);
+      if (!scoreMatch) continue;
+      const left = Number(scoreMatch[1]);
+      const right = Number(scoreMatch[2]);
+      const currentScore = { home: teamIsAway ? right : left, away: teamIsAway ? left : right };
+      const player = findPlayer(rawActionPlayerName(line));
+      if (player) {
+        const row = ensureRow(player);
+        const isTeamGoal = previousScore ? currentScore.home > previousScore.home : /\bbut\b/i.test(line) && currentScore.home > 0;
+        if (/\bbut\b/i.test(line) && isTeamGoal) {
+          row.goals += Math.max(1, previousScore ? currentScore.home - previousScore.home : 1);
+          row.shots += 1;
+          if (/7m|pen/i.test(line)) row.penalty_scored += 1;
+        } else if (/\btir\b/i.test(line)) {
+          row.shots += 1;
+        }
+        if (/arr/i.test(line)) row.saves += 1;
+        if (/2\s*min|excl|exclusion/i.test(line)) row.two_minutes += 1;
+      }
+      previousScore = currentScore;
+    }
+
+    return [...rows.values()].filter((row) => row.goals || row.shots || row.saves || row.penalty_scored || row.two_minutes);
+  }
+
   async function importFdmForMatch(match: MatchItem) {
     const url = newMatchFdmUrl.trim();
     if (!url && !newMatchFdmActions.trim()) { alert('Ajoute le PDF ou colle le lien de la feuille de match FFHB.'); return; }
@@ -3046,15 +3154,23 @@ export default function App() {
       const summary = newMatchFdmActions.trim()
         ? buildSupporterSummary(match, newMatchFdmActions)
         : (newMatchSupporterSummary.trim() || buildSupporterSummary(match, newMatchFdmActions));
+      const importedStats = buildImportedStatsRows(match, newMatchFdmActions);
       const { error } = await supabase.from('matches').update({
         fdm_url: url || newMatchFdmFileName || null,
         supporter_summary: summary,
         fdm_actions_text: newMatchFdmActions.trim() || null,
       }).eq('id', match.id);
       if (error) throw error;
+      if (importedStats.length > 0) {
+        const { error: clearStatsError } = await supabase.from('match_player_stats').delete().eq('match_id', match.id);
+        if (clearStatsError) throw clearStatsError;
+        await saveImportedMatchStats(match.id, importedStats);
+      }
       setNewMatchSupporterSummary(summary);
       await loadData();
-      alert("Lien FFHB enregistré et résumé supporter généré. L'import automatique des stats joueur sera branché sur ce bouton.");
+      alert(importedStats.length > 0
+        ? `Resume supporter genere et stats ajoutees pour ${importedStats.length} joueur(s).`
+        : "Resume supporter genere. Aucune stat joueur n'a pu etre reliee automatiquement.");
     } catch (e: any) {
       console.error(e);
       alert("Erreur : vérifie que le SQL supabase-match-supporter-fields.sql a bien été exécuté.");
