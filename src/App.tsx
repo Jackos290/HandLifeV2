@@ -2908,27 +2908,22 @@ export default function App() {
     const isGorcyTeam = /gorcy|u\d|senior|gar.on|fille/i.test(teamName);
     const summaryTeamName = isGorcyTeam ? 'GORCY CLUB ATHLETIQUE HB' : teamName;
     const clubLabel = isGorcyTeam ? 'Gorcy' : teamName;
+    const isSenior = /senior/i.test(teamName);
+    const isFemale = /fille|f\u00E9min|femin/i.test(teamName);
+    const groupLabel = isSenior ? (isFemale ? 'Les seniors f\u00E9minines' : 'Les seniors') : (isFemale ? 'Les jeunes joueuses' : 'Les jeunes');
+    const shortGroupLabel = isSenior ? 'Le groupe' : (isFemale ? 'Les filles' : 'Les jeunes');
     const actionLines = actionText
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter((line) => /\b\d{1,2}\s*-\s*\d{1,2}\b/.test(line));
 
     const formatPlayerName = (rawName: string) => {
-      const cleaned = rawName
-        .replace(/\s+-\s+.*$/, '')
-        .trim()
-        .replace(/\s+/g, ' ');
+      const cleaned = rawName.replace(/\s+-\s+.*$/, '').trim().replace(/\s+/g, ' ');
       if (!cleaned) return '';
       const words = cleaned.split(' ');
       const splitIndex = words.findIndex((word) => /[a-z\u00E0-\u00FF]/.test(word));
-      const title = (value: string) => value
-        .toLowerCase()
-        .replace(/(^|[\s-])([a-z\u00E0-\u00FF])/g, (_, sep, letter) => `${sep}${letter.toUpperCase()}`);
-      if (splitIndex > 0) {
-        const lastName = title(words.slice(0, splitIndex).join(' '));
-        const firstName = title(words.slice(splitIndex).join(' '));
-        return `${firstName} ${lastName}`.trim();
-      }
+      const title = (value: string) => value.toLowerCase().replace(/(^|[\s-])([a-z\u00E0-\u00FF])/g, (_, sep, letter) => `${sep}${letter.toUpperCase()}`);
+      if (splitIndex > 0) return `${title(words.slice(splitIndex).join(' '))} ${title(words.slice(0, splitIndex).join(' '))}`.trim();
       return title(cleaned);
     };
 
@@ -2940,13 +2935,7 @@ export default function App() {
           if (!matchScore) return null;
           const left = Number(matchScore[1]);
           const right = Number(matchScore[2]);
-          return {
-            home: teamIsAway ? right : left,
-            away: teamIsAway ? left : right,
-            left,
-            right,
-            line,
-          };
+          return { home: teamIsAway ? right : left, away: teamIsAway ? left : right, left, right, line };
         })
         .filter(Boolean) as { home: number; away: number; left: number; right: number; line: string }[];
       const first = scores[0];
@@ -2958,6 +2947,8 @@ export default function App() {
       const halfTarget = totalGoals * 0.45;
       const halfScore = scores.reduce((best, score) => Math.abs((score.home + score.away) - halfTarget) < Math.abs((best.home + best.away) - halfTarget) ? score : best, seedScore);
       const bestLead = scores.reduce((best, score) => (score.home - score.away) > (best.home - best.away) ? score : best, seedScore);
+      const finalDiff = home - away;
+      const absDiff = Math.abs(finalDiff);
       const saveCount = actionLines.filter((line) => /arr/i.test(line)).length;
       const fastBreakCount = actionLines.filter((line) => /contre|mont/i.test(line)).length;
       const teamScorers: Record<string, number> = {};
@@ -2966,33 +2957,45 @@ export default function App() {
       for (const current of scores.slice(1)) {
         const playerMatch = current.line.match(/N[^0-9]{0,3}\s*\d+\s+([A-Z\u00C0-\u017F][A-Z\u00C0-\u017F'\- ]{2,})/i);
         const playerName = formatPlayerName(playerMatch?.[1] || '');
-        if (previous && playerName && current.home > previous.home) {
-          teamScorers[playerName] = (teamScorers[playerName] || 0) + (current.home - previous.home);
-        }
-        if (previous && playerName && current.away > previous.away) {
-          opponentScorers[playerName] = (opponentScorers[playerName] || 0) + (current.away - previous.away);
-        }
+        if (previous && playerName && current.home > previous.home) teamScorers[playerName] = (teamScorers[playerName] || 0) + (current.home - previous.home);
+        if (previous && playerName && current.away > previous.away) opponentScorers[playerName] = (opponentScorers[playerName] || 0) + (current.away - previous.away);
         previous = current;
       }
       const teamTopScorers = Object.entries(teamScorers).sort((a, b) => b[1] - a[1]);
       const opponentTopScorers = Object.entries(opponentScorers).sort((a, b) => b[1] - a[1]);
       const mainScorers = teamTopScorers.slice(0, 3).map(([name]) => name);
       const contributors = teamTopScorers.slice(3, 6).map(([name]) => name);
-      const trend = home > away ? `s'est impos\u00E9 ${home}-${away}` : home < away ? `s'est inclin\u00E9 ${home}-${away}` : `a partag\u00E9 les points ${home}-${away}`;
-      const bestLeadText = bestLead && bestLead.home > bestLead.away
-        ? `m\u00E8nent m\u00EAme ${bestLead.home}-${bestLead.away} apr\u00E8s une tr\u00E8s belle premi\u00E8re partie de match`
-        : 'prennent rapidement confiance dans les premi\u00E8res minutes';
-      const scorersText = mainScorers.length > 0 ? ` ${mainScorers.join(', ')} se montrent particuli\u00E8rement efficaces devant le but.` : '';
-      const halfText = halfScore ? `${halfScore.home}-${halfScore.away}` : `${home}-${away}`;
-      const opponentRun = home < away
-        ? `${opponent} acc\u00E9l\u00E8re le rythme et profite${fastBreakCount > 0 ? ' de plusieurs contre-attaques' : ' de ses temps forts'} pour revenir puis passer devant. Plus r\u00E9alistes offensivement, les visiteurs rentrent aux vestiaires avec ${Math.abs((halfScore?.away || away) - (halfScore?.home || home))} buts d'avance (${halfText}).`
-        : `${opponent} tente de revenir avant la pause, mais ${clubLabel} reste solide (${halfText}).`;
-      const contributorText = contributors.length > 0
-        ? `${contributors.join(', ')} apportent \u00E9galement leur contribution, tandis que l'\u00E9quipe ne l\u00E2che jamais collectivement.`
-        : `L'\u00E9quipe ne l\u00E2che jamais collectivement et continue de chercher les bonnes solutions.`;
-      const secondHalf = home < away
-        ? `En seconde p\u00E9riode, ${clubLabel} continue de se battre avec beaucoup de courage malgr\u00E9 la fatigue et l'intensit\u00E9 impos\u00E9e par l'adversaire. ${contributorText}`
-        : `En seconde p\u00E9riode, ${clubLabel} continue avec s\u00E9rieux et engagement. ${contributorText}`;
+      const trend = finalDiff > 0 ? `s'est impos\u00E9 ${home}-${away}` : finalDiff < 0 ? `s'est inclin\u00E9 ${home}-${away}` : `a partag\u00E9 les points ${home}-${away}`;
+      const introMood = finalDiff > 0
+        ? `au terme d'un match ma\u00EEtris\u00E9 avec s\u00E9rieux.`
+        : absDiff <= 2
+          ? `au terme d'un match extr\u00EAmement serr\u00E9, disput\u00E9 jusqu'aux derni\u00E8res minutes.`
+          : `au terme d'un match engag\u00E9 face \u00E0 une \u00E9quipe tr\u00E8s efficace.`;
+      const leadSentence = bestLead.home > bestLead.away
+        ? `${shortGroupLabel} ont eu un vrai temps fort, menant jusqu'\u00E0 ${bestLead.home}-${bestLead.away}.`
+        : `${shortGroupLabel} sont rest\u00E9s au contact pendant une bonne partie de la rencontre.`;
+      const halfDiff = (halfScore?.home || 0) - (halfScore?.away || 0);
+      const halfSentence = halfDiff > 0
+        ? `\u00C0 la pause, ${clubLabel} garde l'avantage (${halfScore.home}-${halfScore.away}), preuve d'une premi\u00E8re partie de match solide.`
+        : halfDiff < 0
+          ? `Avant la pause, ${opponent} parvient \u00E0 prendre les devants (${halfScore.home}-${halfScore.away})${fastBreakCount > 0 ? ' en profitant notamment de plusieurs transitions rapides' : ''}.`
+          : `\u00C0 la pause, rien n'est fait entre les deux \u00E9quipes (${halfScore.home}-${halfScore.away}).`;
+      const attackSentence = mainScorers.length > 0
+        ? `${mainScorers.join(', ')} se mettent en \u00E9vidence offensivement.`
+        : `L'\u00E9quipe trouve plusieurs solutions offensives au fil du match.`;
+      const defenseSentence = saveCount > 0
+        ? `D\u00E9fensivement, plusieurs arr\u00EAts importants permettent aussi de rester dans le rythme.`
+        : `D\u00E9fensivement, le groupe reste appliqu\u00E9 malgr\u00E9 la pression adverse.`;
+      const secondHalf = finalDiff > 0
+        ? `En seconde p\u00E9riode, ${clubLabel} confirme avec application. ${contributors.length > 0 ? `${contributors.join(', ')} participent \u00E9galement \u00E0 l'effort collectif.` : `Chacun apporte sa pierre \u00E0 l'\u00E9difice.`}`
+        : absDiff <= 2
+          ? `La seconde p\u00E9riode reste tr\u00E8s accroch\u00E9e. ${contributors.length > 0 ? `${contributors.join(', ')} apportent \u00E9galement leur contribution,` : `Le collectif continue d'y croire,`} mais quelques d\u00E9tails font finalement basculer la rencontre.`
+          : `En seconde p\u00E9riode, ${clubLabel} continue de se battre malgr\u00E9 l'\u00E9cart et l'intensit\u00E9 impos\u00E9e par l'adversaire. ${contributors.length > 0 ? `${contributors.join(', ')} apportent \u00E9galement leur contribution.` : `Le groupe ne l\u00E2che pas collectivement.`}`;
+      const conclusion = finalDiff > 0
+        ? `Une victoire qui r\u00E9compense l'engagement, la solidarit\u00E9 et les belles s\u00E9quences propos\u00E9es par ${clubLabel}. \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0`
+        : absDiff <= 2
+          ? `M\u00EAme si le r\u00E9sultat laisse forc\u00E9ment des regrets, ${summaryTeamName} peut retenir l'\u00E9tat d'esprit, la combativit\u00E9 et les nombreuses bonnes s\u00E9quences de cette rencontre. \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0`
+          : `Face \u00E0 une \u00E9quipe de ${opponent} tr\u00E8s efficace, ${summaryTeamName} peut malgr\u00E9 tout retenir l'envie, la combativit\u00E9 et les efforts fournis jusqu'au bout. \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0`;
       const topScorersBlock = [
         '\n\n\uD83D\uDD25 Top buteurs',
         summaryTeamName,
@@ -3001,7 +3004,7 @@ export default function App() {
         ...opponentTopScorers.slice(0, 3).map(([name, goals]) => `${name} \u2014 ${goals} but${goals > 1 ? 's' : ''}`),
       ].filter(Boolean).join('\n');
 
-      return `Le ${summaryTeamName} ${trend} face \u00E0 une solide \u00E9quipe de ${opponent} au terme d'un match engag\u00E9 et rythm\u00E9.\n\nLes jeunes de ${clubLabel} ont pourtant r\u00E9alis\u00E9 une excellente entame de rencontre. Gr\u00E2ce \u00E0 une d\u00E9fense appliqu\u00E9e, ${saveCount > 0 ? 'plusieurs arr\u00EAts importants' : 'beaucoup de solidarit\u00E9 d\u00E9fensive'} et beaucoup d'envie offensivement, ils ${bestLeadText}.${scorersText}\n\nMais avant la pause, ${opponentRun}\n\n${secondHalf}\n\nFace \u00E0 une \u00E9quipe de ${opponent} tr\u00E8s efficace jusqu'au bout, l'\u00E9cart se creuse progressivement, mais les jeunes de ${clubLabel} peuvent \u00EAtre fiers de leur \u00E9tat d'esprit, de leur combativit\u00E9 et des belles s\u00E9quences propos\u00E9es durant cette rencontre. \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0${topScorersBlock}`;
+      return `Le ${summaryTeamName} ${trend} face \u00E0 ${opponent} ${introMood}\n\n${groupLabel} de ${clubLabel} ont livr\u00E9 une rencontre pleine d'intensit\u00E9. ${leadSentence} ${defenseSentence} ${attackSentence}\n\n${halfSentence}\n\n${secondHalf}\n\n${conclusion}${topScorersBlock}`;
     }
 
     if (!Number.isFinite(home) || !Number.isFinite(away)) {
