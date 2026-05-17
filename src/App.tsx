@@ -581,6 +581,7 @@ export default function App() {
   const [coachTab, setCoachTab] = useState<CoachTab>('trainings');
   const [selectedCoachTeamId, setSelectedCoachTeamId] = useState('');
   const [coachPlayerTeamId, setCoachPlayerTeamId] = useState('');
+  const [coachPlayerBirthDate, setCoachPlayerBirthDate] = useState('');
   const [selectedTrainingTemplateId, setSelectedTrainingTemplateId] = useState('');
   const [selectedTrainingDate, setSelectedTrainingDate] = useState('');
   const [selectedMatchId, setSelectedMatchId] = useState('');
@@ -2639,13 +2640,14 @@ export default function App() {
     if (!coach) { alert("Impossible de retrouver ton profil coach."); return; }
     const teamId = coachPlayerTeamId || '';
     if (!teamId) { alert("Choisis une categorie avant de creer ton profil joueur."); return; }
+    if (!coachPlayerBirthDate) { alert("Renseigne ta date de naissance avant de creer ton profil joueur."); return; }
     const existing = players.find((p) => normalizePersonKey(p.first_name, p.last_name) === normalizePersonKey(coach.first_name, coach.last_name) && p.team_id === teamId);
     if (existing) { setCoachTab('mycard'); return; }
     const payload = {
       first_name: coach.first_name.trim(),
       last_name: coach.last_name.trim(),
       team_id: teamId,
-      birth_date: null,
+      birth_date: coachPlayerBirthDate,
       jersey_number: null,
       position: null,
       gender: null,
@@ -5742,25 +5744,25 @@ export default function App() {
       <div style={styles.container}>
         {/* Header */}
         <div style={styles.header}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0, flex: '1 1 300px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 220px' }}>
             <img src={CLUB_LOGO} alt="CA Gorcy Handball"
-              style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.4)', flexShrink: 0 }} />
+              style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.4)', flexShrink: 0 }} />
             <div style={{ minWidth: 0 }}>
               <div style={styles.headerBadge}>CA Gorcy Handball</div>
-              <h1 style={{ margin: '8px 0 6px 0', fontSize: 'clamp(28px, 8vw, 46px)', lineHeight: 1.05 }}>
+              <h1 style={{ margin: '6px 0 2px 0', fontSize: 'clamp(24px, 6vw, 34px)', lineHeight: 1.05 }}>
                 {activeRole === 'coach' ? (isAdmin ? '👑 Admin' : '🏆 Espace Coach') : (selectedParentId ? '👪 Espace Parent' : '🤾 Espace Joueur')}
               </h1>
-              <p style={{ margin: 0, opacity: 0.92, overflowWrap: 'anywhere' }}>
+              <p style={{ margin: 0, opacity: 0.88, overflowWrap: 'anywhere', fontSize: 14, fontWeight: 700 }}>
                 {activeRole === 'coach'
-                  ? isAdmin ? 'Accès complet à toutes les équipes' : `Vos équipes : ${allowedTeamIds.map(getTeamName).join(', ')}`
+                  ? isAdmin ? 'Administration du club' : 'Tableau de bord coach'
                   : selectedParentId ? 'Présences et infos équipe' : 'Ma saison, ma carte et mes infos équipe'}
               </p>
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 6, display: activeRole === 'coach' ? 'none' : 'block' }}>
                 <HandLifeLogo variant="dark" size="sm" />
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
             {/* Photo de profil du coach connecté */}
             {activeRole === 'coach' && !isAdmin && connectedCoachId && (() => {
               const me = coachAccessList.find((c) => c.id === connectedCoachId);
@@ -5768,8 +5770,8 @@ export default function App() {
               return (
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   {me?.photo_url
-                    ? <img src={me.photo_url} alt="Ma photo" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.7)', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }} />
-                    : <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: 'white' }}>
+                    ? <img src={me.photo_url} alt="Ma photo" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.7)', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }} />
+                    : <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color: 'white' }}>
                         {initials || '🏆'}
                       </div>
                   }
@@ -5783,13 +5785,13 @@ export default function App() {
                 </div>
               );
             })()}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', minWidth: 0 }}>
+            <div style={{ display: 'flex', gap: 7, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', minWidth: 0 }}>
               {activeRole === 'coach' && (() => {
                 const online = getOnlineCounts();
                 return (
                   <div style={{ position: 'relative' }}>
                     <button onClick={() => setShowHeaderOnline((p) => !p)}
-                      style={{ position: 'relative', minWidth: 54, height: 48, padding: '8px 10px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                      style={{ position: 'relative', minWidth: 46, height: 42, padding: '7px 9px', borderRadius: 13, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                       title="Voir les personnes en ligne">
                       <span style={{ width: 9, height: 9, borderRadius: '50%', background: online.total > 0 ? '#22c55e' : '#94a3b8', boxShadow: online.total > 0 ? '0 0 0 3px rgba(34,197,94,0.20)' : 'none', display: 'inline-block' }} />
                       {online.total}
@@ -5828,28 +5830,28 @@ export default function App() {
               {getCurrentAdminDelegateTarget() && (
                 <button onClick={enterDelegatedAdminAccess}
                   title="Acces direct admin" aria-label="Acces direct admin"
-                  style={{ height: 48, padding: '0 14px', borderRadius: 14, border: 'none', background: '#facc15', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  style={{ height: 42, padding: '0 12px', borderRadius: 13, border: 'none', background: '#facc15', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span>Admin</span>
                 </button>
               )}
               {isAdmin && adminReturnRole && (
                 <button onClick={returnFromAdminAccess}
                   title="Retour espace precedent" aria-label="Retour espace precedent"
-                  style={{ height: 48, padding: '0 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  style={{ height: 42, padding: '0 12px', borderRadius: 13, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span>{adminReturnRole === 'coach' ? 'Coach' : adminReturnRole === 'player' ? 'Joueur' : 'Parent'}</span>
                 </button>
               )}
               {activeRole === 'coach' && !isAdmin && connectedCoachId && (
                 <button onClick={enterCoachPlayerSpace}
                   title="Acces joueur" aria-label="Acces joueur"
-                  style={{ height: 48, padding: '0 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  style={{ height: 42, padding: '0 12px', borderRadius: 13, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span>Joueur</span>
                 </button>
               )}
               {activeRole === 'parent' && connectedCoachId && !isAdmin && (
                 <button onClick={returnToCoachSpace}
                   title="Retour coach" aria-label="Retour coach"
-                  style={{ height: 48, padding: '0 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  style={{ height: 42, padding: '0 12px', borderRadius: 13, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span>Coach</span>
                 </button>
               )}
@@ -5857,7 +5859,7 @@ export default function App() {
               {(() => {
                 const unreadCount = getUnreadMessageConversations().length;
                 return (
-                  <button onClick={openMessagesPanel} style={{ position: 'relative', padding: '10px 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: 18 }} title="Messages">
+                  <button onClick={openMessagesPanel} style={{ position: 'relative', width: 42, height: 42, padding: 0, borderRadius: 13, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: 17 }} title="Messages">
                     💬
                     {unreadCount > 0 && (
                       <span style={{ position: 'absolute', top: 2, right: 2, background: '#dc2626', color: 'white', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px', minWidth: 16, textAlign: 'center', lineHeight: '14px', display: 'block' }}>
@@ -5867,8 +5869,8 @@ export default function App() {
                   </button>
                 );
               })()}
-              <button onClick={() => setShowCalendar(true)} title="Calendrier" aria-label="Calendrier" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>📅</button>
-              <button onClick={handleLogout} title="Déconnexion" aria-label="Déconnexion" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'white', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>⏻</button>
+              <button onClick={() => setShowCalendar(true)} title="Calendrier" aria-label="Calendrier" style={{ width: 42, height: 42, borderRadius: 13, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 18 }}>📅</button>
+              <button onClick={handleLogout} title="Déconnexion" aria-label="Déconnexion" style={{ width: 42, height: 42, borderRadius: 13, border: 'none', background: 'white', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 18 }}>⏻</button>
             </div>
           </div>
         </div>
@@ -7426,6 +7428,10 @@ export default function App() {
                           <option value="">Choisir une categorie</option>
                           {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
+                      </div>
+                      <div>
+                        <label style={styles.inputLabel}>Date de naissance</label>
+                        <input type="date" value={coachPlayerBirthDate} onChange={(e) => setCoachPlayerBirthDate(e.target.value)} style={{ ...styles.input, maxWidth: 260 }} />
                       </div>
                       <button onClick={createCoachPlayerProfile} style={{ ...styles.primaryButton, maxWidth: 320 }}>
                         ➕ Creer mon joueur
@@ -10318,8 +10324,8 @@ const styles: Record<string, React.CSSProperties> = {
   roleText: { fontSize: 14, color: '#5b6472', lineHeight: 1.4 },
   select: { padding: '14px 16px', paddingRight: 42, borderRadius: 14, border: '1px solid #cfd8e3', fontSize: 16, lineHeight: 1.35, minHeight: 56, outline: 'none', background: 'white', color: '#1b2430', width: '100%', boxSizing: 'border-box', WebkitAppearance: 'none', MozAppearance: 'none', appearance: 'none' },
   input: { padding: '14px 16px', borderRadius: 14, border: '1px solid #cfd8e3', fontSize: 16, lineHeight: 1.35, minHeight: 56, outline: 'none', background: 'white', color: '#1b2430', caretColor: '#0A5FB5', width: '100%', boxSizing: 'border-box' },
-  header: { background: 'linear-gradient(135deg, #0A5FB5, #062C5D)', color: 'white', borderRadius: 28, padding: 24, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', width: '100%', boxSizing: 'border-box', overflow: 'visible' },
-  headerBadge: { display: 'inline-block', padding: '6px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.16)', fontSize: 13, fontWeight: 700 },
+  header: { background: 'linear-gradient(135deg, #0A5FB5, #062C5D)', color: 'white', borderRadius: 24, padding: 16, marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', width: '100%', boxSizing: 'border-box', overflow: 'visible' },
+  headerBadge: { display: 'inline-block', padding: '5px 11px', borderRadius: 999, background: 'rgba(255,255,255,0.16)', fontSize: 12, fontWeight: 800 },
   logoutButton: { padding: '12px 16px', borderRadius: 14, border: 'none', background: 'white', color: '#062C5D', fontWeight: 800, cursor: 'pointer' },
   coachMenu: { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 },
   menuButton: { padding: '12px 16px', borderRadius: 14, border: '1px solid #d6e1ec', background: 'white', cursor: 'pointer', fontWeight: 700, color: '#16304c' },
