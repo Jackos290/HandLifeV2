@@ -243,6 +243,31 @@ export function FifaPlayerCard({
     <div
       onClick={onClick}
       style={{
+        width: '100%',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'transform 0.15s ease',
+      }}
+    >
+      <BigFifaCard
+        data={{
+          player: p,
+          totalTrainingPresences,
+          totalGoals,
+          totalShots,
+          totalMatches,
+          isMyChild,
+          hideStats,
+          age,
+        }}
+        clubLogo={clubLogo}
+      />
+    </div>
+  );
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
         position: 'relative',
         width: '100%',
         aspectRatio: '3 / 4.4',
