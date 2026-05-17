@@ -7,6 +7,8 @@ import { GRADES, PlayerCard, FifaPlayerCard, FullScreenCard, GradeModal, compute
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
+const POWER_CARD_IMAGES = import.meta.glob('../carte/*.{png,jpg,jpeg,webp}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+
 type Team = {
   id: string;
   name: string;
@@ -5741,6 +5743,31 @@ export default function App() {
   }
 
   function renderPowerCollectionCard(power: typeof HANDBALL_POWERS[number], index: number, unlocked: boolean, selected: boolean) {
+    const cardNumber = index + 1;
+    const imageUrl = Object.entries(POWER_CARD_IMAGES).find(([path]) => {
+      const file = path.split('/').pop()?.toLowerCase() || '';
+      return file === `${cardNumber}.png`
+        || file === `${cardNumber}.jpg`
+        || file === `${cardNumber}.jpeg`
+        || file === `${cardNumber}.webp`
+        || file === `${power.id}.png`
+        || file === `${power.id}.jpg`
+        || file === `${power.id}.jpeg`
+        || file === `${power.id}.webp`;
+    })?.[1];
+    if (imageUrl) {
+      return (
+        <div key={power.id} style={{ borderRadius: 18, border: `3px solid ${selected ? '#facc15' : unlocked ? '#0A5FB5' : '#cbd5e1'}`, background: '#020617', boxShadow: unlocked ? '0 16px 34px rgba(15,23,42,0.24)' : 'none', overflow: 'hidden', position: 'relative', opacity: unlocked ? 1 : 0.62 }}>
+          <img src={imageUrl} alt={`Carte ${power.label}`} style={{ display: 'block', width: '100%', aspectRatio: '2 / 3', objectFit: 'cover', filter: unlocked ? 'none' : 'grayscale(1) brightness(0.72)' }} />
+          {!unlocked && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.34)', color: 'white', fontSize: 36, fontWeight: 1000 }}>🔒</div>
+          )}
+          <div style={{ position: 'absolute', left: 10, right: 10, bottom: 10, padding: '8px 10px', borderRadius: 12, background: 'rgba(2,6,23,0.84)', color: selected ? '#facc15' : 'white', fontWeight: 1000, fontSize: 11, textAlign: 'center', letterSpacing: 0.8 }}>
+            {selected ? 'ACTIVE' : unlocked ? 'CARTE DEBLOQUEE' : 'A DEBLOQUER'}
+          </div>
+        </div>
+      );
+    }
     const themes = [
       { accent: '#38bdf8', glow: '#7dd3fc', shirt: '#0A5FB5', skin: '#f3c79a' },
       { accent: '#f97316', glow: '#fdba74', shirt: '#ea580c', skin: '#eab07f' },
