@@ -4130,6 +4130,27 @@ export default function App() {
     setShowParentMessages(false);
   }
 
+  function enterCoachPlayerSpace() {
+    const player = getCoachLinkedPlayer();
+    if (!player) {
+      setCoachTab('mycard');
+      return;
+    }
+    setLinkedPlayerId(player.id);
+    setHasPlayerRole(true);
+    setSelectedParentId('');
+    setParentChildTab(player.id);
+    setParentTab('home');
+    setActiveRole('parent');
+    setShowParentMessages(false);
+  }
+
+  function returnToCoachSpace() {
+    setActiveRole('coach');
+    setParentTab('home');
+    setShowParentMessages(false);
+  }
+
   async function toggleAdminDelegate(targetType: 'user' | 'coach', targetId: string, enabled: boolean) {
     if (!targetId) return;
     const key = `${targetType}-${targetId}`;
@@ -5190,7 +5211,8 @@ export default function App() {
 
   // ── Parent ──
   const linkedPlayerIds = parentLinks.filter((l) => l.parent_id === selectedParentId).map((l) => l.player_id).filter(Boolean) as string[];
-  const parentPlayers = players.filter((p) => linkedPlayerIds.includes(p.id));
+  const parentPlayerIds = [...new Set([...(linkedPlayerIds || []), ...(linkedPlayerId ? [linkedPlayerId] : [])])];
+  const parentPlayers = players.filter((p) => parentPlayerIds.includes(p.id));
 
   // ── RENDER ──
   if (loading) {
@@ -5707,12 +5729,12 @@ export default function App() {
             <div style={{ minWidth: 0 }}>
               <div style={styles.headerBadge}>CA Gorcy Handball</div>
               <h1 style={{ margin: '8px 0 6px 0', fontSize: 'clamp(28px, 8vw, 46px)', lineHeight: 1.05 }}>
-                {activeRole === 'coach' ? (isAdmin ? '👑 Admin' : '🏆 Espace Coach') : '👪 Espace Parent'}
+                {activeRole === 'coach' ? (isAdmin ? '👑 Admin' : '🏆 Espace Coach') : (selectedParentId ? '👪 Espace Parent' : '🤾 Espace Joueur')}
               </h1>
               <p style={{ margin: 0, opacity: 0.92, overflowWrap: 'anywhere' }}>
                 {activeRole === 'coach'
                   ? isAdmin ? 'Accès complet à toutes les équipes' : `Vos équipes : ${allowedTeamIds.map(getTeamName).join(', ')}`
-                  : 'Présences et infos équipe'}
+                  : selectedParentId ? 'Présences et infos équipe' : 'Ma saison, ma carte et mes infos équipe'}
               </p>
               <div style={{ marginTop: 10 }}>
                 <HandLifeLogo variant="dark" size="sm" />
@@ -5792,10 +5814,17 @@ export default function App() {
                 </button>
               )}
               {activeRole === 'coach' && !isAdmin && connectedCoachId && (
-                <button onClick={() => setCoachTab('mycard')}
+                <button onClick={enterCoachPlayerSpace}
                   title="Acces joueur" aria-label="Acces joueur"
                   style={{ height: 48, padding: '0 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span>Joueur</span>
+                </button>
+              )}
+              {activeRole === 'parent' && connectedCoachId && !isAdmin && (
+                <button onClick={returnToCoachSpace}
+                  title="Retour coach" aria-label="Retour coach"
+                  style={{ height: 48, padding: '0 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span>Coach</span>
                 </button>
               )}
               {/* Message icon with badge */}
@@ -8784,7 +8813,7 @@ export default function App() {
         {activeRole === 'parent' && (
           <div style={styles.contentCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              <h2 style={{ ...styles.blockTitle, margin: 0 }}>Espace Parent</h2>
+              <h2 style={{ ...styles.blockTitle, margin: 0 }}>{selectedParentId ? 'Espace Parent' : 'Espace Joueur'}</h2>
               <button
                 onClick={() => setParentTab('password')}
                 title="Changer le mot de passe"
@@ -9431,7 +9460,7 @@ export default function App() {
             {/* ── MON ESPACE / ENTRAÎNEMENTS / MATCHS / ÉVÉNEMENTS ── */}
             {(['home', 'trainings', 'matches', 'events'] as const).includes(parentTab as any) && (
             <>{parentPlayers.length === 0
-              ? <div style={styles.emptyState}>{"Aucun enfant lié à ce compte parent."}</div>
+              ? <div style={styles.emptyState}>{selectedParentId ? "Aucun enfant lié à ce compte parent." : "Aucun profil joueur lié à ce compte."}</div>
               : (
                 <>
                   <div style={{ display: 'grid', gap: 18 }}>
