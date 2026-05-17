@@ -3093,7 +3093,8 @@ export default function App() {
     if (!Decompression) return null;
     for (const format of ['deflate', 'deflate-raw']) {
       try {
-        const stream = new Blob([streamBytes]).stream().pipeThrough(new Decompression(format));
+        const streamBuffer = streamBytes.buffer.slice(streamBytes.byteOffset, streamBytes.byteOffset + streamBytes.byteLength);
+        const stream = new Blob([streamBuffer]).stream().pipeThrough(new Decompression(format));
         return new Uint8Array(await new Response(stream).arrayBuffer());
       } catch {
         // Try the next supported deflate variant.
