@@ -164,7 +164,7 @@ type UpcomingTraining = {
 };
 
 // CoachTab — 'admin' seulement visible pour isAdmin
-type CoachTab = 'trainings' | 'matches' | 'stats' | 'composition' | 'players' | 'users' | 'messages' | 'licenses' | 'team' | 'accessibility' | 'admin' | 'password' | 'events' | 'polls';
+type CoachTab = 'trainings' | 'matches' | 'stats' | 'composition' | 'players' | 'users' | 'messages' | 'licenses' | 'team' | 'accessibility' | 'admin' | 'password' | 'events' | 'polls' | 'supporter';
 
 type Sponsor = {
   id: string;
@@ -3025,6 +3025,27 @@ export default function App() {
     }
   }
 
+  async function clearMatchSupporterImport(match: MatchItem) {
+    if (!window.confirm('Supprimer le resume supporter et les donnees de feuille de match pour ce match ?')) return;
+    try {
+      const { error } = await supabase.from('matches').update({
+        fdm_url: null,
+        supporter_summary: null,
+        fdm_actions_text: null,
+      }).eq('id', match.id);
+      if (error) throw error;
+      setNewMatchFdmUrl('');
+      setNewMatchFdmFileName('');
+      setNewMatchFdmActions('');
+      setNewMatchSupporterSummary('');
+      await loadData();
+      alert('Resume supporter supprime');
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors de la suppression du resume supporter.");
+    }
+  }
+
   function getFinalScoreFromActions(actions: string) {
     return actions
       .split(/\r?\n/)
@@ -5624,7 +5645,7 @@ export default function App() {
             )}
             {/* Menu onglets */}
             <div style={styles.coachMenu}>
-              {(['trainings', 'matches', 'stats', 'composition', 'team', 'players', 'users', 'messages', 'licenses', 'events', 'polls', 'password', ...(isAdmin ? ['admin'] : [])] as CoachTab[]).map((tab) => {
+              {(['trainings', 'matches', 'stats', 'composition', 'team', 'players', 'users', 'messages', 'licenses', 'events', 'polls', 'supporter', 'password', ...(isAdmin ? ['admin'] : [])] as CoachTab[]).map((tab) => {
                 const labels: Record<CoachTab, string> = {
                   trainings: '📅 Entraînements', matches: '⚽ Matchs', stats: '📊 Stats',
                   composition: '🏐 Composition',
@@ -5633,6 +5654,7 @@ export default function App() {
                   accessibility: '⚙️ Administration', admin: '⚙️ Administration',
                   events: '🎉 Événements',
                   polls: '📊 Sondages',
+                  supporter: 'Supporter',
                 };
                 // Badges de notification
                 let badgeCount = 0;
@@ -6058,6 +6080,12 @@ export default function App() {
                                 style={{ ...styles.primaryButton, background: '#92400e', opacity: savingFdmImport || (!newMatchFdmUrl.trim() && !newMatchFdmActions.trim()) ? 0.65 : 1 }}>
                                 {savingFdmImport ? 'Import en cours...' : 'Regenerer stats + resume'}
                               </button>
+                              {(selectedMatch.supporter_summary || selectedMatch.fdm_actions_text || newMatchSupporterSummary || newMatchFdmActions) && (
+                                <button onClick={() => clearMatchSupporterImport(selectedMatch)}
+                                  style={{ ...styles.secondaryOutlineButton, borderColor: '#fecaca', color: '#dc2626' }}>
+                                  Supprimer resume / import
+                                </button>
+                              )}
                               {newMatchSupporterSummary && (
                                 <div style={{ padding: 12, borderRadius: 12, background: 'white', border: '1px solid #fde68a', color: '#78350f', fontSize: 13, fontWeight: 700 }}>
                                   {newMatchSupporterSummary}
@@ -7088,6 +7116,39 @@ export default function App() {
             )}
 
             {/* ── MOT DE PASSE COACH ── */}
+            {coachTab === 'supporter' && (
+              <div style={styles.contentCard}>
+                <h2 style={styles.blockTitle}>Supporter</h2>
+                <p style={styles.blockSubtitle}>Resumes visibles par les parents et joueurs, classes du plus recent au plus ancien.</p>
+                <div style={{ display: 'grid', gap: 14 }}>
+                  {visibleMatches.filter((m) => !!m.supporter_summary?.trim()).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime()).length === 0
+                    ? <div style={styles.emptyState}>Aucun resume de match disponible.</div>
+                    : visibleMatches.filter((m) => !!m.supporter_summary?.trim()).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime()).map((match) => (
+                      <div key={match.id} style={{ ...styles.panelCard, background: 'white' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 10 }}>
+                          <div>
+                            <div style={{ fontSize: 12, color: '#64748b', fontWeight: 800 }}>{formatDate(match.match_date)} ? {formatTime(match.match_date)}</div>
+                            <h3 style={{ margin: '4px 0 0 0', color: '#062C5D' }}>{getTeamName(match.team_id)} vs {match.opponent}</h3>
+                            {match.score_home !== null && match.score_home !== undefined && match.score_home !== '' && (
+                              <div style={{ marginTop: 4, color: '#0A5FB5', fontWeight: 900 }}>Score : {match.score_home} - {match.score_away}</div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button onClick={() => { setCoachTab('matches'); setMatchSubTab('convocation'); setSelectedMatchId(match.id); setMatchDetailTab('stats'); }}
+                              style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>Modifier</button>
+                            <button onClick={() => clearMatchSupporterImport(match)}
+                              style={{ ...styles.linkRemoveButton, fontSize: 12 }}>Supprimer</button>
+                          </div>
+                        </div>
+                        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#10233b', fontSize: 14, fontWeight: 650 }}>
+                          {match.supporter_summary}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
             {coachTab === 'password' && (
               <div style={styles.contentCard}>
                 <h2 style={styles.blockTitle}>🔑 Changer mon mot de passe</h2>
@@ -7420,6 +7481,14 @@ export default function App() {
                         <label style={styles.inputLabel}>Resume supporter</label>
                         <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Resume visible dans le futur espace Supporter." />
                       </div>
+                      {editingMatchId && (newMatchSupporterSummary || newMatchFdmActions || newMatchFdmUrl) && (
+                        <button type="button" onClick={() => {
+                          const match = matches.find((m) => m.id === editingMatchId);
+                          if (match) clearMatchSupporterImport(match);
+                        }} style={{ ...styles.secondaryOutlineButton, borderColor: '#fecaca', color: '#dc2626' }}>
+                          Supprimer resume / import feuille de match
+                        </button>
+                      )}
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button onClick={addMatch} style={styles.primaryButton}>{editingMatchId ? '💾 Enregistrer' : 'Ajouter le match'}</button>
