@@ -586,6 +586,7 @@ export default function App() {
   const [matchDetailTab, setMatchDetailTab] = useState<'convocation' | 'presence' | 'stats'>('convocation');
   const [crossCategoryTeamId, setCrossCategoryTeamId] = useState<string>('');
   const [parentTab, setParentTab] = useState<'home' | 'team' | 'trainings' | 'matches' | 'events' | 'password' | 'player' | 'polls' | 'supporter'>('home');
+  const [showParentMoreNav, setShowParentMoreNav] = useState(false);
   const [parentChildTab, setParentChildTab] = useState<string>('');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showParentMessages, setShowParentMessages] = useState(false);
@@ -8627,6 +8628,7 @@ export default function App() {
                 title="Changer le mot de passe"
                 aria-label="Changer le mot de passe"
                 style={{
+                  display: 'none',
                   width: 38,
                   height: 38,
                   borderRadius: '50%',
@@ -8643,7 +8645,7 @@ export default function App() {
             </div>
 
             {/* Boutons parent */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))', gap: 10, marginBottom: 20 }}>
+            <div style={{ display: 'none' }}>
               {(() => {
                 const tabs: { key: 'home' | 'team' | 'trainings' | 'matches' | 'events' | 'polls' | 'supporter'; label: string }[] = [
                   { key: 'home', label: '👪 Mon espace' },
@@ -9656,6 +9658,78 @@ export default function App() {
                 </span>
               </div>
             )}
+            <div style={{ height: 86 }} />
+            {(() => {
+              const myTeamIds = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)).filter(Boolean) as string[])];
+              if (linkedPlayerId) {
+                const me = players.find((p) => p.id === linkedPlayerId);
+                if (me?.team_id) myTeamIds.push(getPlayerTeamIdForSeason(me, parentSelectedSeasonId));
+              }
+              const visiblePolls = getPollsVisibleFor([...new Set(myTeamIds)]);
+              const visibleSupporterMatches = getAllSupporterMatches();
+              const pollBadge = visiblePolls.filter((p) => {
+                if (p.closed) return false;
+                const myVotes = getMyVotesForPoll(p.id, selectedParentId, linkedPlayerId);
+                return normalizePollQuestions(p).some((q) => {
+                  const qOptions = getPollOptionsForQuestion(p.id, q.id);
+                  return !qOptions.some((o) => myVotes.includes(o.id));
+                });
+              }).length;
+              const supporterBadge = visibleSupporterMatches.filter((m) => !supporterReadKeys.includes(getSupporterSummaryKey(m))).length;
+              const unreadMessages = getUnreadMessageConversations().length;
+              const goTab = (tab: typeof parentTab) => {
+                setParentTab(tab);
+                setShowParentMoreNav(false);
+                if (tab === 'supporter') markSupporterMatchesRead(visibleSupporterMatches);
+              };
+              const primaryTabs: { key: typeof parentTab; icon: string; label: string; badge?: number }[] = [
+                { key: 'home', icon: '🏠', label: 'Accueil', badge: unreadMessages },
+                { key: 'team', icon: '👕', label: 'Équipe' },
+                { key: 'trainings', icon: '🏃', label: 'Séances' },
+                { key: 'matches', icon: '⚽', label: 'Matchs' },
+              ];
+              const moreTabs: { key: typeof parentTab; icon: string; label: string; badge?: number; hidden?: boolean }[] = [
+                { key: 'events', icon: '🎉', label: 'Événements' },
+                { key: 'polls', icon: '📊', label: 'Sondages', badge: pollBadge, hidden: visiblePolls.length === 0 },
+                { key: 'supporter', icon: '📣', label: 'Supporter', badge: supporterBadge, hidden: visibleSupporterMatches.length === 0 },
+                { key: 'password', icon: '🔑', label: 'Mot de passe' },
+              ];
+              const moreActive = ['events', 'polls', 'supporter', 'password'].includes(parentTab);
+              return (
+                <>
+                  {showParentMoreNav && (
+                    <div style={{ position: 'fixed', left: 16, right: 16, bottom: 88, zIndex: 999, maxWidth: 720, margin: '0 auto', background: 'white', borderRadius: 18, border: '1px solid #d8e5f2', boxShadow: '0 18px 42px rgba(15,23,42,0.20)', padding: 10, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                      {moreTabs.filter((tab) => !tab.hidden).map((tab) => (
+                        <button key={tab.key} onClick={() => goTab(tab.key)}
+                          style={{ position: 'relative', minHeight: 48, borderRadius: 14, border: parentTab === tab.key ? '2px solid #0A5FB5' : '1px solid #d8e5f2', background: parentTab === tab.key ? '#eaf4ff' : '#f8fbff', color: '#10233b', fontWeight: 900, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                          <span>{tab.icon}</span><span>{tab.label}</span>
+                          {!!tab.badge && tab.badge > 0 && <span style={{ position: 'absolute', top: 4, right: 6, background: '#dc2626', color: 'white', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px' }}>{tab.badge}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ position: 'fixed', left: 10, right: 10, bottom: 10, zIndex: 998, maxWidth: 720, margin: '0 auto', background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(14px)', border: '1px solid #d8e5f2', boxShadow: '0 14px 38px rgba(15,23,42,0.18)', borderRadius: 22, padding: '8px 10px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }}>
+                    {primaryTabs.map((tab) => {
+                      const active = parentTab === tab.key;
+                      return (
+                        <button key={tab.key} onClick={() => goTab(tab.key)}
+                          style={{ position: 'relative', minHeight: 56, borderRadius: 16, border: 'none', background: active ? '#0A5FB5' : 'transparent', color: active ? 'white' : '#334155', fontWeight: 900, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, fontSize: 11 }}>
+                          <span style={{ fontSize: 18, lineHeight: 1 }}>{tab.icon}</span>
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{tab.label}</span>
+                          {!!tab.badge && tab.badge > 0 && <span style={{ position: 'absolute', top: 5, right: 8, background: '#dc2626', color: 'white', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px' }}>{tab.badge}</span>}
+                        </button>
+                      );
+                    })}
+                    <button onClick={() => setShowParentMoreNav((p) => !p)}
+                      style={{ minHeight: 56, borderRadius: 16, border: 'none', background: moreActive || showParentMoreNav ? '#0A5FB5' : 'transparent', color: moreActive || showParentMoreNav ? 'white' : '#334155', fontWeight: 900, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, fontSize: 11, position: 'relative' }}>
+                      <span style={{ fontSize: 18, lineHeight: 1 }}>⋯</span>
+                      <span>Plus</span>
+                      {(pollBadge + supporterBadge) > 0 && <span style={{ position: 'absolute', top: 5, right: 8, background: '#dc2626', color: 'white', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px' }}>{pollBadge + supporterBadge}</span>}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </div>
