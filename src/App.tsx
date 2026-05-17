@@ -5742,16 +5742,22 @@ export default function App() {
 
   function renderPowerCollectionCard(power: typeof HANDBALL_POWERS[number], index: number, unlocked: boolean, selected: boolean) {
     const themes = [
-      { accent: '#38bdf8', glow: '#7dd3fc', shirt: '#0A5FB5', effect: 'MUR' },
-      { accent: '#f97316', glow: '#fdba74', shirt: '#ea580c', effect: 'FEU' },
-      { accent: '#a78bfa', glow: '#c4b5fd', shirt: '#6d28d9', effect: 'AURA' },
-      { accent: '#34d399', glow: '#86efac', shirt: '#047857', effect: 'VITESSE' },
-      { accent: '#facc15', glow: '#fde68a', shirt: '#0A5FB5', effect: 'ETOILE' },
-      { accent: '#fb7185', glow: '#fda4af', shirt: '#be123c', effect: 'CHOC' },
+      { accent: '#38bdf8', glow: '#7dd3fc', shirt: '#0A5FB5', skin: '#f3c79a' },
+      { accent: '#f97316', glow: '#fdba74', shirt: '#ea580c', skin: '#eab07f' },
+      { accent: '#a78bfa', glow: '#c4b5fd', shirt: '#6d28d9', skin: '#d6a878' },
+      { accent: '#34d399', glow: '#86efac', shirt: '#047857', skin: '#f0c18d' },
+      { accent: '#facc15', glow: '#fde68a', shirt: '#0A5FB5', skin: '#e8b27e' },
+      { accent: '#fb7185', glow: '#fda4af', shirt: '#be123c', skin: '#f4c7a1' },
     ];
     const theme = themes[index % themes.length];
     const statBase = 7 + (index % 4);
-    const pose = index % 5;
+    const scene =
+      /mur|contre|rempart|defensif|defense|gardien|parade/.test(power.id) ? 'wall' :
+      /missile|torpille|impact|explosivite|feu|grinta/.test(power.id) ? 'fire' :
+      /aimant|interception|pression/.test(power.id) ? 'magnet' :
+      /eclair|demarrage|vitesse|repli|contre_attaque|relance/.test(power.id) ? 'speed' :
+      /vision|lecture|passe|tempo|lucidite/.test(power.id) ? 'vision' :
+      'aura';
     const stars = '★★★★★'.slice(0, Math.min(5, 3 + (index % 3)));
     const valueRows: [string, number][] = [
       ['DEFENSE', statBase],
@@ -5760,11 +5766,9 @@ export default function App() {
       ['ESPRIT', Math.min(10, 8 + ((index + 1) % 3))],
     ];
     return (
-      <div key={power.id} style={{ minHeight: 292, borderRadius: 18, padding: 9, border: `2px solid ${selected ? theme.accent : unlocked ? '#0A5FB5' : '#cbd5e1'}`, background: unlocked ? `linear-gradient(135deg, #020617 0%, #08244a 45%, #020617 100%)` : 'linear-gradient(145deg, #f8fafc, #e2e8f0)', boxShadow: unlocked ? `0 16px 34px ${theme.accent}40` : 'none', color: unlocked ? 'white' : '#94a3b8', position: 'relative', overflow: 'hidden', opacity: unlocked ? 1 : 0.78 }}>
+      <div key={power.id} style={{ minHeight: 318, borderRadius: 18, padding: 9, border: `2px solid ${selected ? theme.accent : unlocked ? '#0A5FB5' : '#cbd5e1'}`, background: unlocked ? `linear-gradient(140deg, #020617 0%, #061a33 42%, #020617 100%)` : 'linear-gradient(145deg, #f8fafc, #e2e8f0)', boxShadow: unlocked ? `0 16px 34px ${theme.accent}40` : 'none', color: unlocked ? 'white' : '#94a3b8', position: 'relative', overflow: 'hidden', opacity: unlocked ? 1 : 0.78 }}>
         <div style={{ position: 'absolute', inset: 6, borderRadius: 14, border: `1px solid ${unlocked ? theme.accent : '#cbd5e1'}`, boxShadow: unlocked ? `inset 0 0 24px ${theme.accent}55` : 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, background: unlocked ? `radial-gradient(circle at 76% 18%, ${theme.glow}cc, transparent 22%), radial-gradient(circle at 72% 48%, ${theme.accent}88, transparent 34%), repeating-linear-gradient(135deg, transparent 0 16px, rgba(255,255,255,0.08) 17px 18px)` : 'none', opacity: unlocked ? 0.9 : 0.25 }} />
-        <div style={{ position: 'absolute', right: -34, top: 38, width: 170, height: 170, borderRadius: '50%', border: `18px solid ${unlocked ? theme.accent : '#cbd5e1'}`, opacity: unlocked ? 0.16 : 0.08 }} />
-        <div style={{ position: 'absolute', right: 18, top: 58, width: 94, height: 120, borderRadius: 20, background: unlocked ? `linear-gradient(160deg, ${theme.glow}99, transparent 65%)` : '#cbd5e1', clipPath: theme.effect === 'MUR' ? 'polygon(13% 0, 88% 4%, 100% 48%, 78% 100%, 16% 94%, 0 48%)' : 'polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%)', opacity: unlocked ? 0.72 : 0.22, filter: unlocked ? `drop-shadow(0 0 14px ${theme.glow})` : 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: unlocked ? `radial-gradient(circle at 70% 28%, ${theme.glow}bb, transparent 26%), radial-gradient(circle at 78% 55%, ${theme.accent}77, transparent 36%), repeating-linear-gradient(135deg, transparent 0 14px, rgba(255,255,255,0.08) 15px 16px)` : 'none', opacity: unlocked ? 0.95 : 0.25 }} />
         <div style={{ position: 'absolute', left: 12, top: 12, width: 42, height: 42, borderRadius: 12, background: unlocked ? '#031224' : '#cbd5e1', border: `2px solid ${unlocked ? theme.accent : '#e2e8f0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, zIndex: 3 }}>{unlocked ? power.icon : '🔒'}</div>
         <div style={{ position: 'absolute', left: 12, top: 62, zIndex: 3, width: 72 }}>
           <div style={{ color: unlocked ? '#facc15' : '#94a3b8', fontSize: 11, letterSpacing: 1 }}>{stars}</div>
@@ -5773,16 +5777,73 @@ export default function App() {
             <div style={{ color: unlocked ? theme.glow : '#64748b', fontWeight: 900, fontSize: 8, marginTop: 4, lineHeight: 1.2 }}>SPECIAL HAND</div>
           </div>
         </div>
-        <div style={{ position: 'absolute', left: '50%', top: 48, width: 132, height: 168, transform: `translateX(-35%) rotate(${pose === 1 ? '-7deg' : pose === 2 ? '7deg' : '0deg'})`, zIndex: 2, filter: unlocked ? `drop-shadow(0 0 16px ${theme.glow})` : 'none' }}>
-          <div style={{ position: 'absolute', left: 51, top: 0, width: 34, height: 34, borderRadius: '50%', background: unlocked ? '#f8cfa4' : '#cbd5e1', boxShadow: unlocked ? 'inset -5px -4px 0 rgba(0,0,0,0.15)' : 'none' }} />
-          <div style={{ position: 'absolute', left: 44, top: -3, width: 47, height: 18, borderRadius: '50% 50% 18% 18%', background: unlocked ? '#111827' : '#94a3b8', transform: 'rotate(-8deg)' }} />
-          <div style={{ position: 'absolute', left: 39, top: 34, width: 58, height: 76, borderRadius: '20px 20px 12px 12px', background: unlocked ? `linear-gradient(160deg, ${theme.shirt}, #0A5FB5 55%, #031224)` : '#94a3b8', border: unlocked ? '2px solid rgba(255,255,255,0.45)' : 'none' }} />
-          <div style={{ position: 'absolute', left: pose === 3 ? -4 : 14, top: 48, width: 58, height: 13, borderRadius: 999, background: unlocked ? '#f8cfa4' : '#cbd5e1', transform: `rotate(${pose === 3 ? '-42deg' : '-24deg'})`, transformOrigin: 'right center' }} />
-          <div style={{ position: 'absolute', right: pose === 4 ? -6 : 10, top: 48, width: 58, height: 13, borderRadius: 999, background: unlocked ? '#f8cfa4' : '#cbd5e1', transform: `rotate(${pose === 4 ? '44deg' : '26deg'})`, transformOrigin: 'left center' }} />
-          <div style={{ position: 'absolute', left: 42, top: 104, width: 17, height: 60, borderRadius: 999, background: unlocked ? '#111827' : '#94a3b8', transform: 'rotate(20deg)', transformOrigin: 'top center' }} />
-          <div style={{ position: 'absolute', right: 37, top: 104, width: 17, height: 60, borderRadius: 999, background: unlocked ? '#111827' : '#94a3b8', transform: 'rotate(-20deg)', transformOrigin: 'top center' }} />
-          <div style={{ position: 'absolute', right: pose === 4 ? -9 : 0, top: pose === 4 ? 18 : 76, width: 30, height: 30, borderRadius: '50%', background: unlocked ? 'radial-gradient(circle at 34% 30%, white 0 12%, #dbeafe 13% 31%, #0A5FB5 32% 100%)' : '#cbd5e1', border: unlocked ? `2px solid ${theme.glow}` : 'none' }} />
-        </div>
+        <svg viewBox="0 0 240 260" style={{ position: 'absolute', right: -18, top: 28, width: 202, height: 232, zIndex: 2, filter: unlocked ? `drop-shadow(0 0 16px ${theme.glow})` : 'none' }} aria-hidden="true">
+          <defs>
+            <linearGradient id={`shirt-${power.id}`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={theme.shirt} />
+              <stop offset="60%" stopColor="#0A5FB5" />
+              <stop offset="100%" stopColor="#031224" />
+            </linearGradient>
+            <radialGradient id={`ball-${power.id}`} cx="35%" cy="30%" r="70%">
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="36%" stopColor="#dbeafe" />
+              <stop offset="100%" stopColor="#0A5FB5" />
+            </radialGradient>
+          </defs>
+          {scene === 'wall' && (
+            <g opacity={unlocked ? 0.85 : 0.22}>
+              <path d="M74 34 L178 18 L224 90 L199 189 L86 204 L26 126 Z" fill={theme.accent} opacity="0.22" stroke={theme.glow} strokeWidth="4" />
+              <path d="M70 88 L205 70 M59 126 L210 126 M86 166 L198 151 M112 35 L96 202 M154 24 L143 194" stroke={theme.glow} strokeWidth="3" opacity="0.65" />
+            </g>
+          )}
+          {scene === 'fire' && (
+            <g opacity={unlocked ? 0.85 : 0.2}>
+              <path d="M115 205 C67 164 95 111 128 82 C125 119 168 119 151 52 C207 111 211 178 159 214 Z" fill={theme.accent} opacity="0.38" />
+              <path d="M137 210 C103 172 125 137 145 113 C146 145 177 145 169 101 C203 149 194 195 161 218 Z" fill={theme.glow} opacity="0.45" />
+            </g>
+          )}
+          {scene === 'magnet' && (
+            <g opacity={unlocked ? 0.85 : 0.22} fill="none" stroke={theme.glow} strokeWidth="6">
+              <path d="M93 70 C142 21 219 55 214 127" />
+              <path d="M108 95 C145 65 194 83 191 130" strokeWidth="4" />
+              <path d="M78 58 L94 75 M210 127 L225 139" />
+            </g>
+          )}
+          {scene === 'speed' && (
+            <g opacity={unlocked ? 0.9 : 0.22} stroke={theme.glow} strokeLinecap="round">
+              <path d="M18 78 H116" strokeWidth="5" />
+              <path d="M2 118 H128" strokeWidth="4" />
+              <path d="M28 165 H112" strokeWidth="5" />
+              <path d="M144 28 L117 103 H154 L124 202" fill="none" strokeWidth="7" stroke={theme.accent} />
+            </g>
+          )}
+          {scene === 'vision' && (
+            <g opacity={unlocked ? 0.85 : 0.22} fill="none" stroke={theme.glow}>
+              <ellipse cx="151" cy="101" rx="63" ry="34" strokeWidth="5" />
+              <circle cx="151" cy="101" r="15" fill={theme.accent} opacity="0.58" />
+              <path d="M23 65 C74 86 104 111 139 164 M34 180 C77 152 113 130 176 118" strokeWidth="3" />
+            </g>
+          )}
+          {scene === 'aura' && (
+            <g opacity={unlocked ? 0.85 : 0.22}>
+              <circle cx="147" cy="120" r="84" fill={theme.accent} opacity="0.17" />
+              <circle cx="147" cy="120" r="57" fill="none" stroke={theme.glow} strokeWidth="4" />
+              <path d="M68 61 L78 78 L97 82 L81 94 L83 114 L68 103 L50 112 L57 92 L43 78 L62 77 Z" fill={theme.glow} opacity="0.5" />
+            </g>
+          )}
+          <g transform={`translate(${index % 2 ? 10 : 0} 0)`}>
+            <path d="M118 33 C110 22 126 15 145 18 C164 22 170 34 164 48 C154 43 137 44 118 49 Z" fill={unlocked ? '#08111f' : '#94a3b8'} />
+            <circle cx="142" cy="54" r="24" fill={unlocked ? theme.skin : '#cbd5e1'} />
+            <path d="M100 86 C113 66 158 66 174 86 L163 146 C148 158 119 158 104 146 Z" fill={unlocked ? `url(#shirt-${power.id})` : '#94a3b8'} stroke={unlocked ? 'rgba(255,255,255,0.55)' : '#cbd5e1'} strokeWidth="3" />
+            <path d="M105 91 C75 100 53 124 39 151" stroke={unlocked ? theme.skin : '#cbd5e1'} strokeWidth="17" strokeLinecap="round" fill="none" />
+            <path d="M169 91 C195 109 209 134 216 160" stroke={unlocked ? theme.skin : '#cbd5e1'} strokeWidth="17" strokeLinecap="round" fill="none" />
+            <path d="M112 144 C102 174 89 197 74 230" stroke={unlocked ? '#07111f' : '#94a3b8'} strokeWidth="22" strokeLinecap="round" fill="none" />
+            <path d="M154 145 C169 176 178 199 194 229" stroke={unlocked ? '#07111f' : '#94a3b8'} strokeWidth="22" strokeLinecap="round" fill="none" />
+            <path d="M53 226 L84 235 M178 232 L209 225" stroke={unlocked ? '#0f172a' : '#94a3b8'} strokeWidth="9" strokeLinecap="round" />
+            <circle cx={scene === 'wall' ? 41 : 218} cy={scene === 'wall' ? 151 : 160} r="19" fill={unlocked ? `url(#ball-${power.id})` : '#cbd5e1'} stroke={unlocked ? theme.glow : '#94a3b8'} strokeWidth="4" />
+            <path d="M129 83 L153 83 M122 99 H162 M117 116 H166" stroke="rgba(255,255,255,0.42)" strokeWidth="3" />
+          </g>
+        </svg>
         <div style={{ position: 'absolute', left: 12, bottom: 70, zIndex: 3, width: 84 }}>
           <div style={{ display: 'grid', gap: 4 }}>
               {valueRows.map(([label, value]) => (
