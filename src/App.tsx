@@ -5742,55 +5742,63 @@ export default function App() {
 
   function renderPowerCollectionCard(power: typeof HANDBALL_POWERS[number], index: number, unlocked: boolean, selected: boolean) {
     const themes = [
-      { accent: '#38bdf8', glow: '#7dd3fc', aura: 'radial-gradient(circle at 70% 20%, rgba(125,211,252,0.75), transparent 34%), linear-gradient(145deg, #0a2342, #05101f)' },
-      { accent: '#f97316', glow: '#fdba74', aura: 'radial-gradient(circle at 74% 22%, rgba(251,146,60,0.8), transparent 34%), linear-gradient(145deg, #2a1206, #050505)' },
-      { accent: '#a78bfa', glow: '#c4b5fd', aura: 'radial-gradient(circle at 72% 18%, rgba(196,181,253,0.8), transparent 32%), linear-gradient(145deg, #24104f, #080314)' },
-      { accent: '#34d399', glow: '#86efac', aura: 'radial-gradient(circle at 72% 20%, rgba(74,222,128,0.7), transparent 33%), linear-gradient(145deg, #06351f, #020b07)' },
-      { accent: '#facc15', glow: '#fde68a', aura: 'radial-gradient(circle at 72% 20%, rgba(250,204,21,0.75), transparent 32%), linear-gradient(145deg, #332406, #090602)' },
-      { accent: '#fb7185', glow: '#fda4af', aura: 'radial-gradient(circle at 72% 20%, rgba(251,113,133,0.7), transparent 32%), linear-gradient(145deg, #3b0712, #080103)' },
+      { accent: '#38bdf8', glow: '#7dd3fc', shirt: '#0A5FB5', effect: 'MUR' },
+      { accent: '#f97316', glow: '#fdba74', shirt: '#ea580c', effect: 'FEU' },
+      { accent: '#a78bfa', glow: '#c4b5fd', shirt: '#6d28d9', effect: 'AURA' },
+      { accent: '#34d399', glow: '#86efac', shirt: '#047857', effect: 'VITESSE' },
+      { accent: '#facc15', glow: '#fde68a', shirt: '#0A5FB5', effect: 'ETOILE' },
+      { accent: '#fb7185', glow: '#fda4af', shirt: '#be123c', effect: 'CHOC' },
     ];
     const theme = themes[index % themes.length];
     const statBase = 7 + (index % 4);
     const pose = index % 5;
+    const stars = '★★★★★'.slice(0, Math.min(5, 3 + (index % 3)));
     const valueRows: [string, number][] = [
-      ['Impact', statBase],
-      ['Technique', Math.min(10, statBase + (index % 3))],
-      ['Collectif', Math.min(10, 8 + (index % 3))],
+      ['DEFENSE', statBase],
+      ['FORCE', Math.min(10, statBase + (index % 3))],
+      ['REACTIVITE', Math.min(10, 8 + (index % 3))],
+      ['ESPRIT', Math.min(10, 8 + ((index + 1) % 3))],
     ];
     return (
-      <div key={power.id} style={{ minHeight: 228, borderRadius: 18, padding: 10, border: `2px solid ${selected ? theme.accent : unlocked ? '#0A5FB5' : '#cbd5e1'}`, background: unlocked ? theme.aura : 'linear-gradient(145deg, #f8fafc, #e2e8f0)', boxShadow: unlocked ? `0 14px 30px ${theme.accent}33` : 'none', color: unlocked ? 'white' : '#94a3b8', position: 'relative', overflow: 'hidden', opacity: unlocked ? 1 : 0.76 }}>
-        <div style={{ position: 'absolute', inset: 8, borderRadius: 14, border: `1px solid ${unlocked ? theme.accent : '#cbd5e1'}`, opacity: 0.9 }} />
-        <div style={{ position: 'absolute', right: -20, top: 18, width: 110, height: 110, borderRadius: '50%', border: `18px solid ${unlocked ? theme.accent : '#cbd5e1'}`, opacity: unlocked ? 0.16 : 0.1 }} />
-        <div style={{ position: 'absolute', left: 12, top: 12, width: 38, height: 38, borderRadius: 12, background: unlocked ? '#06182c' : '#cbd5e1', border: `2px solid ${unlocked ? theme.accent : '#e2e8f0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, zIndex: 2 }}>{unlocked ? power.icon : '🔒'}</div>
-        <div style={{ position: 'absolute', right: 13, top: 14, zIndex: 2, textAlign: 'right' }}>
-          <div style={{ fontSize: 9, fontWeight: 1000, letterSpacing: 1.4, color: unlocked ? theme.glow : '#94a3b8' }}>POWER</div>
-          <div style={{ fontSize: 16, fontWeight: 1000, color: unlocked ? 'white' : '#64748b' }}>{String(index + 1).padStart(2, '0')}</div>
+      <div key={power.id} style={{ minHeight: 292, borderRadius: 18, padding: 9, border: `2px solid ${selected ? theme.accent : unlocked ? '#0A5FB5' : '#cbd5e1'}`, background: unlocked ? `linear-gradient(135deg, #020617 0%, #08244a 45%, #020617 100%)` : 'linear-gradient(145deg, #f8fafc, #e2e8f0)', boxShadow: unlocked ? `0 16px 34px ${theme.accent}40` : 'none', color: unlocked ? 'white' : '#94a3b8', position: 'relative', overflow: 'hidden', opacity: unlocked ? 1 : 0.78 }}>
+        <div style={{ position: 'absolute', inset: 6, borderRadius: 14, border: `1px solid ${unlocked ? theme.accent : '#cbd5e1'}`, boxShadow: unlocked ? `inset 0 0 24px ${theme.accent}55` : 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: unlocked ? `radial-gradient(circle at 76% 18%, ${theme.glow}cc, transparent 22%), radial-gradient(circle at 72% 48%, ${theme.accent}88, transparent 34%), repeating-linear-gradient(135deg, transparent 0 16px, rgba(255,255,255,0.08) 17px 18px)` : 'none', opacity: unlocked ? 0.9 : 0.25 }} />
+        <div style={{ position: 'absolute', right: -34, top: 38, width: 170, height: 170, borderRadius: '50%', border: `18px solid ${unlocked ? theme.accent : '#cbd5e1'}`, opacity: unlocked ? 0.16 : 0.08 }} />
+        <div style={{ position: 'absolute', right: 18, top: 58, width: 94, height: 120, borderRadius: 20, background: unlocked ? `linear-gradient(160deg, ${theme.glow}99, transparent 65%)` : '#cbd5e1', clipPath: theme.effect === 'MUR' ? 'polygon(13% 0, 88% 4%, 100% 48%, 78% 100%, 16% 94%, 0 48%)' : 'polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%)', opacity: unlocked ? 0.72 : 0.22, filter: unlocked ? `drop-shadow(0 0 14px ${theme.glow})` : 'none' }} />
+        <div style={{ position: 'absolute', left: 12, top: 12, width: 42, height: 42, borderRadius: 12, background: unlocked ? '#031224' : '#cbd5e1', border: `2px solid ${unlocked ? theme.accent : '#e2e8f0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, zIndex: 3 }}>{unlocked ? power.icon : '🔒'}</div>
+        <div style={{ position: 'absolute', left: 12, top: 62, zIndex: 3, width: 72 }}>
+          <div style={{ color: unlocked ? '#facc15' : '#94a3b8', fontSize: 11, letterSpacing: 1 }}>{stars}</div>
+          <div style={{ marginTop: 6, background: unlocked ? 'rgba(2,6,23,0.88)' : 'rgba(255,255,255,0.7)', border: `1px solid ${unlocked ? theme.accent : '#cbd5e1'}`, borderRadius: 8, padding: 6 }}>
+            <div style={{ color: unlocked ? 'white' : '#334155', fontWeight: 1000, fontSize: 13, lineHeight: 1, textTransform: 'uppercase' }}>{power.label.split(' ')[0]}</div>
+            <div style={{ color: unlocked ? theme.glow : '#64748b', fontWeight: 900, fontSize: 8, marginTop: 4, lineHeight: 1.2 }}>SPECIAL HAND</div>
+          </div>
         </div>
-        <div style={{ position: 'absolute', left: '50%', top: 54, width: 104, height: 120, transform: `translateX(-50%) rotate(${pose === 1 ? '-7deg' : pose === 2 ? '7deg' : '0deg'})`, zIndex: 1 }}>
-          <div style={{ position: 'absolute', left: 42, top: 0, width: 24, height: 24, borderRadius: '50%', background: unlocked ? '#f8cfa4' : '#cbd5e1', boxShadow: unlocked ? `0 0 18px ${theme.glow}` : 'none' }} />
-          <div style={{ position: 'absolute', left: 32, top: 24, width: 44, height: 54, borderRadius: '18px 18px 12px 12px', background: unlocked ? `linear-gradient(160deg, ${theme.accent}, #0A5FB5 58%, #031224)` : '#94a3b8', border: unlocked ? '2px solid rgba(255,255,255,0.45)' : 'none' }} />
-          <div style={{ position: 'absolute', left: pose === 3 ? 2 : 16, top: 36, width: 42, height: 11, borderRadius: 999, background: unlocked ? '#f8cfa4' : '#cbd5e1', transform: `rotate(${pose === 3 ? '-36deg' : '-20deg'})`, transformOrigin: 'right center' }} />
-          <div style={{ position: 'absolute', right: pose === 4 ? -2 : 14, top: 36, width: 42, height: 11, borderRadius: 999, background: unlocked ? '#f8cfa4' : '#cbd5e1', transform: `rotate(${pose === 4 ? '38deg' : '22deg'})`, transformOrigin: 'left center' }} />
-          <div style={{ position: 'absolute', left: 32, top: 75, width: 14, height: 48, borderRadius: 999, background: unlocked ? '#111827' : '#94a3b8', transform: 'rotate(18deg)', transformOrigin: 'top center' }} />
-          <div style={{ position: 'absolute', right: 28, top: 75, width: 14, height: 48, borderRadius: 999, background: unlocked ? '#111827' : '#94a3b8', transform: 'rotate(-18deg)', transformOrigin: 'top center' }} />
-          <div style={{ position: 'absolute', right: pose === 4 ? -2 : 4, top: pose === 4 ? 16 : 62, width: 24, height: 24, borderRadius: '50%', background: unlocked ? 'radial-gradient(circle at 34% 30%, white 0 13%, #dbeafe 14% 30%, #0A5FB5 31% 100%)' : '#cbd5e1', border: unlocked ? `2px solid ${theme.glow}` : 'none' }} />
+        <div style={{ position: 'absolute', left: '50%', top: 48, width: 132, height: 168, transform: `translateX(-35%) rotate(${pose === 1 ? '-7deg' : pose === 2 ? '7deg' : '0deg'})`, zIndex: 2, filter: unlocked ? `drop-shadow(0 0 16px ${theme.glow})` : 'none' }}>
+          <div style={{ position: 'absolute', left: 51, top: 0, width: 34, height: 34, borderRadius: '50%', background: unlocked ? '#f8cfa4' : '#cbd5e1', boxShadow: unlocked ? 'inset -5px -4px 0 rgba(0,0,0,0.15)' : 'none' }} />
+          <div style={{ position: 'absolute', left: 44, top: -3, width: 47, height: 18, borderRadius: '50% 50% 18% 18%', background: unlocked ? '#111827' : '#94a3b8', transform: 'rotate(-8deg)' }} />
+          <div style={{ position: 'absolute', left: 39, top: 34, width: 58, height: 76, borderRadius: '20px 20px 12px 12px', background: unlocked ? `linear-gradient(160deg, ${theme.shirt}, #0A5FB5 55%, #031224)` : '#94a3b8', border: unlocked ? '2px solid rgba(255,255,255,0.45)' : 'none' }} />
+          <div style={{ position: 'absolute', left: pose === 3 ? -4 : 14, top: 48, width: 58, height: 13, borderRadius: 999, background: unlocked ? '#f8cfa4' : '#cbd5e1', transform: `rotate(${pose === 3 ? '-42deg' : '-24deg'})`, transformOrigin: 'right center' }} />
+          <div style={{ position: 'absolute', right: pose === 4 ? -6 : 10, top: 48, width: 58, height: 13, borderRadius: 999, background: unlocked ? '#f8cfa4' : '#cbd5e1', transform: `rotate(${pose === 4 ? '44deg' : '26deg'})`, transformOrigin: 'left center' }} />
+          <div style={{ position: 'absolute', left: 42, top: 104, width: 17, height: 60, borderRadius: 999, background: unlocked ? '#111827' : '#94a3b8', transform: 'rotate(20deg)', transformOrigin: 'top center' }} />
+          <div style={{ position: 'absolute', right: 37, top: 104, width: 17, height: 60, borderRadius: 999, background: unlocked ? '#111827' : '#94a3b8', transform: 'rotate(-20deg)', transformOrigin: 'top center' }} />
+          <div style={{ position: 'absolute', right: pose === 4 ? -9 : 0, top: pose === 4 ? 18 : 76, width: 30, height: 30, borderRadius: '50%', background: unlocked ? 'radial-gradient(circle at 34% 30%, white 0 12%, #dbeafe 13% 31%, #0A5FB5 32% 100%)' : '#cbd5e1', border: unlocked ? `2px solid ${theme.glow}` : 'none' }} />
         </div>
-        <div style={{ position: 'absolute', left: 12, right: 12, bottom: 13, zIndex: 2 }}>
-          <div style={{ background: unlocked ? 'rgba(2,6,23,0.82)' : 'rgba(255,255,255,0.7)', border: `1px solid ${unlocked ? theme.accent : '#cbd5e1'}`, borderRadius: 12, padding: '10px 8px' }}>
-            <div style={{ color: unlocked ? 'white' : '#334155', fontWeight: 1000, fontSize: 13, lineHeight: 1.1, textTransform: 'uppercase', minHeight: 28 }}>{power.label}</div>
-            <div style={{ display: 'grid', gap: 4, marginTop: 8 }}>
+        <div style={{ position: 'absolute', left: 12, bottom: 70, zIndex: 3, width: 84 }}>
+          <div style={{ display: 'grid', gap: 4 }}>
               {valueRows.map(([label, value]) => (
-                <div key={label} style={{ display: 'grid', gridTemplateColumns: '62px 1fr 24px', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 8, fontWeight: 900, color: unlocked ? '#dbeafe' : '#64748b' }}>{label}</span>
-                  <span style={{ height: 5, borderRadius: 999, background: unlocked ? 'rgba(255,255,255,0.18)' : '#e2e8f0', overflow: 'hidden' }}>
+              <div key={label} style={{ display: 'grid', gridTemplateColumns: '1fr 22px', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 7, fontWeight: 1000, color: unlocked ? '#dbeafe' : '#64748b' }}>{label}</span>
+                <span style={{ fontSize: 7, fontWeight: 1000, color: unlocked ? theme.glow : '#64748b' }}>{value}/10</span>
+                <span style={{ gridColumn: '1 / -1', height: 5, borderRadius: 999, background: unlocked ? 'rgba(255,255,255,0.18)' : '#e2e8f0', overflow: 'hidden' }}>
                     <span style={{ display: 'block', width: `${value * 10}%`, height: '100%', borderRadius: 999, background: unlocked ? theme.accent : '#94a3b8' }} />
                   </span>
-                  <span style={{ fontSize: 8, fontWeight: 1000, color: unlocked ? theme.glow : '#64748b' }}>{value}/10</span>
                 </div>
               ))}
-            </div>
-            <div style={{ marginTop: 8, color: selected ? theme.accent : unlocked ? '#bfdbfe' : '#94a3b8', fontSize: 9, fontWeight: 1000, letterSpacing: 0.8 }}>{selected ? 'ACTIVE' : unlocked ? 'CARTE DEBLOQUEE' : 'A DEBLOQUER'}</div>
           </div>
+        </div>
+        <div style={{ position: 'absolute', left: 12, right: 12, bottom: 12, zIndex: 4, background: unlocked ? 'rgba(2,6,23,0.9)' : 'rgba(255,255,255,0.78)', border: `1px solid ${unlocked ? theme.accent : '#cbd5e1'}`, borderRadius: 12, padding: '9px 8px', textAlign: 'center' }}>
+          <div style={{ color: unlocked ? 'white' : '#334155', fontWeight: 1000, fontSize: 14, lineHeight: 1.05, textTransform: 'uppercase' }}>{power.label}</div>
+          <div style={{ marginTop: 5, color: selected ? theme.accent : unlocked ? '#bfdbfe' : '#94a3b8', fontSize: 9, fontWeight: 1000, letterSpacing: 0.8 }}>{selected ? 'ACTIVE' : unlocked ? 'CARTE DEBLOQUEE' : 'A DEBLOQUER'}</div>
         </div>
       </div>
     );
@@ -7626,7 +7634,7 @@ export default function App() {
                       </button>
                     </div>
                     {showPowerCollection && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(168px, 1fr))', gap: 12 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14 }}>
                         {HANDBALL_POWERS.map((power, index) => {
                           const unlocked = index < unlockedPowerCount;
                           const selected = selectedPowers.includes(power.id);
@@ -9169,7 +9177,7 @@ export default function App() {
                       </button>
                     </div>
                     {showPowerCollection && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(168px, 1fr))', gap: 12 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14 }}>
                         {HANDBALL_POWERS.map((power, index) => {
                           const unlocked = index < unlockedPowerCount;
                           const selected = selectedPowers.includes(power.id);
