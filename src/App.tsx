@@ -579,6 +579,7 @@ export default function App() {
   // ── UI states ──
   const [coachTab, setCoachTab] = useState<CoachTab>('trainings');
   const [selectedCoachTeamId, setSelectedCoachTeamId] = useState('');
+  const [coachPlayerTeamId, setCoachPlayerTeamId] = useState('');
   const [selectedTrainingTemplateId, setSelectedTrainingTemplateId] = useState('');
   const [selectedTrainingDate, setSelectedTrainingDate] = useState('');
   const [selectedMatchId, setSelectedMatchId] = useState('');
@@ -2624,18 +2625,18 @@ export default function App() {
     const coach = coachAccessList.find((c) => c.id === connectedCoachId && (c.first_name || c.last_name));
     if (!coach) return null;
     const coachKey = normalizePersonKey(coach.first_name, coach.last_name);
-    const teamIds = new Set(isAdmin ? teams.map((t) => t.id) : allowedTeamIds);
-    return players.find((p) =>
-      normalizePersonKey(p.first_name, p.last_name) === coachKey &&
-      (!teamIds.size || teamIds.has(getPlayerTeamIdForSeason(p, parentSelectedSeasonId) || p.team_id))
-    ) || null;
+    const sameNamePlayers = players.filter((p) => normalizePersonKey(p.first_name, p.last_name) === coachKey);
+    if (coachPlayerTeamId) {
+      return sameNamePlayers.find((p) => (getPlayerTeamIdForSeason(p, parentSelectedSeasonId) || p.team_id) === coachPlayerTeamId) || null;
+    }
+    return sameNamePlayers[0] || null;
   }
 
   async function createCoachPlayerProfile() {
     if (!connectedCoachId) return;
     const coach = coachAccessList.find((c) => c.id === connectedCoachId && (c.first_name || c.last_name));
     if (!coach) { alert("Impossible de retrouver ton profil coach."); return; }
-    const teamId = selectedCoachTeamId || allowedTeamIds[0] || visibleTeams[0]?.id || teams[0]?.id || '';
+    const teamId = coachPlayerTeamId || '';
     if (!teamId) { alert("Choisis une categorie avant de creer ton profil joueur."); return; }
     const existing = players.find((p) => normalizePersonKey(p.first_name, p.last_name) === normalizePersonKey(coach.first_name, coach.last_name) && p.team_id === teamId);
     if (existing) { setCoachTab('mycard'); return; }
@@ -7349,17 +7350,27 @@ export default function App() {
             {coachTab === 'mycard' && (() => {
               const coachPlayer = getCoachLinkedPlayer();
               const coach = connectedCoachId ? coachAccessList.find((c) => c.id === connectedCoachId && (c.first_name || c.last_name)) : null;
+              const coachKey = coach ? normalizePersonKey(coach.first_name, coach.last_name) : '';
+              const coachPlayerCandidates = coachKey ? players.filter((p) => normalizePersonKey(p.first_name, p.last_name) === coachKey) : [];
+              const selectedPlayerTeamId = coachPlayerTeamId || coachPlayer?.team_id || coachPlayerCandidates[0]?.team_id || '';
               if (!coachPlayer) {
                 return (
                   <div style={styles.contentCard}>
                     <h2 style={styles.blockTitle}>🃏 Ma carte joueur</h2>
-                    <p style={styles.blockSubtitle}>Si tu es aussi joueur, cree ton profil joueur a ton nom pour acceder a ta carte et a tes super pouvoirs.</p>
+                    <p style={styles.blockSubtitle}>Si tu es aussi joueur, choisis la categorie ou tu joues. Elle peut etre differente des categories que tu entraines.</p>
                     <div style={{ ...styles.panelCard, display: 'grid', gap: 12, background: '#fffdf4', border: '1px solid #fde68a' }}>
                       <div>
                         <strong style={{ color: '#062C5D' }}>{coach ? `${coach.first_name} ${coach.last_name}` : 'Coach'}</strong>
                         <div style={{ marginTop: 4, color: '#64748b', fontWeight: 700, fontSize: 13 }}>
-                          Le joueur sera cree dans la categorie affichee : {getTeamName(selectedCoachTeamId || allowedTeamIds[0] || '') || 'a choisir'}.
+                          Le joueur sera cree uniquement dans la categorie choisie ci-dessous.
                         </div>
+                      </div>
+                      <div>
+                        <label style={styles.inputLabel}>Categorie ou je joue</label>
+                        <select value={selectedPlayerTeamId} onChange={(e) => setCoachPlayerTeamId(e.target.value)} style={{ ...styles.select, maxWidth: 360 }}>
+                          <option value="">Choisir une categorie</option>
+                          {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
                       </div>
                       <button onClick={createCoachPlayerProfile} style={{ ...styles.primaryButton, maxWidth: 320 }}>
                         ➕ Creer mon joueur
@@ -7378,7 +7389,16 @@ export default function App() {
               return (
                 <div style={styles.contentCard}>
                   <h2 style={styles.blockTitle}>🃏 Ma carte joueur</h2>
-                  <p style={styles.blockSubtitle}>{getTeamName(teamId)} - pouvoirs debloques avec les entrainements et matchs joues.</p>
+                  <p style={styles.blockSubtitle}>Choisis la categorie dans laquelle tu joues pour afficher la bonne carte.</p>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={styles.inputLabel}>Categorie ou je joue</label>
+                    <select value={selectedPlayerTeamId || teamId} onChange={(e) => setCoachPlayerTeamId(e.target.value)} style={{ ...styles.select, maxWidth: 360 }}>
+                      {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                    <div style={{ marginTop: 6, color: '#64748b', fontWeight: 700, fontSize: 12 }}>
+                      Carte affichee : {getTeamName(teamId)} - pouvoirs debloques avec les entrainements et matchs joues.
+                    </div>
+                  </div>
                   <div style={{ ...styles.panelCard, background: '#fffdf4', border: '1px solid #fde68a' }}>
                     <div style={{ width: 'min(100%, 340px)', margin: '0 auto' }}>
                       <FifaPlayerCard
