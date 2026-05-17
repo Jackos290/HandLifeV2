@@ -2863,8 +2863,8 @@ export default function App() {
 
   function buildSupporterSummary(match: MatchItem, actionText = '') {
     const result = matchResults[match.id];
-    const home = Number(result?.score_home ?? match.score_home ?? 0);
-    const away = Number(result?.score_away ?? match.score_away ?? 0);
+    let home = Number(result?.score_home ?? match.score_home ?? 0);
+    let away = Number(result?.score_away ?? match.score_away ?? 0);
     const teamName = getTeamName(match.team_id);
     const opponent = match.opponent || 'adversaire';
     const actionLines = actionText
@@ -2881,6 +2881,8 @@ export default function App() {
         .filter(Boolean) as { home: number; away: number; line: string }[];
       const first = scores[0];
       const last = scores[scores.length - 1];
+      home = last?.home ?? home;
+      away = last?.away ?? away;
       const teamGoals = Math.max(0, (last?.home || home) - (first?.home || 0));
       const oppGoals = Math.max(0, (last?.away || away) - (first?.away || 0));
       const scoringPlayers: Record<string, number> = {};
@@ -2902,7 +2904,14 @@ export default function App() {
         : home < away
           ? `s'incline ${home}-${away}`
           : `termine à égalité ${home}-${away}`;
-      return `${teamName} ${trend} face à ${opponent}. La feuille de match montre ${actionLines.length} actions suivies, avec ${teamGoals} buts marqués contre ${oppGoals} encaissés sur les lignes analysées.${topScorers.length ? ` Joueurs en vue : ${topScorers.join(', ')}.` : ''} Ce résumé est généré à partir du déroulé Temps / Score / Action.`;
+      const maxDelay = scores.reduce((best, score) => Math.max(best, score.away - score.home), 0);
+      const closeGame = Math.abs(home - away) <= 2;
+      const scenario = home > away
+        ? (maxDelay > 2 ? 'Après avoir été accroché, le groupe a su inverser la tendance.' : 'Le groupe a gardé le contrôle et a fait la différence collectivement.')
+        : home < away
+          ? (closeGame ? "Le match est resté serré jusqu'au bout, avec un groupe qui n'a rien lâché." : `L'adversaire a pris l'avantage au fil du match, avec un plus gros écart de ${maxDelay} buts.`)
+          : 'Les deux équipes se sont rendu coup pour coup dans une rencontre équilibrée.';
+      return `${teamName} ${trend} face à ${opponent}. ${scenario} ${teamGoals} buts inscrits, ${oppGoals} encaissés et ${actionLines.length} actions analysées depuis la feuille de match.${topScorers.length ? ` Côté buteurs : ${topScorers.join(', ')}.` : ''}`;
     }
 
     if (!Number.isFinite(home) || !Number.isFinite(away)) {
@@ -3150,6 +3159,21 @@ export default function App() {
       setNewMatchFdmFileName(file.name);
       setNewMatchFdmUrl('');
       setNewMatchFdmActions(actions);
+      const finalScore = actions
+        .split(/\r?\n/)
+        .map((line) => line.match(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/))
+        .filter(Boolean)
+        .pop();
+      if (finalScore) {
+        setMatchResults((prev) => ({
+          ...prev,
+          [match.id]: {
+            ...prev[match.id],
+            score_home: finalScore[1],
+            score_away: finalScore[2],
+          },
+        }));
+      }
       const summary = buildSupporterSummary(match, actions);
       setNewMatchSupporterSummary(summary);
       if (!actions) {
