@@ -68,10 +68,10 @@ export function getPositionFullName(code: string | null | undefined): string {
   return p ? p.full : code;
 }
 
-export function computeGrade(totalTrainingPresences: number, totalGoals: number = 0, totalMatchesPlayed: number = 0) {
+export function computeGrade(totalTrainingPresences: number, _totalGoals: number = 0, totalMatchesPlayed: number = 0) {
   const trainingStars = Math.floor(totalTrainingPresences / 2);
-  const goalStars = Math.max(0, totalGoals || 0);
-  const matchStars = Math.max(0, totalMatchesPlayed || 0);
+  const goalStars = 0;
+  const matchStars = Math.max(0, totalMatchesPlayed || 0) * 2;
   const totalStars = trainingStars + goalStars + matchStars;
   const gradeIdx = [...GRADES].reverse().findIndex((g) => totalStars >= g.min);
   const grade = GRADES[GRADES.length - 1 - (gradeIdx === -1 ? GRADES.length - 1 : gradeIdx)];

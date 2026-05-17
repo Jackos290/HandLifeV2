@@ -8723,6 +8723,11 @@ export default function App() {
               const childSaves = childStatsRows.reduce((sum, s) => sum + (s.saves || 0), 0);
               const childMatches = new Set(childStatsRows.map((s) => s.match_id)).size;
               const childPct = childShots > 0 ? Math.round((childGoals / childShots) * 100) : 0;
+              const selectedPowers = selectedCard.player.card_powers || [];
+              const unlockedPowerCount = Math.min(
+                HANDBALL_POWERS.length,
+                3 + Math.floor(selectedCard.totalTrainingPresences / 4) + Math.floor(selectedCard.totalMatches / 2)
+              );
               const teamStatsRows = seasonForFilter
                 ? selectedTeamPlayers.flatMap((p) => getMatchPlayerStatsForSeason(p.id, seasonForFilter))
                 : matchPlayerStats.filter((s) => selectedTeamPlayers.some((p) => p.id === s.player_id));
@@ -8767,15 +8772,13 @@ export default function App() {
                     </div>
                   ) : (
                     <div style={styles.panelCard}>
-                      <h3 style={styles.panelTitle}>Stats du joueur</h3>
+                      <h3 style={styles.panelTitle}>Progression des pouvoirs</h3>
                       <div style={styles.statsGrid}>
                         {[
-                          ['🏃 Presences', `${selectedCard.totalTrainingPresences}`],
-                          ['⚽ Matchs', String(childMatches)],
-                          ['🎯 Buts', String(childGoals)],
-                          ['🏹 Tirs', String(childShots)],
-                          ['🧤 Arrets', String(childSaves)],
-                          ['📊 Reussite', childShots > 0 ? `${childPct}%` : '-'],
+                          ['🏃 Entrainements', `${selectedCard.totalTrainingPresences}`],
+                          ['⚽ Matchs joues', String(selectedCard.totalMatches)],
+                          ['✨ Pouvoirs debloques', `${unlockedPowerCount}/${HANDBALL_POWERS.length}`],
+                          ['🔥 Pouvoirs actifs', `${selectedPowers.length}/3`],
                         ].map(([label, value]) => (
                           <div key={label} style={{ background: '#f0f7ff', borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: '1px solid #bfdbfe' }}>
                             <div style={{ fontSize: 22, fontWeight: 900, color: '#1e40af' }}>{value}</div>
@@ -8783,25 +8786,30 @@ export default function App() {
                           </div>
                         ))}
                       </div>
+                      <div style={{ marginTop: 10, color: '#64748b', fontWeight: 800, fontSize: 12, textAlign: 'center' }}>
+                        +1 pouvoir tous les 4 entrainements valides et tous les 2 matchs joues.
+                      </div>
                     </div>
                   )}
 
                   <div style={styles.panelCard}>
-                    <h3 style={styles.panelTitle}>Stats collectives - {selectedTeam.name}</h3>
-                    <div style={styles.statsGrid}>
-                      {[
-                        ['👥 Joueurs', String(selectedTeamPlayers.length)],
-                        ['⚽ Matchs joues', String(teamMatches)],
-                        ['🎯 Buts', String(teamGoals)],
-                        ['🏹 Tirs', String(teamShots)],
-                        ['🧤 Arrets', String(teamSaves)],
-                        ['📊 Reussite', teamShots > 0 ? `${teamPct}%` : '-'],
-                      ].map(([label, value]) => (
-                        <div key={label} style={{ background: '#eef6ff', borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: '1px solid #d8e5f2' }}>
-                          <div style={{ fontSize: 22, fontWeight: 900, color: '#062C5D' }}>{value}</div>
-                          <div style={{ fontSize: 10, fontWeight: 800, color: '#062C5D', opacity: 0.75, marginTop: 3 }}>{label}</div>
-                        </div>
-                      ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+                      <h3 style={{ ...styles.panelTitle, margin: 0 }}>Mes super pouvoirs</h3>
+                      <span style={{ color: '#92400e', fontSize: 12, fontWeight: 900 }}>{selectedPowers.length}/3 actifs</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: 8 }}>
+                      {HANDBALL_POWERS.map((power, index) => {
+                        const unlocked = index < unlockedPowerCount;
+                        const selected = selectedPowers.includes(power.id);
+                        return (
+                          <button key={power.id}
+                            disabled={!unlocked}
+                            onClick={() => unlocked && togglePlayerCardPower(selectedCard.player, power.id)}
+                            style={{ minHeight: 46, padding: '9px 10px', borderRadius: 13, border: `2px solid ${selected ? '#0A5FB5' : unlocked ? '#dbe4ef' : '#e5e7eb'}`, background: selected ? '#eaf4ff' : unlocked ? 'white' : '#f1f5f9', color: unlocked ? '#10233b' : '#94a3b8', fontWeight: 900, fontSize: 12, cursor: unlocked ? 'pointer' : 'not-allowed', textAlign: 'center', opacity: unlocked ? 1 : 0.75 }}>
+                            <span style={{ fontSize: 15, marginRight: 5 }}>{unlocked ? power.icon : '🔒'}</span>{power.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -8934,10 +8942,75 @@ export default function App() {
             })()}
 
             {/* ── MODALE GRADES ── */}
+            {parentTab === 'player' && (() => {
+              const selectedChild = parentPlayers.find((p) => p.id === parentChildTab) || parentPlayers[0] || (linkedPlayerId ? players.find((p) => p.id === linkedPlayerId) : null);
+              const seasonForFilter = parentSelectedSeasonId;
+              if (!selectedChild) return <div style={styles.emptyState}>Aucun joueur selectionne.</div>;
+              const selectedTeamId = getPlayerTeamIdForSeason(selectedChild, seasonForFilter);
+              const selectedTeam = teams.find((t) => t.id === selectedTeamId);
+              const selectedTeamPlayers = selectedTeamId ? getPlayersForTeamSeason(selectedTeamId, seasonForFilter) : [];
+              if (!selectedTeam || selectedTeamPlayers.length === 0) return <div style={styles.emptyState}>Aucune equipe trouvee pour ce joueur.</div>;
+              const teamStatsRows = seasonForFilter
+                ? selectedTeamPlayers.flatMap((p) => getMatchPlayerStatsForSeason(p.id, seasonForFilter))
+                : matchPlayerStats.filter((s) => selectedTeamPlayers.some((p) => p.id === s.player_id));
+              const teamGoals = teamStatsRows.reduce((sum, s) => sum + (s.goals || 0), 0);
+              const teamShots = teamStatsRows.reduce((sum, s) => sum + (s.shots || 0), 0);
+              const teamSaves = teamStatsRows.reduce((sum, s) => sum + (s.saves || 0), 0);
+              const teamMatches = [...new Set(teamStatsRows.map((s) => s.match_id))].length;
+              const teamPct = teamShots > 0 ? Math.round((teamGoals / teamShots) * 100) : 0;
+              return (
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <div>
+                    <h3 style={{ margin: 0, color: '#062C5D', fontSize: 22, fontWeight: 900 }}>Mon equipe</h3>
+                    <div style={{ marginTop: 4, color: '#64748b', fontWeight: 800, fontSize: 13 }}>{selectedTeam.name}</div>
+                  </div>
+                  <div style={styles.panelCard}>
+                    <h3 style={styles.panelTitle}>Stats collectives</h3>
+                    <div style={styles.statsGrid}>
+                      {[
+                        ['👥 Joueurs', String(selectedTeamPlayers.length)],
+                        ['⚽ Matchs joues', String(teamMatches)],
+                        ['🎯 Buts', String(teamGoals)],
+                        ['🏹 Tirs', String(teamShots)],
+                        ['🧤 Arrets', String(teamSaves)],
+                        ['📊 Reussite', teamShots > 0 ? `${teamPct}%` : '-'],
+                      ].map(([label, value]) => (
+                        <div key={label} style={{ background: '#eef6ff', borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: '1px solid #d8e5f2' }}>
+                          <div style={{ fontSize: 22, fontWeight: 900, color: '#062C5D' }}>{value}</div>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: '#062C5D', opacity: 0.75, marginTop: 3 }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={styles.panelCard}>
+                    <h3 style={styles.panelTitle}>Joueurs de l'equipe</h3>
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      {selectedTeamPlayers.slice().sort((a, b) => getPlayerName(a).localeCompare(getPlayerName(b), 'fr')).map((player) => {
+                        const isMyChild = parentPlayers.some((child) => child.id === player.id);
+                        const initials = `${player.first_name?.[0] || ''}${player.last_name?.[0] || ''}`.toUpperCase();
+                        return (
+                          <div key={player.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 14, background: isMyChild ? '#eaf4ff' : 'white', border: isMyChild ? '2px solid #0A5FB5' : '1px solid #d8e5f2' }}>
+                            {player.photo_url
+                              ? <img src={player.photo_url} alt={getPlayerName(player)} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid white', boxShadow: '0 1px 6px rgba(16,35,59,0.16)' }} />
+                              : <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 15, flexShrink: 0 }}>{initials || '👤'}</div>}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 900, color: '#10233b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.first_name} {player.last_name?.toUpperCase()}</div>
+                              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{player.position || 'Poste non defini'}{player.jersey_number != null ? ` - #${player.jersey_number}` : ''}</div>
+                            </div>
+                            {isMyChild && <span style={{ fontSize: 11, fontWeight: 900, color: '#0A5FB5', background: 'white', borderRadius: 999, padding: '4px 8px' }}>Mon enfant</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {showGradeModal && <GradeModal onClose={() => setShowGradeModal(false)} />}
 
             {/* ── MON PROFIL JOUEUR (si user est aussi joueur) ── */}
-            {parentTab === 'player' && hasPlayerRole && (() => {
+            {false && parentTab === 'player' && hasPlayerRole && (() => {
               const me = linkedPlayerId ? players.find((p) => p.id === linkedPlayerId) : null;
               if (!me) {
                 return (
@@ -9782,17 +9855,18 @@ export default function App() {
               };
               const primaryTabs: { key: typeof parentTab; icon: string; label: string; badge?: number }[] = [
                 { key: 'home', icon: '🏠', label: 'Accueil', badge: unreadMessages },
-                { key: 'team', icon: '👕', label: 'Équipe' },
+                { key: 'team', icon: '🃏', label: 'Ma carte' },
                 { key: 'trainings', icon: '🏃', label: 'Séances' },
                 { key: 'matches', icon: '⚽', label: 'Matchs' },
               ];
               const moreTabs: { key: typeof parentTab; icon: string; label: string; badge?: number; hidden?: boolean }[] = [
+                { key: 'player', icon: '👕', label: 'Mon equipe' },
                 { key: 'events', icon: '🎉', label: 'Événements' },
                 { key: 'polls', icon: '📊', label: 'Sondages', badge: pollBadge, hidden: visiblePolls.length === 0 },
                 { key: 'supporter', icon: '📣', label: 'Supporter', badge: supporterBadge, hidden: visibleSupporterMatches.length === 0 },
                 { key: 'password', icon: '🔑', label: 'Mot de passe' },
               ];
-              const moreActive = ['events', 'polls', 'supporter', 'password'].includes(parentTab);
+              const moreActive = ['player', 'events', 'polls', 'supporter', 'password'].includes(parentTab);
               return (
                 <>
                   {showParentMoreNav && (
