@@ -3088,21 +3088,6 @@ export default function App() {
     return values;
   }
 
-  async function inflatePdfStream(streamBytes: Uint8Array) {
-    const Decompression = (window as any).DecompressionStream;
-    if (!Decompression) return null;
-    for (const format of ['deflate', 'deflate-raw']) {
-      try {
-        const streamBuffer = streamBytes.buffer.slice(streamBytes.byteOffset, streamBytes.byteOffset + streamBytes.byteLength);
-        const stream = new Blob([streamBuffer]).stream().pipeThrough(new Decompression(format));
-        return new Uint8Array(await new Response(stream).arrayBuffer());
-      } catch {
-        // Try the next supported deflate variant.
-      }
-    }
-    return null;
-  }
-
   async function extractReadablePdfText(buffer: ArrayBuffer) {
     try {
       const pdfJsText = await extractPdfTextWithPdfJs(buffer);
@@ -3128,7 +3113,7 @@ export default function App() {
       if (pdfText[dataEnd - 1] === '\r') dataEnd -= 1;
       const header = pdfText.slice(Math.max(0, streamStart - 500), streamStart);
       const rawStream = bytes.slice(dataStart, dataEnd);
-      const readableStream = /\/FlateDecode/.test(header) ? await inflatePdfStream(rawStream) : rawStream;
+      const readableStream = /\/FlateDecode/.test(header) ? null : rawStream;
       if (readableStream) {
         const content = decodePdfBytes(readableStream);
         extracted.push(...extractPdfLiteralStrings(content), ...extractPdfHexStrings(content));
