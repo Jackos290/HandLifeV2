@@ -1476,11 +1476,16 @@ export default function App() {
   useEffect(() => {
     if (activeRole !== 'coach' || coachTab !== 'matches' || matchSubTab !== 'convocation') return;
     const candidates = selectedCoachTeamId ? visibleMatches.filter((m) => m.team_id === selectedCoachTeamId) : visibleMatches;
+    if (candidates.length === 0) {
+      if (selectedMatchId) setSelectedMatchId('');
+      return;
+    }
+    if (selectedMatchId && candidates.some((m) => m.id === selectedMatchId)) return;
     const next = getPreferredUpcomingMatch(candidates);
     if (next) {
       setSelectedMatchId(next.id);
     }
-  }, [activeRole, coachTab, matchSubTab, selectedCoachTeamId, visibleMatches]);
+  }, [activeRole, coachTab, matchSubTab, selectedCoachTeamId, selectedMatchId, visibleMatches]);
 
   useEffect(() => {
     if (!selectedTrainingTemplateId) return;
