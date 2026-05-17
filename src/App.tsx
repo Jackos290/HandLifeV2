@@ -2875,6 +2875,25 @@ export default function App() {
       .map((line) => line.trim())
       .filter((line) => /\b\d{1,2}\s*-\s*\d{1,2}\b/.test(line));
 
+    const formatPlayerName = (rawName: string) => {
+      const cleaned = rawName
+        .replace(/\s+-\s+.*$/, '')
+        .trim()
+        .replace(/\s+/g, ' ');
+      if (!cleaned) return '';
+      const words = cleaned.split(' ');
+      const splitIndex = words.findIndex((word) => /[a-z\u00E0-\u00FF]/.test(word));
+      const title = (value: string) => value
+        .toLowerCase()
+        .replace(/(^|[\s-])([a-z\u00E0-\u00FF])/g, (_, sep, letter) => `${sep}${letter.toUpperCase()}`);
+      if (splitIndex > 0) {
+        const lastName = title(words.slice(0, splitIndex).join(' '));
+        const firstName = title(words.slice(splitIndex).join(' '));
+        return `${firstName} ${lastName}`.trim();
+      }
+      return title(cleaned);
+    };
+
     if (actionLines.length > 0) {
       const scores = actionLines
         .map((line) => {
@@ -2886,57 +2905,67 @@ export default function App() {
       const last = scores[scores.length - 1];
       home = last?.home ?? home;
       away = last?.away ?? away;
+      const seedScore = first || last || { home, away, line: '' };
       const totalGoals = Math.max(1, home + away);
       const halfTarget = totalGoals * 0.45;
-      const halfScore = scores.reduce((best, score) => Math.abs((score.home + score.away) - halfTarget) < Math.abs((best.home + best.away) - halfTarget) ? score : best, last || first);
-      const bestLead = scores.reduce((best, score) => (score.home - score.away) > (best.home - best.away) ? score : best, first || last);
+      const halfScore = scores.reduce((best, score) => Math.abs((score.home + score.away) - halfTarget) < Math.abs((best.home + best.away) - halfTarget) ? score : best, seedScore);
+      const bestLead = scores.reduce((best, score) => (score.home - score.away) > (best.home - best.away) ? score : best, seedScore);
       const saveCount = actionLines.filter((line) => /arr/i.test(line)).length;
       const fastBreakCount = actionLines.filter((line) => /contre|mont/i.test(line)).length;
-      const scoringPlayers: Record<string, number> = {};
+      const teamScorers: Record<string, number> = {};
+      const opponentScorers: Record<string, number> = {};
       let previous = first;
       for (const current of scores.slice(1)) {
-        if (previous && current.home > previous.home) {
-          const playerMatch = current.line.match(/N[^0-9]{0,3}\s*\d+\s+([A-Z\u00C0-\u017F][A-Z\u00C0-\u017F'\- ]{2,})/i);
-          const playerName = (playerMatch?.[1] || '')
-            .trim()
-            .replace(/\s+/g, ' ')
-            .toLowerCase()
-            .replace(/(^|[\s-])([a-z\u00E0-\u00FF])/g, (_, sep, letter) => `${sep}${letter.toUpperCase()}`);
-          if (playerName) scoringPlayers[playerName] = (scoringPlayers[playerName] || 0) + (current.home - previous.home);
+        const playerMatch = current.line.match(/N[^0-9]{0,3}\s*\d+\s+([A-Z\u00C0-\u017F][A-Z\u00C0-\u017F'\- ]{2,})/i);
+        const playerName = formatPlayerName(playerMatch?.[1] || '');
+        if (previous && playerName && current.home > previous.home) {
+          teamScorers[playerName] = (teamScorers[playerName] || 0) + (current.home - previous.home);
+        }
+        if (previous && playerName && current.away > previous.away) {
+          opponentScorers[playerName] = (opponentScorers[playerName] || 0) + (current.away - previous.away);
         }
         previous = current;
       }
-      const topScorers = Object.entries(scoringPlayers)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([name]) => name);
+      const teamTopScorers = Object.entries(teamScorers).sort((a, b) => b[1] - a[1]);
+      const opponentTopScorers = Object.entries(opponentScorers).sort((a, b) => b[1] - a[1]);
+      const mainScorers = teamTopScorers.slice(0, 3).map(([name]) => name);
+      const contributors = teamTopScorers.slice(3, 6).map(([name]) => name);
       const trend = home > away ? `s'est impos\u00E9 ${home}-${away}` : home < away ? `s'est inclin\u00E9 ${home}-${away}` : `a partag\u00E9 les points ${home}-${away}`;
       const bestLeadText = bestLead && bestLead.home > bestLead.away
-        ? `menant m\u00EAme ${bestLead.home}-${bestLead.away}`
-        : 'r\u00E9pondant pr\u00E9sent d\u00E8s les premi\u00E8res minutes';
-      const strengths = [saveCount > 0 ? 'plusieurs arr\u00EAts importants' : 'une d\u00E9fense appliqu\u00E9e', 'une attaque efficace'];
-      const scorersText = topScorers.length > 0 ? ` port\u00E9e notamment par ${topScorers.join(', ')}` : '';
+        ? `m\u00E8nent m\u00EAme ${bestLead.home}-${bestLead.away} apr\u00E8s une tr\u00E8s belle premi\u00E8re partie de match`
+        : 'prennent rapidement confiance dans les premi\u00E8res minutes';
+      const scorersText = mainScorers.length > 0 ? ` ${mainScorers.join(', ')} se montrent particuli\u00E8rement efficaces devant le but.` : '';
       const halfText = halfScore ? `${halfScore.home}-${halfScore.away}` : `${home}-${away}`;
       const opponentRun = home < away
-        ? `${opponent} est revenu dans le match${fastBreakCount > 0 ? ' en profitant de plusieurs mont\u00E9es de balle et contre-attaques' : ''} pour prendre l'avantage (${halfText} \u00E0 la pause).`
-        : `${opponent} a tent\u00E9 de revenir avant la pause, mais ${clubLabel} est rest\u00E9 solide (${halfText}).`;
+        ? `${opponent} acc\u00E9l\u00E8re le rythme et profite${fastBreakCount > 0 ? ' de plusieurs contre-attaques' : ' de ses temps forts'} pour revenir puis passer devant. Plus r\u00E9alistes offensivement, les visiteurs rentrent aux vestiaires avec ${Math.abs((halfScore?.away || away) - (halfScore?.home || home))} buts d'avance (${halfText}).`
+        : `${opponent} tente de revenir avant la pause, mais ${clubLabel} reste solide (${halfText}).`;
+      const contributorText = contributors.length > 0
+        ? `${contributors.join(', ')} apportent \u00E9galement leur contribution, tandis que l'\u00E9quipe ne l\u00E2che jamais collectivement.`
+        : `L'\u00E9quipe ne l\u00E2che jamais collectivement et continue de chercher les bonnes solutions.`;
       const secondHalf = home < away
-        ? `Malgr\u00E9 une deuxi\u00E8me p\u00E9riode plus difficile face \u00E0 une \u00E9quipe adverse tr\u00E8s efficace offensivement, ${clubLabel} n'a jamais baiss\u00E9 les bras et a continu\u00E9 \u00E0 se battre jusqu'au bout avec un tr\u00E8s bel \u00E9tat d'esprit collectif.`
-        : `En deuxi\u00E8me p\u00E9riode, ${clubLabel} a continu\u00E9 \u00E0 jouer avec s\u00E9rieux, en gardant son engagement et son esprit collectif jusqu'au bout.`;
+        ? `En seconde p\u00E9riode, ${clubLabel} continue de se battre avec beaucoup de courage malgr\u00E9 la fatigue et l'intensit\u00E9 impos\u00E9e par l'adversaire. ${contributorText}`
+        : `En seconde p\u00E9riode, ${clubLabel} continue avec s\u00E9rieux et engagement. ${contributorText}`;
+      const topScorersBlock = [
+        '\n\n\uD83D\uDD25 Top buteurs',
+        summaryTeamName,
+        ...teamTopScorers.slice(0, 3).map(([name, goals]) => `${name} \u2014 ${goals} but${goals > 1 ? 's' : ''}`),
+        opponent,
+        ...opponentTopScorers.slice(0, 3).map(([name, goals]) => `${name} \u2014 ${goals} but${goals > 1 ? 's' : ''}`),
+      ].filter(Boolean).join('\n');
 
-      return `Le ${summaryTeamName} ${trend} face \u00E0 ${opponent} apr\u00E8s une rencontre disput\u00E9e et pleine d'engagement.\n\nLes joueurs de ${clubLabel} ont r\u00E9alis\u00E9 une tr\u00E8s belle entame de match, ${bestLeadText} gr\u00E2ce \u00E0 ${strengths.join(', ')}${scorersText}.\n\nAvant la pause, ${opponentRun}\n\n${secondHalf}\n\nBravo \u00E0 toute l'\u00E9quipe pour l'envie, les efforts et les progr\u00E8s montr\u00E9s durant cette rencontre \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0`;
+      return `Le ${summaryTeamName} ${trend} face \u00E0 une solide \u00E9quipe de ${opponent} au terme d'un match engag\u00E9 et rythm\u00E9.\n\nLes jeunes de ${clubLabel} ont pourtant r\u00E9alis\u00E9 une excellente entame de rencontre. Gr\u00E2ce \u00E0 une d\u00E9fense appliqu\u00E9e, ${saveCount > 0 ? 'plusieurs arr\u00EAts importants' : 'beaucoup de solidarit\u00E9 d\u00E9fensive'} et beaucoup d'envie offensivement, ils ${bestLeadText}.${scorersText}\n\nMais avant la pause, ${opponentRun}\n\n${secondHalf}\n\nFace \u00E0 une \u00E9quipe de ${opponent} tr\u00E8s efficace jusqu'au bout, l'\u00E9cart se creuse progressivement, mais les jeunes de ${clubLabel} peuvent \u00EAtre fiers de leur \u00E9tat d'esprit, de leur combativit\u00E9 et des belles s\u00E9quences propos\u00E9es durant cette rencontre. \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0${topScorersBlock}`;
     }
 
     if (!Number.isFinite(home) || !Number.isFinite(away)) {
-      return `${teamName} a disput? son match face ? ${opponent}. Le r?sum? sera compl?t? apr?s l'import de la feuille de match.`;
+      return `${teamName} a disput\u00E9 son match face \u00E0 ${opponent}. Le r\u00E9sum\u00E9 sera compl\u00E9t\u00E9 apr\u00E8s l'import de la feuille de match.`;
     }
     if (home > away) {
-      return `${teamName} s'impose ${home}-${away} face ? ${opponent}. Une prestation collective solide, ? retrouver avec les statistiques d?taill?es de la feuille de match.`;
+      return `${teamName} s'impose ${home}-${away} face \u00E0 ${opponent}. Une prestation collective solide, \u00E0 retrouver avec les statistiques d\u00E9taill\u00E9es de la feuille de match.`;
     }
     if (home < away) {
-      return `${teamName} s'incline ${home}-${away} face ? ${opponent}. Le groupe a continu? ? se battre, avec les statistiques d?taill?es disponibles depuis la feuille de match.`;
+      return `${teamName} s'incline ${home}-${away} face \u00E0 ${opponent}. Le groupe a continu\u00E9 \u00E0 se battre, avec les statistiques d\u00E9taill\u00E9es disponibles depuis la feuille de match.`;
     }
-    return `${teamName} partage les points avec ${opponent} sur le score de ${home}-${away}. Un match accroch?, ? analyser avec les statistiques de la feuille de match.`;
+    return `${teamName} partage les points avec ${opponent} sur le score de ${home}-${away}. Un match accroch\u00E9, \u00E0 analyser avec les statistiques de la feuille de match.`;
   }
 
   async function importFdmForMatch(match: MatchItem) {
