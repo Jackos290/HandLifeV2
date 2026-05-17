@@ -5740,6 +5740,62 @@ export default function App() {
     );
   }
 
+  function renderPowerCollectionCard(power: typeof HANDBALL_POWERS[number], index: number, unlocked: boolean, selected: boolean) {
+    const themes = [
+      { accent: '#38bdf8', glow: '#7dd3fc', aura: 'radial-gradient(circle at 70% 20%, rgba(125,211,252,0.75), transparent 34%), linear-gradient(145deg, #0a2342, #05101f)' },
+      { accent: '#f97316', glow: '#fdba74', aura: 'radial-gradient(circle at 74% 22%, rgba(251,146,60,0.8), transparent 34%), linear-gradient(145deg, #2a1206, #050505)' },
+      { accent: '#a78bfa', glow: '#c4b5fd', aura: 'radial-gradient(circle at 72% 18%, rgba(196,181,253,0.8), transparent 32%), linear-gradient(145deg, #24104f, #080314)' },
+      { accent: '#34d399', glow: '#86efac', aura: 'radial-gradient(circle at 72% 20%, rgba(74,222,128,0.7), transparent 33%), linear-gradient(145deg, #06351f, #020b07)' },
+      { accent: '#facc15', glow: '#fde68a', aura: 'radial-gradient(circle at 72% 20%, rgba(250,204,21,0.75), transparent 32%), linear-gradient(145deg, #332406, #090602)' },
+      { accent: '#fb7185', glow: '#fda4af', aura: 'radial-gradient(circle at 72% 20%, rgba(251,113,133,0.7), transparent 32%), linear-gradient(145deg, #3b0712, #080103)' },
+    ];
+    const theme = themes[index % themes.length];
+    const statBase = 7 + (index % 4);
+    const pose = index % 5;
+    const valueRows: [string, number][] = [
+      ['Impact', statBase],
+      ['Technique', Math.min(10, statBase + (index % 3))],
+      ['Collectif', Math.min(10, 8 + (index % 3))],
+    ];
+    return (
+      <div key={power.id} style={{ minHeight: 228, borderRadius: 18, padding: 10, border: `2px solid ${selected ? theme.accent : unlocked ? '#0A5FB5' : '#cbd5e1'}`, background: unlocked ? theme.aura : 'linear-gradient(145deg, #f8fafc, #e2e8f0)', boxShadow: unlocked ? `0 14px 30px ${theme.accent}33` : 'none', color: unlocked ? 'white' : '#94a3b8', position: 'relative', overflow: 'hidden', opacity: unlocked ? 1 : 0.76 }}>
+        <div style={{ position: 'absolute', inset: 8, borderRadius: 14, border: `1px solid ${unlocked ? theme.accent : '#cbd5e1'}`, opacity: 0.9 }} />
+        <div style={{ position: 'absolute', right: -20, top: 18, width: 110, height: 110, borderRadius: '50%', border: `18px solid ${unlocked ? theme.accent : '#cbd5e1'}`, opacity: unlocked ? 0.16 : 0.1 }} />
+        <div style={{ position: 'absolute', left: 12, top: 12, width: 38, height: 38, borderRadius: 12, background: unlocked ? '#06182c' : '#cbd5e1', border: `2px solid ${unlocked ? theme.accent : '#e2e8f0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, zIndex: 2 }}>{unlocked ? power.icon : '🔒'}</div>
+        <div style={{ position: 'absolute', right: 13, top: 14, zIndex: 2, textAlign: 'right' }}>
+          <div style={{ fontSize: 9, fontWeight: 1000, letterSpacing: 1.4, color: unlocked ? theme.glow : '#94a3b8' }}>POWER</div>
+          <div style={{ fontSize: 16, fontWeight: 1000, color: unlocked ? 'white' : '#64748b' }}>{String(index + 1).padStart(2, '0')}</div>
+        </div>
+        <div style={{ position: 'absolute', left: '50%', top: 54, width: 104, height: 120, transform: `translateX(-50%) rotate(${pose === 1 ? '-7deg' : pose === 2 ? '7deg' : '0deg'})`, zIndex: 1 }}>
+          <div style={{ position: 'absolute', left: 42, top: 0, width: 24, height: 24, borderRadius: '50%', background: unlocked ? '#f8cfa4' : '#cbd5e1', boxShadow: unlocked ? `0 0 18px ${theme.glow}` : 'none' }} />
+          <div style={{ position: 'absolute', left: 32, top: 24, width: 44, height: 54, borderRadius: '18px 18px 12px 12px', background: unlocked ? `linear-gradient(160deg, ${theme.accent}, #0A5FB5 58%, #031224)` : '#94a3b8', border: unlocked ? '2px solid rgba(255,255,255,0.45)' : 'none' }} />
+          <div style={{ position: 'absolute', left: pose === 3 ? 2 : 16, top: 36, width: 42, height: 11, borderRadius: 999, background: unlocked ? '#f8cfa4' : '#cbd5e1', transform: `rotate(${pose === 3 ? '-36deg' : '-20deg'})`, transformOrigin: 'right center' }} />
+          <div style={{ position: 'absolute', right: pose === 4 ? -2 : 14, top: 36, width: 42, height: 11, borderRadius: 999, background: unlocked ? '#f8cfa4' : '#cbd5e1', transform: `rotate(${pose === 4 ? '38deg' : '22deg'})`, transformOrigin: 'left center' }} />
+          <div style={{ position: 'absolute', left: 32, top: 75, width: 14, height: 48, borderRadius: 999, background: unlocked ? '#111827' : '#94a3b8', transform: 'rotate(18deg)', transformOrigin: 'top center' }} />
+          <div style={{ position: 'absolute', right: 28, top: 75, width: 14, height: 48, borderRadius: 999, background: unlocked ? '#111827' : '#94a3b8', transform: 'rotate(-18deg)', transformOrigin: 'top center' }} />
+          <div style={{ position: 'absolute', right: pose === 4 ? -2 : 4, top: pose === 4 ? 16 : 62, width: 24, height: 24, borderRadius: '50%', background: unlocked ? 'radial-gradient(circle at 34% 30%, white 0 13%, #dbeafe 14% 30%, #0A5FB5 31% 100%)' : '#cbd5e1', border: unlocked ? `2px solid ${theme.glow}` : 'none' }} />
+        </div>
+        <div style={{ position: 'absolute', left: 12, right: 12, bottom: 13, zIndex: 2 }}>
+          <div style={{ background: unlocked ? 'rgba(2,6,23,0.82)' : 'rgba(255,255,255,0.7)', border: `1px solid ${unlocked ? theme.accent : '#cbd5e1'}`, borderRadius: 12, padding: '10px 8px' }}>
+            <div style={{ color: unlocked ? 'white' : '#334155', fontWeight: 1000, fontSize: 13, lineHeight: 1.1, textTransform: 'uppercase', minHeight: 28 }}>{power.label}</div>
+            <div style={{ display: 'grid', gap: 4, marginTop: 8 }}>
+              {valueRows.map(([label, value]) => (
+                <div key={label} style={{ display: 'grid', gridTemplateColumns: '62px 1fr 24px', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 8, fontWeight: 900, color: unlocked ? '#dbeafe' : '#64748b' }}>{label}</span>
+                  <span style={{ height: 5, borderRadius: 999, background: unlocked ? 'rgba(255,255,255,0.18)' : '#e2e8f0', overflow: 'hidden' }}>
+                    <span style={{ display: 'block', width: `${value * 10}%`, height: '100%', borderRadius: 999, background: unlocked ? theme.accent : '#94a3b8' }} />
+                  </span>
+                  <span style={{ fontSize: 8, fontWeight: 1000, color: unlocked ? theme.glow : '#64748b' }}>{value}/10</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 8, color: selected ? theme.accent : unlocked ? '#bfdbfe' : '#94a3b8', fontSize: 9, fontWeight: 1000, letterSpacing: 0.8 }}>{selected ? 'ACTIVE' : unlocked ? 'CARTE DEBLOQUEE' : 'A DEBLOQUER'}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ─── APP CONNECTÉE ─────────────────────────────────────────────────────────
   return (
     <div style={styles.appPage}>
@@ -7570,24 +7626,11 @@ export default function App() {
                       </button>
                     </div>
                     {showPowerCollection && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(118px, 1fr))', gap: 10 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(168px, 1fr))', gap: 12 }}>
                         {HANDBALL_POWERS.map((power, index) => {
                           const unlocked = index < unlockedPowerCount;
                           const selected = selectedPowers.includes(power.id);
-                          const accent = ['#facc15', '#38bdf8', '#fb7185', '#34d399', '#a78bfa', '#f97316', '#22c55e', '#e879f9'][index % 8];
-                          return (
-                            <div key={power.id} style={{ minHeight: 150, borderRadius: 16, padding: 10, border: `2px solid ${selected ? accent : unlocked ? '#0A5FB5' : '#cbd5e1'}`, background: unlocked ? `linear-gradient(145deg, #fff7cc 0%, ${accent} 38%, #0b2a4a 39%, #06182c 100%)` : 'linear-gradient(145deg, #f8fafc, #e2e8f0)', boxShadow: unlocked ? '0 12px 24px rgba(15,23,42,0.14)' : 'none', color: unlocked ? 'white' : '#94a3b8', position: 'relative', overflow: 'hidden', opacity: unlocked ? 1 : 0.76 }}>
-                              <div style={{ position: 'absolute', right: -14, top: -18, fontSize: 72, opacity: unlocked ? 0.16 : 0.08 }}>🏐</div>
-                              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1, color: unlocked ? '#78350f' : '#94a3b8' }}>CARTE #{index + 1}</div>
-                              <div style={{ margin: '18px auto 12px', width: 52, height: 52, borderRadius: 14, background: unlocked ? '#08213d' : '#cbd5e1', border: unlocked ? '2px solid #facc15' : '2px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: unlocked ? '0 8px 18px rgba(0,0,0,0.24)' : 'none' }}>
-                                {unlocked ? power.icon : '🔒'}
-                              </div>
-                              <div style={{ textAlign: 'center', fontWeight: 1000, fontSize: 13, lineHeight: 1.15, color: unlocked ? 'white' : '#64748b' }}>{power.label}</div>
-                              <div style={{ marginTop: 10, textAlign: 'center', fontSize: 10, fontWeight: 900, color: selected ? '#facc15' : unlocked ? '#bfdbfe' : '#94a3b8' }}>
-                                {selected ? 'ACTIVE' : unlocked ? 'DEBLOQUEE' : 'A DEBLOQUER'}
-                              </div>
-                            </div>
-                          );
+                          return renderPowerCollectionCard(power, index, unlocked, selected);
                         })}
                       </div>
                     )}
@@ -9126,24 +9169,11 @@ export default function App() {
                       </button>
                     </div>
                     {showPowerCollection && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(118px, 1fr))', gap: 10 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(168px, 1fr))', gap: 12 }}>
                         {HANDBALL_POWERS.map((power, index) => {
                           const unlocked = index < unlockedPowerCount;
                           const selected = selectedPowers.includes(power.id);
-                          const accent = ['#facc15', '#38bdf8', '#fb7185', '#34d399', '#a78bfa', '#f97316', '#22c55e', '#e879f9'][index % 8];
-                          return (
-                            <div key={power.id} style={{ minHeight: 150, borderRadius: 16, padding: 10, border: `2px solid ${selected ? accent : unlocked ? '#0A5FB5' : '#cbd5e1'}`, background: unlocked ? `linear-gradient(145deg, #fff7cc 0%, ${accent} 38%, #0b2a4a 39%, #06182c 100%)` : 'linear-gradient(145deg, #f8fafc, #e2e8f0)', boxShadow: unlocked ? '0 12px 24px rgba(15,23,42,0.14)' : 'none', color: unlocked ? 'white' : '#94a3b8', position: 'relative', overflow: 'hidden', opacity: unlocked ? 1 : 0.76 }}>
-                              <div style={{ position: 'absolute', right: -14, top: -18, fontSize: 72, opacity: unlocked ? 0.16 : 0.08 }}>🏐</div>
-                              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1, color: unlocked ? '#78350f' : '#94a3b8' }}>CARTE #{index + 1}</div>
-                              <div style={{ margin: '18px auto 12px', width: 52, height: 52, borderRadius: 14, background: unlocked ? '#08213d' : '#cbd5e1', border: unlocked ? '2px solid #facc15' : '2px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: unlocked ? '0 8px 18px rgba(0,0,0,0.24)' : 'none' }}>
-                                {unlocked ? power.icon : '🔒'}
-                              </div>
-                              <div style={{ textAlign: 'center', fontWeight: 1000, fontSize: 13, lineHeight: 1.15, color: unlocked ? 'white' : '#64748b' }}>{power.label}</div>
-                              <div style={{ marginTop: 10, textAlign: 'center', fontSize: 10, fontWeight: 900, color: selected ? '#facc15' : unlocked ? '#bfdbfe' : '#94a3b8' }}>
-                                {selected ? 'ACTIVE' : unlocked ? 'DEBLOQUEE' : 'A DEBLOQUER'}
-                              </div>
-                            </div>
-                          );
+                          return renderPowerCollectionCard(power, index, unlocked, selected);
                         })}
                       </div>
                     )}
