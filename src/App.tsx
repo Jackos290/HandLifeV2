@@ -2970,37 +2970,51 @@ export default function App() {
       const opponentTopScorers = Object.entries(opponentScorers).sort((a, b) => b[1] - a[1]);
       const mainScorers = teamTopScorers.slice(0, 3).map(([name]) => name);
       const contributors = teamTopScorers.slice(3, 6).map(([name]) => name);
+      const pick = (items: string[]) => {
+        const seed = `${match.id || ''}${match.match_date || ''}${home}-${away}`.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+        return items[Math.abs(seed) % items.length];
+      };
       const trend = finalDiff > 0 ? `s'est impos\u00E9 ${home}-${away}` : finalDiff < 0 ? `s'est inclin\u00E9 ${home}-${away}` : `a partag\u00E9 les points ${home}-${away}`;
       const introMood = finalDiff > 0
-        ? `au terme d'un match ma\u00EEtris\u00E9 avec s\u00E9rieux.`
-        : absDiff <= 2
-          ? `au terme d'un match extr\u00EAmement serr\u00E9, disput\u00E9 jusqu'aux derni\u00E8res minutes.`
-          : `au terme d'un match engag\u00E9 face \u00E0 une \u00E9quipe tr\u00E8s efficace.`;
-      const leadSentence = bestLead.home > bestLead.away
-        ? `${shortGroupLabel} ont eu un vrai temps fort, menant jusqu'\u00E0 ${bestLead.home}-${bestLead.away}.`
-        : `${shortGroupLabel} sont rest\u00E9s au contact pendant une bonne partie de la rencontre.`;
+        ? (absDiff >= 8
+          ? pick([`avec une autorit\u00E9 grandissante au fil des minutes.`, `apr\u00E8s avoir pris le contr\u00F4le du match sans vraiment le rendre.`, `au terme d'une rencontre men\u00E9e avec beaucoup de s\u00E9rieux.`])
+          : pick([`au bout d'un bras de fer longtemps ind\u00E9cis.`, `apr\u00E8s un match qui a gard\u00E9 son suspense jusqu'au bout.`, `en faisant preuve de sang-froid dans les moments importants.`]))
+        : finalDiff < 0
+          ? (absDiff <= 2
+            ? pick([`au terme d'un sc\u00E9nario cruel, o\u00F9 tout s'est jou\u00E9 sur des d\u00E9tails.`, `apr\u00E8s une fin de match irrespirable.`, `dans une rencontre qui aurait pu basculer d'un c\u00F4t\u00E9 comme de l'autre.`])
+            : pick([`face \u00E0 une \u00E9quipe qui a su acc\u00E9l\u00E9rer au bon moment.`, `apr\u00E8s un match plus disput\u00E9 que l'\u00E9cart final ne le laisse penser.`, `dans une rencontre intense, marqu\u00E9e par plusieurs temps forts.`]))
+          : pick([`apr\u00E8s une rencontre tendue jusqu'\u00E0 la derni\u00E8re possession.`, `au terme d'un duel \u00E9quilibr\u00E9 de bout en bout.`, `dans un match o\u00F9 aucune des deux \u00E9quipes n'a r\u00E9ussi \u00E0 faire la diff\u00E9rence.`]);
+      const leadSentence = finalDiff > 0 && absDiff >= 8
+        ? `${groupLabel} installent progressivement leur domination, jusqu'\u00E0 creuser un \u00E9cart net (${bestLead.home}-${bestLead.away}).`
+        : bestLead.home > bestLead.away + 2 && finalDiff < 0
+          ? `Le sc\u00E9nario est d'abord id\u00E9al : ${groupLabel.toLowerCase()} prennent confiance, trouvent le rythme et m\u00E8nent jusqu'\u00E0 ${bestLead.home}-${bestLead.away}.`
+          : bestLead.home > bestLead.away
+            ? `${groupLabel} prennent les commandes \u00E0 un moment cl\u00E9 du match (${bestLead.home}-${bestLead.away}), port\u00E9s par une belle \u00E9nergie collective.`
+            : `${groupLabel} s'accrochent, restent dans le tempo et refusent de laisser l'adversaire s'\u00E9chapper trop vite.`;
       const halfDiff = (halfScore?.home || 0) - (halfScore?.away || 0);
       const halfSentence = halfDiff > 0
-        ? `\u00C0 la pause, ${clubLabel} garde l'avantage (${halfScore.home}-${halfScore.away}), preuve d'une premi\u00E8re partie de match solide.`
+        ? `\u00C0 la pause, ${clubLabel} vire en t\u00EAte (${halfScore.home}-${halfScore.away}) : le plan tient, mais le match reste sous tension.`
         : halfDiff < 0
-          ? `Avant la pause, ${opponent} parvient \u00E0 prendre les devants (${halfScore.home}-${halfScore.away})${fastBreakCount > 0 ? ' en profitant notamment de plusieurs transitions rapides' : ''}.`
-          : `\u00C0 la pause, rien n'est fait entre les deux \u00E9quipes (${halfScore.home}-${halfScore.away}).`;
+          ? `Juste avant la pause, ${opponent} inverse la dynamique et rentre aux vestiaires devant (${halfScore.home}-${halfScore.away})${fastBreakCount > 0 ? ' gr\u00E2ce notamment \u00E0 des mont\u00E9es de balle rapides' : ''}.`
+          : `\u00C0 la pause, impossible de d\u00E9signer un favori : ${halfScore.home}-${halfScore.away}, tout reste \u00E0 \u00E9crire.`;
       const attackSentence = mainScorers.length > 0
-        ? `${mainScorers.join(', ')} se mettent en \u00E9vidence offensivement.`
-        : `L'\u00E9quipe trouve plusieurs solutions offensives au fil du match.`;
+        ? `${mainScorers.join(', ')} donnent le ton devant le but et alimentent les temps forts de ${clubLabel}.`
+        : `L'\u00E9quipe varie ses solutions et trouve des failles au fil des possessions.`;
       const defenseSentence = saveCount > 0
-        ? `D\u00E9fensivement, plusieurs arr\u00EAts importants permettent aussi de rester dans le rythme.`
-        : `D\u00E9fensivement, le groupe reste appliqu\u00E9 malgr\u00E9 la pression adverse.`;
+        ? `Derri\u00E8re, les arr\u00EAts et les replis importants maintiennent le suspense dans les moments chauds.`
+        : `D\u00E9fensivement, le bloc tente de rester compact malgr\u00E9 la pression adverse.`;
       const secondHalf = finalDiff > 0
-        ? `En seconde p\u00E9riode, ${clubLabel} confirme avec application. ${contributors.length > 0 ? `${contributors.join(', ')} participent \u00E9galement \u00E0 l'effort collectif.` : `Chacun apporte sa pierre \u00E0 l'\u00E9difice.`}`
+        ? (absDiff >= 8
+          ? `Apr\u00E8s la reprise, ${clubLabel} ne desserre pas l'\u00E9treinte. ${contributors.length > 0 ? `${contributors.join(', ')} ajoutent leur pierre \u00E0 une prestation tr\u00E8s collective.` : `Le collectif continue d'avancer ensemble, sans baisser d'intensit\u00E9.`}`
+          : `La seconde p\u00E9riode se joue avec les nerfs. ${contributors.length > 0 ? `${contributors.join(', ')} r\u00E9pondent pr\u00E9sent dans les moments importants,` : `Le collectif reste lucide,`} et ${clubLabel} garde juste ce qu'il faut d'avance.`)
         : absDiff <= 2
-          ? `La seconde p\u00E9riode reste tr\u00E8s accroch\u00E9e. ${contributors.length > 0 ? `${contributors.join(', ')} apportent \u00E9galement leur contribution,` : `Le collectif continue d'y croire,`} mais quelques d\u00E9tails font finalement basculer la rencontre.`
-          : `En seconde p\u00E9riode, ${clubLabel} continue de se battre malgr\u00E9 l'\u00E9cart et l'intensit\u00E9 impos\u00E9e par l'adversaire. ${contributors.length > 0 ? `${contributors.join(', ')} apportent \u00E9galement leur contribution.` : `Le groupe ne l\u00E2che pas collectivement.`}`;
+          ? `La fin de match devient un vrai mano a mano. ${contributors.length > 0 ? `${contributors.join(', ')} gardent ${clubLabel} dans la bataille,` : `Tout le collectif continue d'y croire,`} mais une ou deux possessions font finalement pencher la balance.`
+          : `Au retour des vestiaires, ${opponent} appuie davantage sur ses temps forts. ${contributors.length > 0 ? `${contributors.join(', ')} continuent pourtant d'apporter de l'air \u00E0 ${clubLabel}.` : `${clubLabel} ne rompt pas mentalement et continue de chercher des solutions.`}`;
       const conclusion = finalDiff > 0
         ? `Une victoire qui r\u00E9compense l'engagement, la solidarit\u00E9 et les belles s\u00E9quences propos\u00E9es par ${clubLabel}. \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0`
         : absDiff <= 2
-          ? `M\u00EAme si le r\u00E9sultat laisse forc\u00E9ment des regrets, ${summaryTeamName} peut retenir l'\u00E9tat d'esprit, la combativit\u00E9 et les nombreuses bonnes s\u00E9quences de cette rencontre. \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0`
-          : `Face \u00E0 une \u00E9quipe de ${opponent} tr\u00E8s efficace, ${summaryTeamName} peut malgr\u00E9 tout retenir l'envie, la combativit\u00E9 et les efforts fournis jusqu'au bout. \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0`;
+          ? `Le score final laisse un go\u00FBt amer, mais il raconte aussi une \u00E9quipe de ${clubLabel} capable de tenir le choc, de provoquer le doute et de se battre jusqu'au dernier ballon. \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0`
+          : `M\u00EAme battu, ${summaryTeamName} sort de ce match avec des rep\u00E8res : de l'envie, des temps forts, et une combativit\u00E9 qui devra servir pour la suite. \uD83D\uDC4F\uD83C\uDFFD\uD83C\uDFD0`;
       const topScorersBlock = [
         '\n\n\uD83D\uDD25 Top buteurs',
         summaryTeamName,
@@ -3009,7 +3023,7 @@ export default function App() {
         ...opponentTopScorers.slice(0, 3).map(([name, goals]) => `${name} \u2014 ${goals} but${goals > 1 ? 's' : ''}`),
       ].filter(Boolean).join('\n');
 
-      return `Le ${summaryTeamName} ${trend} face \u00E0 ${opponent} ${introMood}\n\n${groupLabel} de ${clubLabel} ont livr\u00E9 une rencontre pleine d'intensit\u00E9. ${leadSentence} ${defenseSentence} ${attackSentence}\n\n${halfSentence}\n\n${secondHalf}\n\n${conclusion}${topScorersBlock}`;
+      return `Le ${summaryTeamName} ${trend} face \u00E0 ${opponent} ${introMood}\n\n${leadSentence} ${defenseSentence} ${attackSentence}\n\n${halfSentence}\n\n${secondHalf}\n\n${conclusion}${topScorersBlock}`;
     }
 
     if (!Number.isFinite(home) || !Number.isFinite(away)) {
