@@ -581,10 +581,11 @@ export default function App() {
   const [matchSubTab, setMatchSubTab] = useState<'planning' | 'convocation'>('planning');
   const [matchDetailTab, setMatchDetailTab] = useState<'convocation' | 'presence' | 'stats'>('convocation');
   const [crossCategoryTeamId, setCrossCategoryTeamId] = useState<string>('');
-  const [parentTab, setParentTab] = useState<'home' | 'team' | 'trainings' | 'matches' | 'events' | 'password' | 'player' | 'polls'>('home');
+  const [parentTab, setParentTab] = useState<'home' | 'team' | 'trainings' | 'matches' | 'events' | 'password' | 'player' | 'polls' | 'supporter'>('home');
   const [parentChildTab, setParentChildTab] = useState<string>('');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showParentMessages, setShowParentMessages] = useState(false);
+  const [supporterReadKeys, setSupporterReadKeys] = useState<string[]>([]);
   const [adminSubTab, setAdminSubTab] = useState<'coaches' | 'adminAccess' | 'trainings' | 'matches' | 'players' | 'roster' | 'accounts' | 'seasons' | 'settings' | 'licenses' | 'registrations' | 'events' | 'polls' | 'online'>('coaches');
   const [matchesExpanded, setMatchesExpanded] = useState(false);
   const [clubEvents, setClubEvents] = useState<ClubEvent[]>([]);
@@ -1057,6 +1058,37 @@ export default function App() {
   // ── État joueur lié au compte (si l'utilisateur est aussi joueur) ──
   const [linkedPlayerId, setLinkedPlayerId] = useState<string | null>(null);
   const [hasPlayerRole, setHasPlayerRole] = useState(false);
+
+  function getSupporterSummaryKey(match: MatchItem) {
+    return `${match.id}:${match.supporter_summary || ''}`;
+  }
+
+  function getSupporterReadStorageKey() {
+    return `handlife_supporter_reads_${selectedParentId || linkedPlayerId || 'guest'}`;
+  }
+
+  function getSupporterMatchesForTeamIds(teamIds: string[]) {
+    const uniqueTeamIds = [...new Set(teamIds.filter(Boolean))];
+    return matches
+      .filter((m) => !!m.supporter_summary?.trim() && uniqueTeamIds.includes(m.team_id))
+      .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
+  }
+
+  function markSupporterMatchesRead(items: MatchItem[]) {
+    const keys = items.map(getSupporterSummaryKey);
+    const next = [...new Set([...supporterReadKeys, ...keys])];
+    setSupporterReadKeys(next);
+    try { window.localStorage.setItem(getSupporterReadStorageKey(), JSON.stringify(next)); } catch (e) { /* ignore */ }
+  }
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(getSupporterReadStorageKey());
+      setSupporterReadKeys(raw ? JSON.parse(raw) : []);
+    } catch (e) {
+      setSupporterReadKeys([]);
+    }
+  }, [selectedParentId, linkedPlayerId]);
 
   async function loadRegistrations() {
     const { data } = await supabase.from('registrations').select('*').order('created_at', { ascending: false });
@@ -2993,6 +3025,14 @@ export default function App() {
     }
   }
 
+  function getFinalScoreFromActions(actions: string) {
+    return actions
+      .split(/\r?\n/)
+      .map((line) => line.match(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/))
+      .filter(Boolean)
+      .pop() || null;
+  }
+
   function extractFdmActionsFromText(rawText: string) {
     const normalizedLines = rawText
       .split(/\r?\n/)
@@ -3203,11 +3243,7 @@ export default function App() {
       setNewMatchFdmFileName(file.name);
       setNewMatchFdmUrl('');
       setNewMatchFdmActions(actions);
-      const finalScore = actions
-        .split(/\r?\n/)
-        .map((line) => line.match(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/))
-        .filter(Boolean)
-        .pop();
+      const finalScore = getFinalScoreFromActions(actions);
       if (finalScore) {
         setMatchResults((prev) => ({
           ...prev,
@@ -3231,6 +3267,20 @@ export default function App() {
     } finally {
       setAnalyzingFdmFile(false);
     }
+  }
+
+  async function analyzeFdmPdfFileForMatchForm(file: File) {
+    const tempMatch: MatchItem = {
+      id: editingMatchId || 'draft-match',
+      team_id: newMatchTeamId,
+      opponent: newMatchOpponent || 'adversaire',
+      match_date: newMatchDate || new Date().toISOString(),
+      location: newMatchLocation || '',
+      home_away: newMatchHomeAway,
+      score_home: null,
+      score_away: null,
+    };
+    await analyzeFdmPdfFile(file, tempMatch);
   }
 
   function resetTrainingTemplateForm() {
@@ -3297,10 +3347,12 @@ export default function App() {
 
   async function addMatch() {
     if (!newMatchTeamId || !newMatchOpponent.trim() || !newMatchDate) { alert('Remplir équipe, adversaire et date'); return; }
+    const detectedScore = getFinalScoreFromActions(newMatchFdmActions);
     const matchSupporterPayload: any = {
       fdm_url: newMatchFdmUrl.trim() || null,
       supporter_summary: newMatchSupporterSummary.trim() || null,
       fdm_actions_text: newMatchFdmActions.trim() || null,
+      ...(detectedScore ? { score_home: detectedScore[1], score_away: detectedScore[2] } : {}),
     };
     if (editingMatchId) {
       let { error } = await supabase.from('matches').update({
@@ -3317,7 +3369,7 @@ export default function App() {
       }
       if (error) { alert("Erreur lors de la modification du match"); return; }
       setEditingMatchId('');
-      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary(''); setNewMatchFdmActions('');
+      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary(''); setNewMatchFdmActions(''); setNewMatchFdmFileName('');
       await loadData();
       alert('Match modifié');
     } else {
@@ -3335,7 +3387,7 @@ export default function App() {
         error = retry.error;
       }
       if (error) { alert("Erreur lors de la création du match"); return; }
-      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary(''); setNewMatchFdmActions('');
+      setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary(''); setNewMatchFdmActions(''); setNewMatchFdmFileName('');
       await loadData();
       // Notifier les coaches concernés par email
       if (newMatch) {
@@ -3393,6 +3445,7 @@ export default function App() {
     setNewMatchFdmUrl(match.fdm_url || '');
     setNewMatchSupporterSummary(match.supporter_summary || '');
     setNewMatchFdmActions(match.fdm_actions_text || '');
+    setNewMatchFdmFileName('');
     if (targetAdminTab) setAdminSubTab('matches');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -3406,6 +3459,7 @@ export default function App() {
     setNewMatchFdmUrl('');
     setNewMatchSupporterSummary('');
     setNewMatchFdmActions('');
+    setNewMatchFdmFileName('');
   }
 
   function getMatchPlayerLinkPreview(match: MatchItem) {
@@ -7338,6 +7392,31 @@ export default function App() {
                         <input value={newMatchFdmUrl} onChange={(e) => setNewMatchFdmUrl(e.target.value)} style={styles.input} placeholder="https://media-ffhb-fdm.ffhandball.fr/fdm/..." />
                       </div>
                       <div>
+                        <label style={styles.inputLabel}>Feuille de match PDF</label>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                          <label htmlFor="admin-fdm-pdf-file" style={{ ...styles.primaryButton, background: '#0A5FB5', cursor: analyzingFdmFile ? 'default' : 'pointer', opacity: analyzingFdmFile ? 0.7 : 1 }}>
+                            {analyzingFdmFile ? 'Lecture PDF...' : 'Lire une feuille PDF'}
+                          </label>
+                          <input id="admin-fdm-pdf-file" type="file" accept="application/pdf,.pdf" style={{ display: 'none' }}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) await analyzeFdmPdfFileForMatchForm(file);
+                              e.target.value = '';
+                            }} />
+                          {newMatchFdmFileName && <span style={{ fontSize: 12, fontWeight: 800, color: '#78350f' }}>{newMatchFdmFileName}</span>}
+                        </div>
+                      </div>
+                      {newMatchFdmActions && (
+                        <div>
+                          <label style={styles.inputLabel}>Lignes detectees Temps / Score / Action</label>
+                          <textarea value={newMatchFdmActions} onChange={(e) => setNewMatchFdmActions(e.target.value)}
+                            style={{ ...styles.input, minHeight: 90, resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12 }} />
+                          <div style={{ marginTop: 6, fontSize: 12, color: '#78350f', fontWeight: 800 }}>
+                            {newMatchFdmActions.split(/\r?\n/).filter(Boolean).length} ligne(s) detectee(s)
+                          </div>
+                        </div>
+                      )}
+                      <div>
                         <label style={styles.inputLabel}>Resume supporter</label>
                         <textarea value={newMatchSupporterSummary} onChange={(e) => setNewMatchSupporterSummary(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: 'vertical' }} placeholder="Resume visible dans le futur espace Supporter." />
                       </div>
@@ -8322,7 +8401,7 @@ export default function App() {
             {/* Boutons parent */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))', gap: 10, marginBottom: 20 }}>
               {(() => {
-                const tabs: { key: 'home' | 'team' | 'trainings' | 'matches' | 'events' | 'polls'; label: string }[] = [
+                const tabs: { key: 'home' | 'team' | 'trainings' | 'matches' | 'events' | 'polls' | 'supporter'; label: string }[] = [
                   { key: 'home', label: '👪 Mon espace' },
                   { key: 'team', label: '👕 Mon équipe' },
                   { key: 'trainings', label: '🏃 Entraînements' },
@@ -8351,8 +8430,14 @@ export default function App() {
                       });
                     }).length;
                   })();
+                  const supporterBadge = tab === 'supporter'
+                    ? visibleSupporterMatches.filter((m) => !supporterReadKeys.includes(getSupporterSummaryKey(m))).length
+                    : 0;
                   return (
-                    <button key={tab} onClick={() => setParentTab(tab)}
+                    <button key={tab} onClick={() => {
+                      setParentTab(tab);
+                      if (tab === 'supporter') markSupporterMatchesRead(visibleSupporterMatches);
+                    }}
                       style={{ minHeight: 48, padding: '10px 12px', borderRadius: 14, border: parentTab === tab ? '2px solid #0A5FB5' : '1px solid #d6e1ec', background: parentTab === tab ? '#0A5FB5' : 'white', fontWeight: 900, fontSize: 14, cursor: 'pointer', color: parentTab === tab ? 'white' : '#16304c', boxShadow: parentTab === tab ? '0 8px 18px rgba(10,95,181,0.18)' : 'none', transition: 'all 0.15s', position: 'relative', whiteSpace: 'normal', lineHeight: 1.15 }}>
                       {label}
                       {hasUnread && (
@@ -8360,6 +8445,9 @@ export default function App() {
                       )}
                       {!!pollBadge && pollBadge > 0 && (
                         <span style={{ position: 'absolute', top: 2, right: 2, background: '#dc2626', color: 'white', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px', minWidth: 16, textAlign: 'center' }}>{pollBadge}</span>
+                      )}
+                      {supporterBadge > 0 && (
+                        <span style={{ position: 'absolute', top: 2, right: 2, background: '#dc2626', color: 'white', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px', minWidth: 16, textAlign: 'center' }}>{supporterBadge}</span>
                       )}
                     </button>
                   );
@@ -8586,6 +8674,48 @@ export default function App() {
             })()}
 
             {/* ── SONDAGES côté parent/joueur ── */}
+            {/* Supporter */}
+            {parentTab === 'supporter' && (() => {
+              const myTeamIds: string[] = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)).filter(Boolean) as string[])];
+              if (linkedPlayerId) {
+                const me = players.find((p) => p.id === linkedPlayerId);
+                if (me?.team_id) myTeamIds.push(getPlayerTeamIdForSeason(me, parentSelectedSeasonId));
+              }
+              const supporterMatches = getSupporterMatchesForTeamIds([...new Set(myTeamIds)]);
+              return (
+                <div style={{ display: 'grid', gap: 14 }}>
+                  <div style={{ ...styles.panelCard, background: '#fff7ed', border: '1px solid #fed7aa' }}>
+                    <h3 style={{ margin: '0 0 6px 0', color: '#92400e' }}>Espace Supporter</h3>
+                    <p style={{ margin: 0, color: '#92400e', fontSize: 13, fontWeight: 700 }}>
+                      Les resumes des matchs sont classes du plus recent au plus ancien.
+                    </p>
+                  </div>
+                  {supporterMatches.length === 0
+                    ? <div style={styles.emptyState}>Aucun resume de match disponible pour le moment.</div>
+                    : supporterMatches.map((match) => {
+                        const isNew = !supporterReadKeys.includes(getSupporterSummaryKey(match));
+                        return (
+                          <div key={match.id} style={{ ...styles.panelCard, background: 'white', border: isNew ? '2px solid #dc2626' : '1px solid #dbe6f2' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 10 }}>
+                              <div>
+                                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 800 }}>{formatDate(match.match_date)} ? {formatTime(match.match_date)}</div>
+                                <h3 style={{ margin: '4px 0 0 0', color: '#062C5D' }}>{getTeamName(match.team_id)} vs {match.opponent}</h3>
+                                {match.score_home !== null && match.score_home !== undefined && match.score_home !== '' && (
+                                  <div style={{ marginTop: 4, color: '#0A5FB5', fontWeight: 900 }}>Score : {match.score_home} - {match.score_away}</div>
+                                )}
+                              </div>
+                              {isNew && <span style={{ background: '#dc2626', color: 'white', borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 900 }}>NOUVEAU</span>}
+                            </div>
+                            <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#10233b', fontSize: 14, fontWeight: 650 }}>
+                              {match.supporter_summary}
+                            </div>
+                          </div>
+                        );
+                      })}
+                </div>
+              );
+            })()}
+
             {parentTab === 'polls' && (() => {
               const myTeamIds: string[] = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)).filter(Boolean) as string[])];
               if (linkedPlayerId) {
