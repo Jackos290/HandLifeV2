@@ -1074,6 +1074,12 @@ export default function App() {
       .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
   }
 
+  function getAllSupporterMatches() {
+    return matches
+      .filter((m) => !!m.supporter_summary?.trim())
+      .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
+  }
+
   function markSupporterMatchesRead(items: MatchItem[]) {
     const keys = items.map(getSupporterSummaryKey);
     const next = [...new Set([...supporterReadKeys, ...keys])];
@@ -8484,7 +8490,7 @@ export default function App() {
                   if (me?.team_id) myTeamIds.push(getPlayerTeamIdForSeason(me, parentSelectedSeasonId));
                 }
                 const visiblePolls = getPollsVisibleFor([...new Set(myTeamIds)]);
-                const visibleSupporterMatches = getSupporterMatchesForTeamIds([...new Set(myTeamIds)]);
+                const visibleSupporterMatches = getAllSupporterMatches();
                 if (visiblePolls.length > 0) tabs.push({ key: 'polls', label: '📊 Sondages' });
                 if (visibleSupporterMatches.length > 0) tabs.push({ key: 'supporter', label: 'Supporter' });
                 return tabs.map(({ key: tab, label }) => {
@@ -8752,13 +8758,13 @@ export default function App() {
                 const me = players.find((p) => p.id === linkedPlayerId);
                 if (me?.team_id) myTeamIds.push(getPlayerTeamIdForSeason(me, parentSelectedSeasonId));
               }
-              const supporterMatches = getSupporterMatchesForTeamIds([...new Set(myTeamIds)]);
+              const supporterMatches = getAllSupporterMatches();
               return (
                 <div style={{ display: 'grid', gap: 14 }}>
                   <div style={{ ...styles.panelCard, background: '#fff7ed', border: '1px solid #fed7aa' }}>
                     <h3 style={{ margin: '0 0 6px 0', color: '#92400e' }}>Espace Supporter</h3>
                     <p style={{ margin: 0, color: '#92400e', fontSize: 13, fontWeight: 700 }}>
-                      Les resumes des matchs sont classes du plus recent au plus ancien.
+                      Toute la vie du club : les resumes de toutes les equipes, classes du plus recent au plus ancien.
                     </p>
                   </div>
                   {supporterMatches.length === 0
