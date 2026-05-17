@@ -8415,7 +8415,9 @@ export default function App() {
                   if (me?.team_id) myTeamIds.push(getPlayerTeamIdForSeason(me, parentSelectedSeasonId));
                 }
                 const visiblePolls = getPollsVisibleFor([...new Set(myTeamIds)]);
+                const visibleSupporterMatches = getSupporterMatchesForTeamIds([...new Set(myTeamIds)]);
                 if (visiblePolls.length > 0) tabs.push({ key: 'polls', label: '📊 Sondages' });
+                if (visibleSupporterMatches.length > 0) tabs.push({ key: 'supporter', label: 'Supporter' });
                 return tabs.map(({ key: tab, label }) => {
                   const hasUnread = tab === 'home' && getUnreadMessageConversations().length > 0;
                   // Pastille sondages : nb sondages où je n'ai pas voté
