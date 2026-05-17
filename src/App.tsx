@@ -604,6 +604,7 @@ export default function App() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [currentSponsorIdx, setCurrentSponsorIdx] = useState(0);
   const [showGradeModal, setShowGradeModal] = useState(false);
+  const [showPowerCollection, setShowPowerCollection] = useState(false);
   // ─── Modale plein écran de carte FIFA ─────────────────────────────────────
   const [fullScreenCardData, setFullScreenCardData] = useState<{
     cards: any[]; index: number;
@@ -7559,6 +7560,39 @@ export default function App() {
                     </div>
                   </div>
                   <div style={styles.panelCard}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: showPowerCollection ? 14 : 0 }}>
+                      <div>
+                        <h3 style={{ ...styles.panelTitle, margin: 0 }}>Ma collection</h3>
+                        <div style={{ color: '#64748b', fontSize: 12, fontWeight: 800, marginTop: 4 }}>{unlockedPowerCount}/{HANDBALL_POWERS.length} cartes debloquees</div>
+                      </div>
+                      <button onClick={() => setShowPowerCollection((v) => !v)} style={{ ...styles.secondaryButton, padding: '8px 14px' }}>
+                        🃏 {showPowerCollection ? 'Masquer' : 'Voir mes cartes'}
+                      </button>
+                    </div>
+                    {showPowerCollection && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(118px, 1fr))', gap: 10 }}>
+                        {HANDBALL_POWERS.map((power, index) => {
+                          const unlocked = index < unlockedPowerCount;
+                          const selected = selectedPowers.includes(power.id);
+                          const accent = ['#facc15', '#38bdf8', '#fb7185', '#34d399', '#a78bfa', '#f97316', '#22c55e', '#e879f9'][index % 8];
+                          return (
+                            <div key={power.id} style={{ minHeight: 150, borderRadius: 16, padding: 10, border: `2px solid ${selected ? accent : unlocked ? '#0A5FB5' : '#cbd5e1'}`, background: unlocked ? `linear-gradient(145deg, #fff7cc 0%, ${accent} 38%, #0b2a4a 39%, #06182c 100%)` : 'linear-gradient(145deg, #f8fafc, #e2e8f0)', boxShadow: unlocked ? '0 12px 24px rgba(15,23,42,0.14)' : 'none', color: unlocked ? 'white' : '#94a3b8', position: 'relative', overflow: 'hidden', opacity: unlocked ? 1 : 0.76 }}>
+                              <div style={{ position: 'absolute', right: -14, top: -18, fontSize: 72, opacity: unlocked ? 0.16 : 0.08 }}>🏐</div>
+                              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1, color: unlocked ? '#78350f' : '#94a3b8' }}>CARTE #{index + 1}</div>
+                              <div style={{ margin: '18px auto 12px', width: 52, height: 52, borderRadius: 14, background: unlocked ? '#08213d' : '#cbd5e1', border: unlocked ? '2px solid #facc15' : '2px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: unlocked ? '0 8px 18px rgba(0,0,0,0.24)' : 'none' }}>
+                                {unlocked ? power.icon : '🔒'}
+                              </div>
+                              <div style={{ textAlign: 'center', fontWeight: 1000, fontSize: 13, lineHeight: 1.15, color: unlocked ? 'white' : '#64748b' }}>{power.label}</div>
+                              <div style={{ marginTop: 10, textAlign: 'center', fontSize: 10, fontWeight: 900, color: selected ? '#facc15' : unlocked ? '#bfdbfe' : '#94a3b8' }}>
+                                {selected ? 'ACTIVE' : unlocked ? 'DEBLOQUEE' : 'A DEBLOQUER'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div style={styles.panelCard}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
                       <h3 style={{ ...styles.panelTitle, margin: 0 }}>Mes super pouvoirs</h3>
                       <span style={{ color: '#92400e', fontSize: 12, fontWeight: 900 }}>{selectedPowers.length}/3 actifs</span>
@@ -7567,10 +7601,11 @@ export default function App() {
                       {HANDBALL_POWERS.map((power, index) => {
                         const unlocked = index < unlockedPowerCount;
                         const selected = selectedPowers.includes(power.id);
+                        const canClick = unlocked || selected;
                         return (
-                          <button key={power.id} disabled={!unlocked} onClick={() => unlocked && togglePlayerCardPower(card.player, power.id)}
-                            style={{ minHeight: 46, padding: '9px 10px', borderRadius: 13, border: `2px solid ${selected ? '#0A5FB5' : unlocked ? '#dbe4ef' : '#e5e7eb'}`, background: selected ? '#eaf4ff' : unlocked ? 'white' : '#f1f5f9', color: unlocked ? '#10233b' : '#94a3b8', fontWeight: 900, fontSize: 12, cursor: unlocked ? 'pointer' : 'not-allowed', textAlign: 'center', opacity: unlocked ? 1 : 0.75 }}>
-                            <span style={{ fontSize: 15, marginRight: 5 }}>{unlocked ? power.icon : '🔒'}</span>{power.label}
+                          <button key={power.id} disabled={!canClick} onClick={() => canClick && togglePlayerCardPower(card.player, power.id)}
+                            style={{ minHeight: 46, padding: '9px 10px', borderRadius: 13, border: `2px solid ${selected ? '#0A5FB5' : unlocked ? '#dbe4ef' : '#e5e7eb'}`, background: selected ? '#eaf4ff' : unlocked ? 'white' : '#f1f5f9', color: canClick ? '#10233b' : '#94a3b8', fontWeight: 900, fontSize: 12, cursor: canClick ? 'pointer' : 'not-allowed', textAlign: 'center', opacity: canClick ? 1 : 0.75 }}>
+                            <span style={{ fontSize: 15, marginRight: 5 }}>{unlocked || selected ? power.icon : '🔒'}</span>{power.label}{selected && !unlocked ? ' - retirer' : ''}
                           </button>
                         );
                       })}
@@ -9081,6 +9116,40 @@ export default function App() {
                   )}
 
                   <div style={styles.panelCard}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: showPowerCollection ? 14 : 0 }}>
+                      <div>
+                        <h3 style={{ ...styles.panelTitle, margin: 0 }}>Ma collection</h3>
+                        <div style={{ color: '#64748b', fontSize: 12, fontWeight: 800, marginTop: 4 }}>{unlockedPowerCount}/{HANDBALL_POWERS.length} cartes debloquees</div>
+                      </div>
+                      <button onClick={() => setShowPowerCollection((v) => !v)} style={{ ...styles.secondaryButton, padding: '8px 14px' }}>
+                        🃏 {showPowerCollection ? 'Masquer' : 'Voir mes cartes'}
+                      </button>
+                    </div>
+                    {showPowerCollection && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(118px, 1fr))', gap: 10 }}>
+                        {HANDBALL_POWERS.map((power, index) => {
+                          const unlocked = index < unlockedPowerCount;
+                          const selected = selectedPowers.includes(power.id);
+                          const accent = ['#facc15', '#38bdf8', '#fb7185', '#34d399', '#a78bfa', '#f97316', '#22c55e', '#e879f9'][index % 8];
+                          return (
+                            <div key={power.id} style={{ minHeight: 150, borderRadius: 16, padding: 10, border: `2px solid ${selected ? accent : unlocked ? '#0A5FB5' : '#cbd5e1'}`, background: unlocked ? `linear-gradient(145deg, #fff7cc 0%, ${accent} 38%, #0b2a4a 39%, #06182c 100%)` : 'linear-gradient(145deg, #f8fafc, #e2e8f0)', boxShadow: unlocked ? '0 12px 24px rgba(15,23,42,0.14)' : 'none', color: unlocked ? 'white' : '#94a3b8', position: 'relative', overflow: 'hidden', opacity: unlocked ? 1 : 0.76 }}>
+                              <div style={{ position: 'absolute', right: -14, top: -18, fontSize: 72, opacity: unlocked ? 0.16 : 0.08 }}>🏐</div>
+                              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1, color: unlocked ? '#78350f' : '#94a3b8' }}>CARTE #{index + 1}</div>
+                              <div style={{ margin: '18px auto 12px', width: 52, height: 52, borderRadius: 14, background: unlocked ? '#08213d' : '#cbd5e1', border: unlocked ? '2px solid #facc15' : '2px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: unlocked ? '0 8px 18px rgba(0,0,0,0.24)' : 'none' }}>
+                                {unlocked ? power.icon : '🔒'}
+                              </div>
+                              <div style={{ textAlign: 'center', fontWeight: 1000, fontSize: 13, lineHeight: 1.15, color: unlocked ? 'white' : '#64748b' }}>{power.label}</div>
+                              <div style={{ marginTop: 10, textAlign: 'center', fontSize: 10, fontWeight: 900, color: selected ? '#facc15' : unlocked ? '#bfdbfe' : '#94a3b8' }}>
+                                {selected ? 'ACTIVE' : unlocked ? 'DEBLOQUEE' : 'A DEBLOQUER'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={styles.panelCard}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
                       <h3 style={{ ...styles.panelTitle, margin: 0 }}>Mes super pouvoirs</h3>
                       <span style={{ color: '#92400e', fontSize: 12, fontWeight: 900 }}>{selectedPowers.length}/3 actifs</span>
@@ -9089,12 +9158,13 @@ export default function App() {
                       {HANDBALL_POWERS.map((power, index) => {
                         const unlocked = index < unlockedPowerCount;
                         const selected = selectedPowers.includes(power.id);
+                        const canClick = unlocked || selected;
                         return (
                           <button key={power.id}
-                            disabled={!unlocked}
-                            onClick={() => unlocked && togglePlayerCardPower(selectedCard.player, power.id)}
-                            style={{ minHeight: 46, padding: '9px 10px', borderRadius: 13, border: `2px solid ${selected ? '#0A5FB5' : unlocked ? '#dbe4ef' : '#e5e7eb'}`, background: selected ? '#eaf4ff' : unlocked ? 'white' : '#f1f5f9', color: unlocked ? '#10233b' : '#94a3b8', fontWeight: 900, fontSize: 12, cursor: unlocked ? 'pointer' : 'not-allowed', textAlign: 'center', opacity: unlocked ? 1 : 0.75 }}>
-                            <span style={{ fontSize: 15, marginRight: 5 }}>{unlocked ? power.icon : '🔒'}</span>{power.label}
+                            disabled={!canClick}
+                            onClick={() => canClick && togglePlayerCardPower(selectedCard.player, power.id)}
+                            style={{ minHeight: 46, padding: '9px 10px', borderRadius: 13, border: `2px solid ${selected ? '#0A5FB5' : unlocked ? '#dbe4ef' : '#e5e7eb'}`, background: selected ? '#eaf4ff' : unlocked ? 'white' : '#f1f5f9', color: canClick ? '#10233b' : '#94a3b8', fontWeight: 900, fontSize: 12, cursor: canClick ? 'pointer' : 'not-allowed', textAlign: 'center', opacity: canClick ? 1 : 0.75 }}>
+                            <span style={{ fontSize: 15, marginRight: 5 }}>{unlocked || selected ? power.icon : '🔒'}</span>{power.label}{selected && !unlocked ? ' - retirer' : ''}
                           </button>
                         );
                       })}
