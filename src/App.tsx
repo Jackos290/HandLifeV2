@@ -559,6 +559,7 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(true);
   const [activeRole, setActiveRole] = useState<'coach' | 'parent'>('parent');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminReturnRole, setAdminReturnRole] = useState<'coach' | 'parent' | 'player' | null>(null);
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [showResetForm, setShowResetForm] = useState(false);
@@ -4111,6 +4112,9 @@ export default function App() {
     if (activeRole === 'coach' && connectedCoachId && hasAdminDelegate('coach', connectedCoachId)) {
       return { targetType: 'coach' as const, targetId: connectedCoachId };
     }
+    if (activeRole === 'parent' && connectedCoachId && hasAdminDelegate('coach', connectedCoachId)) {
+      return { targetType: 'coach' as const, targetId: connectedCoachId };
+    }
     if (activeRole === 'parent' && selectedParentId && hasAdminDelegate('user', selectedParentId)) {
       return { targetType: 'user' as const, targetId: selectedParentId };
     }
@@ -4123,11 +4127,26 @@ export default function App() {
       alert("Acces admin non autorise pour ce compte.");
       return;
     }
+    setAdminReturnRole(activeRole === 'coach' ? 'coach' : (connectedCoachId && !selectedParentId ? 'player' : 'parent'));
     setIsAdmin(true);
     setActiveRole('coach');
     setCoachTab('admin');
     setAdminSubTab('coaches');
     setShowParentMessages(false);
+  }
+
+  function returnFromAdminAccess() {
+    const target = adminReturnRole;
+    setIsAdmin(false);
+    setAdminReturnRole(null);
+    setShowParentMessages(false);
+    if (target === 'parent' || target === 'player') {
+      setActiveRole('parent');
+      setParentTab('home');
+      return;
+    }
+    setActiveRole('coach');
+    setCoachTab('trainings');
   }
 
   function enterCoachPlayerSpace() {
@@ -5811,6 +5830,13 @@ export default function App() {
                   title="Acces direct admin" aria-label="Acces direct admin"
                   style={{ height: 48, padding: '0 14px', borderRadius: 14, border: 'none', background: '#facc15', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span>Admin</span>
+                </button>
+              )}
+              {isAdmin && adminReturnRole && (
+                <button onClick={returnFromAdminAccess}
+                  title="Retour espace precedent" aria-label="Retour espace precedent"
+                  style={{ height: 48, padding: '0 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span>{adminReturnRole === 'coach' ? 'Coach' : adminReturnRole === 'player' ? 'Joueur' : 'Parent'}</span>
                 </button>
               )}
               {activeRole === 'coach' && !isAdmin && connectedCoachId && (
