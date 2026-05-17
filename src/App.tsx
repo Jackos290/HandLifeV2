@@ -8708,6 +8708,104 @@ export default function App() {
               // Récupérer toutes les équipes des enfants liés
               const parentTeamIds = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)))];
               const seasonForFilter = parentSelectedSeasonId;
+              const selectedChild = parentPlayers.find((p) => p.id === parentChildTab) || parentPlayers[0] || (linkedPlayerId ? players.find((p) => p.id === linkedPlayerId) : null);
+              if (!selectedChild) return <div style={styles.emptyState}>Aucun joueur selectionne.</div>;
+              const selectedTeamId = getPlayerTeamIdForSeason(selectedChild, seasonForFilter);
+              const selectedTeam = teams.find((t) => t.id === selectedTeamId);
+              const selectedTeamPlayers = selectedTeamId ? getPlayersForTeamSeason(selectedTeamId, seasonForFilter) : [];
+              const teamCards = selectedTeamId ? buildFifaCardsForTeam(selectedTeamId, true, seasonForFilter) : [];
+              const selectedCardIndex = Math.max(0, teamCards.findIndex((c) => c.player.id === selectedChild.id));
+              const selectedCard = teamCards[selectedCardIndex];
+              if (!selectedTeam || !selectedCard) return <div style={styles.emptyState}>Aucune equipe trouvee pour ce joueur.</div>;
+              const childStatsRows = getMatchPlayerStatsForSeason(selectedChild.id, seasonForFilter);
+              const childGoals = childStatsRows.reduce((sum, s) => sum + (s.goals || 0), 0);
+              const childShots = childStatsRows.reduce((sum, s) => sum + (s.shots || 0), 0);
+              const childSaves = childStatsRows.reduce((sum, s) => sum + (s.saves || 0), 0);
+              const childMatches = new Set(childStatsRows.map((s) => s.match_id)).size;
+              const childPct = childShots > 0 ? Math.round((childGoals / childShots) * 100) : 0;
+              const teamStatsRows = seasonForFilter
+                ? selectedTeamPlayers.flatMap((p) => getMatchPlayerStatsForSeason(p.id, seasonForFilter))
+                : matchPlayerStats.filter((s) => selectedTeamPlayers.some((p) => p.id === s.player_id));
+              const teamGoals = teamStatsRows.reduce((sum, s) => sum + (s.goals || 0), 0);
+              const teamShots = teamStatsRows.reduce((sum, s) => sum + (s.shots || 0), 0);
+              const teamSaves = teamStatsRows.reduce((sum, s) => sum + (s.saves || 0), 0);
+              const teamMatches = [...new Set(teamStatsRows.map((s) => s.match_id))].length;
+              const teamPct = teamShots > 0 ? Math.round((teamGoals / teamShots) * 100) : 0;
+              return (
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                    <div>
+                      <h3 style={{ margin: 0, color: '#062C5D', fontSize: 20, fontWeight: 900 }}>{getPlayerName(selectedChild)}</h3>
+                      <div style={{ marginTop: 4, color: '#64748b', fontWeight: 800, fontSize: 13 }}>{selectedTeam.name}</div>
+                    </div>
+                    <button onClick={() => setShowGradeModal(true)}
+                      style={{ width: 34, height: 34, borderRadius: '50%', border: '2px solid #a855f7', background: '#f5f3ff', color: '#7c3aed', fontWeight: 900, fontSize: 14, cursor: 'pointer' }}
+                      title="Voir les grades">?</button>
+                  </div>
+
+                  <div style={{ ...styles.panelCard, background: '#fffdf4', border: '1px solid #fde68a' }}>
+                    <div style={{ width: 'min(100%, 340px)', margin: '0 auto' }}>
+                      <FifaPlayerCard
+                        player={selectedCard.player}
+                        totalTrainingPresences={selectedCard.totalTrainingPresences}
+                        totalGoals={selectedCard.totalGoals}
+                        totalShots={selectedCard.totalShots}
+                        totalMatches={selectedCard.totalMatches}
+                        isMyChild={selectedCard.isMyChild}
+                        hideStats={selectedCard.hideStats}
+                        age={selectedCard.age}
+                        clubLogo={CLUB_LOGO}
+                        onClick={() => setFullScreenCardData({ cards: teamCards, index: selectedCardIndex })}
+                      />
+                    </div>
+                  </div>
+
+                  {selectedCard.hideStats ? (
+                    <div style={{ ...styles.panelCard, textAlign: 'center', background: '#f8fafc' }}>
+                      <div style={{ fontSize: 28, marginBottom: 6 }}>🔒</div>
+                      <strong>Stats privees</strong>
+                    </div>
+                  ) : (
+                    <div style={styles.panelCard}>
+                      <h3 style={styles.panelTitle}>Stats du joueur</h3>
+                      <div style={styles.statsGrid}>
+                        {[
+                          ['🏃 Presences', `${selectedCard.totalTrainingPresences}`],
+                          ['⚽ Matchs', String(childMatches)],
+                          ['🎯 Buts', String(childGoals)],
+                          ['🏹 Tirs', String(childShots)],
+                          ['🧤 Arrets', String(childSaves)],
+                          ['📊 Reussite', childShots > 0 ? `${childPct}%` : '-'],
+                        ].map(([label, value]) => (
+                          <div key={label} style={{ background: '#f0f7ff', borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: '1px solid #bfdbfe' }}>
+                            <div style={{ fontSize: 22, fontWeight: 900, color: '#1e40af' }}>{value}</div>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: '#1e40af', opacity: 0.85, marginTop: 3 }}>{label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={styles.panelCard}>
+                    <h3 style={styles.panelTitle}>Stats collectives - {selectedTeam.name}</h3>
+                    <div style={styles.statsGrid}>
+                      {[
+                        ['👥 Joueurs', String(selectedTeamPlayers.length)],
+                        ['⚽ Matchs joues', String(teamMatches)],
+                        ['🎯 Buts', String(teamGoals)],
+                        ['🏹 Tirs', String(teamShots)],
+                        ['🧤 Arrets', String(teamSaves)],
+                        ['📊 Reussite', teamShots > 0 ? `${teamPct}%` : '-'],
+                      ].map(([label, value]) => (
+                        <div key={label} style={{ background: '#eef6ff', borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: '1px solid #d8e5f2' }}>
+                          <div style={{ fontSize: 22, fontWeight: 900, color: '#062C5D' }}>{value}</div>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: '#062C5D', opacity: 0.75, marginTop: 3 }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
               return (
                 <div style={{ display: 'grid', gap: 24 }}>
                   {parentTeamIds.map((teamId) => {
