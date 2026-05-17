@@ -2933,17 +2933,27 @@ export default function App() {
     };
 
     if (actionLines.length > 0) {
+      const teamIsAway = match.home_away === 'away';
       const scores = actionLines
         .map((line) => {
           const matchScore = line.match(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/);
-          return matchScore ? { home: Number(matchScore[1]), away: Number(matchScore[2]), line } : null;
+          if (!matchScore) return null;
+          const left = Number(matchScore[1]);
+          const right = Number(matchScore[2]);
+          return {
+            home: teamIsAway ? right : left,
+            away: teamIsAway ? left : right,
+            left,
+            right,
+            line,
+          };
         })
-        .filter(Boolean) as { home: number; away: number; line: string }[];
+        .filter(Boolean) as { home: number; away: number; left: number; right: number; line: string }[];
       const first = scores[0];
       const last = scores[scores.length - 1];
       home = last?.home ?? home;
       away = last?.away ?? away;
-      const seedScore = first || last || { home, away, line: '' };
+      const seedScore = first || last || { home, away, left: home, right: away, line: '' };
       const totalGoals = Math.max(1, home + away);
       const halfTarget = totalGoals * 0.45;
       const halfScore = scores.reduce((best, score) => Math.abs((score.home + score.away) - halfTarget) < Math.abs((best.home + best.away) - halfTarget) ? score : best, seedScore);
@@ -3052,12 +3062,16 @@ export default function App() {
     }
   }
 
-  function getFinalScoreFromActions(actions: string) {
-    return actions
+  function getFinalScoreFromActions(actions: string, homeAway: string = 'home') {
+    const finalScore = actions
       .split(/\r?\n/)
       .map((line) => line.match(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/))
       .filter(Boolean)
       .pop() || null;
+    if (!finalScore) return null;
+    return homeAway === 'away'
+      ? { team: finalScore[2], opponent: finalScore[1] }
+      : { team: finalScore[1], opponent: finalScore[2] };
   }
 
   function extractFdmActionsFromText(rawText: string) {
@@ -3270,14 +3284,14 @@ export default function App() {
       setNewMatchFdmFileName(file.name);
       setNewMatchFdmUrl('');
       setNewMatchFdmActions(actions);
-      const finalScore = getFinalScoreFromActions(actions);
+      const finalScore = getFinalScoreFromActions(actions, match.home_away);
       if (finalScore) {
         setMatchResults((prev) => ({
           ...prev,
           [match.id]: {
             ...prev[match.id],
-            score_home: finalScore[1],
-            score_away: finalScore[2],
+            score_home: finalScore.team,
+            score_away: finalScore.opponent,
           },
         }));
       }
@@ -3374,12 +3388,12 @@ export default function App() {
 
   async function addMatch() {
     if (!newMatchTeamId || !newMatchOpponent.trim() || !newMatchDate) { alert('Remplir équipe, adversaire et date'); return; }
-    const detectedScore = getFinalScoreFromActions(newMatchFdmActions);
+    const detectedScore = getFinalScoreFromActions(newMatchFdmActions, newMatchHomeAway);
     const matchSupporterPayload: any = {
       fdm_url: newMatchFdmUrl.trim() || null,
       supporter_summary: newMatchSupporterSummary.trim() || null,
       fdm_actions_text: newMatchFdmActions.trim() || null,
-      ...(detectedScore ? { score_home: detectedScore[1], score_away: detectedScore[2] } : {}),
+      ...(detectedScore ? { score_home: detectedScore.team, score_away: detectedScore.opponent } : {}),
     };
     if (editingMatchId) {
       let { error } = await supabase.from('matches').update({
