@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabase';
 import Calendar from './Calendar';
 import MatchComposition from './MatchComposition';
@@ -163,7 +163,7 @@ type UpcomingTraining = {
   cancellationReason?: string | null;
 };
 
-// CoachTab â€” 'admin' seulement visible pour isAdmin
+// CoachTab — 'admin' seulement visible pour isAdmin
 type CoachTab = 'trainings' | 'matches' | 'stats' | 'composition' | 'players' | 'users' | 'messages' | 'licenses' | 'team' | 'accessibility' | 'admin' | 'password' | 'events' | 'polls' | 'supporter';
 
 type Sponsor = {
@@ -271,12 +271,12 @@ type EventFormResponse = {
   updated_at: string;
 };
 
-// ADMIN_CODE supprimÃ© â€” auth via Supabase
+// ADMIN_CODE supprimé — auth via Supabase
 const PRESENCE_ONLINE_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 
 const CLUB_LOGO = `data:image/png;base64,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`;
 
-// â”€â”€â”€ MatchStatsTable â”€ tableau groupÃ© avec validation globale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── MatchStatsTable ─ tableau groupé avec validation globale ────────────────────
 type ClubEvent = {
   id: string;
   title: string;
@@ -366,7 +366,7 @@ function MatchStatsTable({
   const cols: { key: keyof Omit<PlayerStatRow, 'playerId' | 'playerName'>; label: string; bg: string }[] = [
     { key: 'goals', label: 'Buts', bg: '#dbeafe' },
     { key: 'shots', label: 'Tirs', bg: '#ede9fe' },
-    { key: 'saves', label: 'ArrÃªts', bg: '#d1fae5' },
+    { key: 'saves', label: 'Arrêts', bg: '#d1fae5' },
     { key: 'penalty_scored', label: 'Pen.', bg: '#fef3c7' },
     { key: 'two_minutes', label: '2 min', bg: '#fee2e2' },
   ];
@@ -428,9 +428,9 @@ function MatchStatsTable({
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <button onClick={handleSaveAll} disabled={saving}
           style={{ ...styles.primaryButton, opacity: saving ? 0.75 : 1, background: saved ? '#16a34a' : '#0A5FB5', fontSize: big ? 16 : 14, padding: big ? '16px 22px' : '14px 18px' }}>
-          {saving ? 'Enregistrement...' : saved ? 'âœ“ Stats validÃ©es !' : 'âœ… Valider et enregistrer toutes les stats'}
+          {saving ? 'Enregistrement...' : saved ? '✓ Stats validées !' : '✅ Valider et enregistrer toutes les stats'}
         </button>
-        {saved && <span style={{ color: '#166534', fontWeight: 700, fontSize: 14 }}>AjoutÃ©es aux stats globales.</span>}
+        {saved && <span style={{ color: '#166534', fontWeight: 700, fontSize: 14 }}>Ajoutées aux stats globales.</span>}
       </div>
     </div>
   );
@@ -439,10 +439,10 @@ function MatchStatsTable({
     return (
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'white', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: '#0A5FB5', color: 'white', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-          <span style={{ fontWeight: 800, fontSize: 17 }}>ðŸ“Š Stats â€” Tournez le tÃ©lÃ©phone en paysage ðŸ”„</span>
+          <span style={{ fontWeight: 800, fontSize: 17 }}>📊 Stats — Tournez le téléphone en paysage 🔄</span>
           <button onClick={() => setFullscreen(false)}
             style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', borderRadius: 12, padding: '10px 18px', fontWeight: 800, fontSize: 16, cursor: 'pointer' }}>
-            âœ• Fermer
+            ✕ Fermer
           </button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
@@ -454,9 +454,9 @@ function MatchStatsTable({
 
   return (
     <div>
-      <div style={{ cursor: 'pointer', position: 'relative' }} onClick={() => setFullscreen(true)} title="Toucher pour ouvrir en plein Ã©cran">
+      <div style={{ cursor: 'pointer', position: 'relative' }} onClick={() => setFullscreen(true)} title="Toucher pour ouvrir en plein écran">
         <div style={{ position: 'absolute', top: 6, right: 6, zIndex: 10, background: '#0A5FB5', color: 'white', borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 700, pointerEvents: 'none' }}>
-          â¤¢ Plein Ã©cran
+          ⤢ Plein écran
         </div>
         {tableContent(false)}
       </div>
@@ -464,7 +464,7 @@ function MatchStatsTable({
   );
 }
 
-// â”€â”€â”€ LoginForm (email + password) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── LoginForm (email + password) ────────────────────────────────────────────
 function LoginForm({
   onSubmit,
   loading,
@@ -510,14 +510,14 @@ function LoginForm({
 }
 
 
-// â”€â”€â”€ ParentCompositionButton â”€ affiche la compo du match en lecture seule â”€â”€â”€â”€
+// ─── ParentCompositionButton ─ affiche la compo du match en lecture seule ────
 function ParentCompositionButton({ matchId, teamId, players, squadIds }: { matchId: string; teamId: string; players: any[]; squadIds: string[] }) {
   const [open, setOpen] = React.useState(false);
   return (
     <>
       <button onClick={() => setOpen(true)}
         style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid #c7d2fe', background: '#eef2ff', color: '#4338ca', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-        ðŸ Voir la composition
+        🏐 Voir la composition
       </button>
       {open && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
@@ -525,8 +525,8 @@ function ParentCompositionButton({ matchId, teamId, players, squadIds }: { match
           <div style={{ background: 'white', borderRadius: 20, padding: 20, maxWidth: 500, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <h3 style={{ margin: 0, color: '#0f2743' }}>ðŸ Composition du match</h3>
-              <button onClick={() => setOpen(false)} style={{ border: 'none', background: '#f1f5f9', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>âœ• Fermer</button>
+              <h3 style={{ margin: 0, color: '#0f2743' }}>🏐 Composition du match</h3>
+              <button onClick={() => setOpen(false)} style={{ border: 'none', background: '#f1f5f9', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>✕ Fermer</button>
             </div>
             <MatchComposition matchId={matchId} teamId={teamId} players={players} squadIds={squadIds} isCoach={false} />
           </div>
@@ -536,9 +536,9 @@ function ParentCompositionButton({ matchId, teamId, players, squadIds }: { match
   );
 }
 
-// â”€â”€â”€ APP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  // â”€â”€ Data â”€â”€
+  // ── Data ──
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<MatchItem[]>([]);
@@ -554,7 +554,7 @@ export default function App() {
   const [coachAccessList, setCoachAccessList] = useState<CoachAccess[]>([]);
   const [adminDelegates, setAdminDelegates] = useState<AdminDelegate[]>([]);
 
-  // â”€â”€ Auth â”€â”€
+  // ── Auth ──
   const [loggedIn, setLoggedIn] = useState(false);
   const [authChecked, setAuthChecked] = useState(true);
   const [activeRole, setActiveRole] = useState<'coach' | 'parent'>('parent');
@@ -571,12 +571,12 @@ export default function App() {
   const [changePwLoading, setChangePwLoading] = useState(false);
   const [changePwError, setChangePwError] = useState('');
   const [changePwSuccess, setChangePwSuccess] = useState(false);
-  // Ã©quipes visibles pour ce coach (vide = toutes si admin)
+  // équipes visibles pour ce coach (vide = toutes si admin)
   const [allowedTeamIds, setAllowedTeamIds] = useState<string[]>([]);
   const [selectedParentId, setSelectedParentId] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // â”€â”€ UI states â”€â”€
+  // ── UI states ──
   const [coachTab, setCoachTab] = useState<CoachTab>('trainings');
   const [selectedCoachTeamId, setSelectedCoachTeamId] = useState('');
   const [selectedTrainingTemplateId, setSelectedTrainingTemplateId] = useState('');
@@ -599,7 +599,7 @@ export default function App() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [currentSponsorIdx, setCurrentSponsorIdx] = useState(0);
   const [showGradeModal, setShowGradeModal] = useState(false);
-  // â”€â”€â”€ Modale plein Ã©cran de carte FIFA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Modale plein écran de carte FIFA ─────────────────────────────────────
   const [fullScreenCardData, setFullScreenCardData] = useState<{
     cards: any[]; index: number;
   } | null>(null);
@@ -618,7 +618,7 @@ export default function App() {
   const [savingEvent, setSavingEvent] = useState(false);
   const [editingEventId, setEditingEventId] = useState('');
 
-  // Admin â€” gestion coaches
+  // Admin — gestion coaches
   const [newCoachCode, setNewCoachCode] = useState('');
   const [newCoachEmail, setNewCoachEmail] = useState('');
   const [newCoachPassword, setNewCoachPassword] = useState('');
@@ -709,9 +709,9 @@ export default function App() {
     setShowNewMessagePopup(false);
   }
 
-  // Admin â€” entraÃ®nement
+  // Admin — entraînement
   const [newTrainingTeamId, setNewTrainingTeamId] = useState('');
-  const [newTrainingTitle, setNewTrainingTitle] = useState('EntraÃ®nement');
+  const [newTrainingTitle, setNewTrainingTitle] = useState('Entraînement');
   const [newTrainingWeekday, setNewTrainingWeekday] = useState('3');
   const [newTrainingStart, setNewTrainingStart] = useState('18:30');
   const [newTrainingEnd, setNewTrainingEnd] = useState('20:00');
@@ -724,7 +724,7 @@ export default function App() {
   const [newBreakEnd, setNewBreakEnd] = useState('');
   const [newBreakReason, setNewBreakReason] = useState('');
 
-  // Admin â€” match
+  // Admin — match
   const [newMatchTeamId, setNewMatchTeamId] = useState('');
   const [newMatchOpponent, setNewMatchOpponent] = useState('');
   const [newMatchDate, setNewMatchDate] = useState('');
@@ -738,7 +738,7 @@ export default function App() {
   const [savingFdmImport, setSavingFdmImport] = useState(false);
   const [editingMatchId, setEditingMatchId] = useState('');
 
-  // Admin â€” joueur
+  // Admin — joueur
   const [playerFormFirstName, setPlayerFormFirstName] = useState('');
   const [playerFormLastName, setPlayerFormLastName] = useState('');
   const [playerFormTeamId, setPlayerFormTeamId] = useState('');
@@ -754,7 +754,7 @@ export default function App() {
   const [editingPlayerId, setEditingPlayerId] = useState('');
   const [savingPlayer, setSavingPlayer] = useState(false);
 
-  // Admin â€” compte enfant
+  // Admin — compte enfant
   const [showCreateChildForm, setShowCreateChildForm] = useState(false);
   const [newChildFirstName, setNewChildFirstName] = useState('');
   const [newChildLastName, setNewChildLastName] = useState('');
@@ -771,7 +771,7 @@ export default function App() {
   const [promotionSelectedIds, setPromotionSelectedIds] = useState<string[]>([]);
   const [promotionSaving, setPromotionSaving] = useState(false);
 
-  // Users â€” gestion parents
+  // Users — gestion parents
   const [selectedManagedParentId, setSelectedManagedParentId] = useState('');
   const [managedParentFirstName, setManagedParentFirstName] = useState('');
   const [managedParentLastName, setManagedParentLastName] = useState('');
@@ -779,12 +779,12 @@ export default function App() {
   const [managedParentPin, setManagedParentPin] = useState('');
   const [savingManagedParent, setSavingManagedParent] = useState(false);
 
-  // Players â€” lien parent/enfant
+  // Players — lien parent/enfant
   const [selectedLinkParentId, setSelectedLinkParentId] = useState('');
   const [selectedLinkPlayerId, setSelectedLinkPlayerId] = useState('');
   const [linkingPlayer, setLinkingPlayer] = useState(false);
 
-  // Match â€” squad + rÃ©sultat
+  // Match — squad + résultat
   const [matchSquad, setMatchSquad] = useState<Record<string, string[]>>({});
   const [squadInitialized, setSquadInitialized] = useState<Record<string, boolean>>({});
   const [matchResults, setMatchResults] = useState<Record<string, { score_home: string; score_away: string }>>({});
@@ -806,7 +806,7 @@ export default function App() {
   const [savingSeasonAssignments, setSavingSeasonAssignments] = useState(false);
   const [switchingSeason, setSwitchingSeason] = useState(false);
 
-  // ParamÃ¨tres (settings)
+  // Paramètres (settings)
   type AppSettings = {
     app_url: string;
     admin_email: string;
@@ -843,7 +843,7 @@ export default function App() {
   });
   const [savingSettings, setSavingSettings] = useState(false);
 
-  // â”€â”€ Licences â”€â”€
+  // ── Licences ──
   type LicenseStatus = {
     id: string;
     player_id: string;
@@ -873,7 +873,7 @@ export default function App() {
     // IMPORTANT: the DB has a UNIQUE constraint on player_id alone.
     // This means we can never INSERT a 2nd row per player.
     // Strategy: always UPDATE the existing row, switching season_id + status together.
-    // If no row exists yet â†’ INSERT once.
+    // If no row exists yet → INSERT once.
     const anyExisting = licenseStatuses.find((l) => l.player_id === playerId);
 
     const basePayload: any = {
@@ -883,7 +883,7 @@ export default function App() {
     };
 
     if (anyExisting) {
-      // Always update this row â€” change both season_id and status
+      // Always update this row — change both season_id and status
       const updatePayload = { ...basePayload };
       if (sid !== null) updatePayload.season_id = sid;
       const { error } = await supabase.from('license_status').update(updatePayload).eq('id', anyExisting.id);
@@ -928,35 +928,35 @@ export default function App() {
       // If no records have season_id (column not yet migrated), fall back to player-only match
       const columnExists = licenseStatuses.some((l) => l.season_id !== null && l.season_id !== undefined);
       if (!columnExists) return licenseStatuses.find((l) => l.player_id === playerId) || null;
-      // Column exists but no record for this season â†’ null = pending
+      // Column exists but no record for this season → null = pending
       return null;
     }
     return licenseStatuses.find((l) => l.player_id === playerId && !l.season_id) || null;
   }
 
 
-  // Retourne l'URL de licence correspondant Ã  l'Ã©quipe du joueur
+  // Retourne l'URL de licence correspondant à l'équipe du joueur
   function getLicenseUrl(teamId: string): string {
     const cat = (teams.find((t) => t.id === teamId)?.category || '').toLowerCase();
     const nm = (teams.find((t) => t.id === teamId)?.name || '').toLowerCase();
     const h = cat + ' ' + nm;
     if (h.includes('u9')) return appSettings.license_url_u9;
-    if (h.includes('u11') && (h.includes('garcon') || h.includes('garÃ§on') || h.includes('masculin') || h.includes('masc'))) return appSettings.license_url_u11_garcon;
-    if (h.includes('u11') && (h.includes('fille') || h.includes('fÃ©minin') || h.includes('feminin'))) return appSettings.license_url_u11_fille;
+    if (h.includes('u11') && (h.includes('garcon') || h.includes('garçon') || h.includes('masculin') || h.includes('masc'))) return appSettings.license_url_u11_garcon;
+    if (h.includes('u11') && (h.includes('fille') || h.includes('féminin') || h.includes('feminin'))) return appSettings.license_url_u11_fille;
     if (h.includes('u11')) return appSettings.license_url_u11_garcon;
-    if (h.includes('u13') && (h.includes('garcon') || h.includes('garÃ§on') || h.includes('masculin') || h.includes('masc'))) return appSettings.license_url_u13_garcon;
-    if (h.includes('u13') && (h.includes('fille') || h.includes('fÃ©minin') || h.includes('feminin'))) return appSettings.license_url_u13_fille;
+    if (h.includes('u13') && (h.includes('garcon') || h.includes('garçon') || h.includes('masculin') || h.includes('masc'))) return appSettings.license_url_u13_garcon;
+    if (h.includes('u13') && (h.includes('fille') || h.includes('féminin') || h.includes('feminin'))) return appSettings.license_url_u13_fille;
     if (h.includes('u13')) return appSettings.license_url_u13_garcon;
     if (h.includes('u15')) return appSettings.license_url_u15;
     if (h.includes('u17')) return appSettings.license_url_u17;
     if (h.includes('u18')) return appSettings.license_url_u18;
-    if (h.includes('senior') && (h.includes('fille') || h.includes('fÃ©minin') || h.includes('feminin') || h.includes('feminine'))) return appSettings.license_url_senior_fille;
+    if (h.includes('senior') && (h.includes('fille') || h.includes('féminin') || h.includes('feminin') || h.includes('feminine'))) return appSettings.license_url_senior_fille;
     if (h.includes('senior')) return appSettings.license_url_senior;
     if (h.includes('loisir')) return appSettings.license_url_loisir;
     return '';
   }
 
-  // â”€â”€ Inscription publique â”€â”€
+  // ── Inscription publique ──
   const [showRegisterPage, setShowRegisterPage] = useState(false);
   const [regStep, setRegStep] = useState<'choose' | 'parent' | 'direct'>('parent');
   const [regAdultIsPlayer, setRegAdultIsPlayer] = useState(false);
@@ -1022,7 +1022,7 @@ export default function App() {
   };
   const [registrations, setRegistrations] = useState<Registration[]>([]);
 
-  // â”€â”€ PrÃ©sence en ligne (admin) â”€â”€
+  // ── Présence en ligne (admin) ──
   const [onlinePresence, setOnlinePresence] = useState<UserPresence[]>([]);
   const [connectionHistory, setConnectionHistory] = useState<ConnectionHistory[]>([]);
   const [showHeaderOnline, setShowHeaderOnline] = useState(false);
@@ -1031,7 +1031,7 @@ export default function App() {
   const [localConnectionHistory, setLocalConnectionHistory] = useState<ConnectionHistory[]>([]);
   const presenceHistoryLoggedRef = React.useRef(false);
 
-  // â”€â”€ Sondages â”€â”€
+  // ── Sondages ──
   const [polls, setPolls] = useState<Poll[]>([]);
   const [pollOptions, setPollOptions] = useState<PollOption[]>([]);
   const [pollVotes, setPollVotes] = useState<PollVote[]>([]);
@@ -1048,7 +1048,7 @@ export default function App() {
   const [editingPollId, setEditingPollId] = useState('');
   const [viewingPollResultsId, setViewingPollResultsId] = useState('');
 
-  // â”€â”€ Formulaires d'Ã©vÃ©nements â”€â”€
+  // ── Formulaires d'événements ──
   const [eventFormQuestions, setEventFormQuestions] = useState<EventFormQuestion[]>([]);
   const [eventFormResponses, setEventFormResponses] = useState<EventFormResponse[]>([]);
   const [editingEventFormId, setEditingEventFormId] = useState('');
@@ -1056,10 +1056,10 @@ export default function App() {
   const [savingEventForm, setSavingEventForm] = useState(false);
   const [viewingEventFormResultsId, setViewingEventFormResultsId] = useState('');
 
-  // â”€â”€ Saison sÃ©lectionnÃ©e pour parents (filtrage cartes/stats) â”€â”€
+  // ── Saison sélectionnée pour parents (filtrage cartes/stats) ──
   const [parentSelectedSeasonId, setParentSelectedSeasonId] = useState<string>('');
 
-  // â”€â”€ Ã‰tat joueur liÃ© au compte (si l'utilisateur est aussi joueur) â”€â”€
+  // ── État joueur lié au compte (si l'utilisateur est aussi joueur) ──
   const [linkedPlayerId, setLinkedPlayerId] = useState<string | null>(null);
   const [hasPlayerRole, setHasPlayerRole] = useState(false);
 
@@ -1185,7 +1185,7 @@ export default function App() {
     } catch (e) { /* ignore local fallback */ }
   }
 
-  // â”€â”€ Computed visibilitÃ© â”€â”€
+  // ── Computed visibilité ──
   const visibleTeams = useMemo(() => {
     if (isAdmin) return teams;
     return teams.filter((t) => allowedTeamIds.includes(t.id));
@@ -1203,9 +1203,9 @@ export default function App() {
     return trainingTemplates.filter((t) => visibleTeams.some((vt) => vt.id === t.team_id));
   }, [trainingTemplates, visibleTeams]);
 
-  // â”€â”€ VÃ©rifier session existante au dÃ©marrage â”€â”€
+  // ── Vérifier session existante au démarrage ──
   useEffect(() => {
-    // DÃ©tecter si on arrive depuis un lien de reset password (hash dans l'URL)
+    // Détecter si on arrive depuis un lien de reset password (hash dans l'URL)
     const hash = window.location.hash;
     if (hash.includes('type=recovery') || hash.includes('access_token')) {
       setShowChangePassword(true);
@@ -1248,20 +1248,20 @@ export default function App() {
     return () => { try { subscription?.unsubscribe(); } catch(e) {} };
   }, []);
 
-  // â”€â”€ Load donnÃ©es publiques (avant connexion, pour l'inscription) â”€â”€
+  // ── Load données publiques (avant connexion, pour l'inscription) ──
   useEffect(() => {
     try { loadSettings(); } catch(e) {}
     supabase.from('teams').select('*').order('name')
       .then(({ data }) => { if (data) setTeams(data as Team[]); }, () => {});
-    // Joueurs chargÃ©s publiquement pour la liste dÃ©roulante du formulaire d'inscription
+    // Joueurs chargés publiquement pour la liste déroulante du formulaire d'inscription
     supabase.from('players').select('id, first_name, last_name, team_id, birth_date, photo_url, jersey_number, position, card_powers').order('last_name')
       .then(({ data }) => { if (data) setPlayers(data as Player[]); }, () => {});
-    // Sponsors chargÃ©s publiquement pour la page de connexion
+    // Sponsors chargés publiquement pour la page de connexion
     supabase.from('sponsors').select('*').eq('active', true).order('display_order')
       .then(({ data }) => { if (data) setSponsors(data as Sponsor[]); }, () => {});
   }, []);
 
-  // â”€â”€ Load donnÃ©es privÃ©es uniquement aprÃ¨s connexion â”€â”€
+  // ── Load données privées uniquement après connexion ──
   useEffect(() => {
     if (loggedIn) {
       loadData();
@@ -1270,14 +1270,14 @@ export default function App() {
     }
   }, [loggedIn]);
 
-  // Auto-refresh toutes les 30 secondes pour les donnÃ©es gÃ©nÃ©rales
+  // Auto-refresh toutes les 30 secondes pour les données générales
   useEffect(() => {
     if (!loggedIn) return;
     const interval = setInterval(() => { loadDataSilent(); loadPlayerSeasonAssignments(); }, 30000);
     return () => clearInterval(interval);
   }, [loggedIn]);
 
-  // RafraÃ®chissement lÃ©ger de la prÃ©sence pour le header et l'admin.
+  // Rafraîchissement léger de la présence pour le header et l'admin.
   useEffect(() => {
     if (!loggedIn) return;
     refreshPresenceData();
@@ -1285,7 +1285,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [loggedIn]);
 
-  // Heartbeat de prÃ©sence â€” mise Ã  jour toutes les 60s
+  // Heartbeat de présence — mise à jour toutes les 60s
   useEffect(() => {
     if (!loggedIn) return;
     const upsertPresence = async () => {
@@ -1333,7 +1333,7 @@ export default function App() {
     return () => { clearInterval(heartbeat); };
   }, [loggedIn, activeRole, isAdmin, users]);
 
-  // Auto-refresh des conversations parent (sÃ©curitÃ© si realtime ne passe pas)
+  // Auto-refresh des conversations parent (sécurité si realtime ne passe pas)
   useEffect(() => {
     if (!loggedIn || activeRole !== 'parent' || !selectedParentId) return;
     const interval = setInterval(() => {
@@ -1363,10 +1363,10 @@ export default function App() {
     setShowNewMessagePopup(true);
   }, [loggedIn, conversations, lastReadConvTimestamps, activeRole, selectedParentId, connectedCoachId, isAdmin]);
 
-  // Les rappels email entraÃ®nement sont gÃ©rÃ©s par le cron Supabase (check-training-reminders)
-  // Ne pas les dÃ©clencher depuis le front pour Ã©viter les doublons
+  // Les rappels email entraînement sont gérés par le cron Supabase (check-training-reminders)
+  // Ne pas les déclencher depuis le front pour éviter les doublons
 
-  // Realtime â€” prÃ©sences match, prÃ©sences entraÃ®nement, convocations
+  // Realtime — présences match, présences entraînement, convocations
   useEffect(() => {
     if (!loggedIn) return;
 
@@ -1420,7 +1420,7 @@ export default function App() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' },
         (payload: any) => {
           setConversations((prev) => {
-            // Si la conv n'est pas encore en mÃ©moire (parent qui reÃ§oit un nouveau message), on l'ajoute via reload
+            // Si la conv n'est pas encore en mémoire (parent qui reçoit un nouveau message), on l'ajoute via reload
             const exists = prev.find((c) => c.id === payload.new.id);
             if (!exists) return prev;
             return prev.map((c) => c.id === payload.new.id ? { ...c, updated_at: payload.new.updated_at } : c);
@@ -1434,7 +1434,7 @@ export default function App() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload: any) => {
           const newMsg = payload.new as any;
-          // Mettre Ã  jour updated_at localement pour dÃ©clencher la pastille
+          // Mettre à jour updated_at localement pour déclencher la pastille
           setConversations((prev) => prev.map((c) =>
             c.id === newMsg.conversation_id ? { ...c, updated_at: newMsg.created_at } : c
           ));
@@ -1519,7 +1519,7 @@ export default function App() {
   }, [selectedManagedParentId, users]);
 
   async function loadDataSilent() {
-    // Refresh sans flash â€” ne passe pas loading Ã  true
+    // Refresh sans flash — ne passe pas loading à true
     const [
       teamsRes, playersRes, matchesRes, matchAttRes, statsRes,
       usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes, adminDelegatesRes,
@@ -1661,9 +1661,9 @@ export default function App() {
     }
   }
 
-  // â”€â”€ Auth â”€â”€
+  // ── Auth ──
   async function handleChangePassword() {
-    if (newPassword.trim().length < 8) { setChangePwError('Le mot de passe doit faire au moins 8 caractÃ¨res.'); return; }
+    if (newPassword.trim().length < 8) { setChangePwError('Le mot de passe doit faire au moins 8 caractères.'); return; }
     if (newPassword !== newPassword2) { setChangePwError('Les deux mots de passe ne correspondent pas.'); return; }
     setChangePwLoading(true);
     setChangePwError('');
@@ -1694,7 +1694,7 @@ export default function App() {
     } catch (e: any) {
       setLoginError(e?.message?.includes('fetch')
         ? 'Connexion impossible depuis cet environnement.'
-        : "Erreur lors de l'envoi. VÃ©rifie l'adresse email.");
+        : "Erreur lors de l'envoi. Vérifie l'adresse email.");
     }
     setResetLoading(false);
   }
@@ -1716,7 +1716,7 @@ export default function App() {
       if (e?.message?.includes('fetch')) {
         setLoginError('Connexion impossible depuis StackBlitz. Utilise Bolt.new pour tester.');
       } else {
-        setLoginError('Erreur de connexion. RÃ©essaie.');
+        setLoginError('Erreur de connexion. Réessaie.');
       }
     }
     setLoginLoading(false);
@@ -1724,9 +1724,9 @@ export default function App() {
 
   async function applyUserSession(authId: string) {
     try {
-    // RÃ©cupÃ©rer le rÃ´le depuis user_roles
+    // Récupérer le rôle depuis user_roles
     const { data: roleRow } = await supabase.from('user_roles').select('*').eq('auth_id', authId).maybeSingle();
-    if (!roleRow) { setLoginError('Aucun rÃ´le associÃ© Ã  ce compte.'); return; }
+    if (!roleRow) { setLoginError('Aucun rôle associé à ce compte.'); return; }
 
     if (roleRow.role === 'admin') {
       setIsAdmin(true);
@@ -1744,20 +1744,20 @@ export default function App() {
       setActiveRole('coach');
       setLoggedIn(true);
     } else if (roleRow.role === 'parent') {
-      // VÃ©rifier que l'inscription est bien approuvÃ©e
+      // Vérifier que l'inscription est bien approuvée
       const { data: parentRow } = await supabase.from('users').select('id, email, is_active, player_id, roles_extra').eq('auth_id', authId).maybeSingle();
       if (!parentRow) {
-        setLoginError("â³ Votre compte est en attente de validation par l'administrateur. Vous recevrez un email dÃ¨s que votre accÃ¨s sera activÃ©.");
+        setLoginError("⏳ Votre compte est en attente de validation par l'administrateur. Vous recevrez un email dès que votre accès sera activé.");
         await supabase.auth.signOut();
         return;
       }
       if (parentRow.is_active === false) {
-        setLoginError("ðŸš« Votre accÃ¨s a Ã©tÃ© temporairement dÃ©sactivÃ©. Contactez l'administrateur du club.");
+        setLoginError("🚫 Votre accès a été temporairement désactivé. Contactez l'administrateur du club.");
         await supabase.auth.signOut();
         return;
       }
       setSelectedParentId(parentRow.id);
-      // DÃ©tecter si le user est aussi joueur (player_id renseignÃ© OU roles_extra contient 'player')
+      // Détecter si le user est aussi joueur (player_id renseigné OU roles_extra contient 'player')
       const playerId = (parentRow as any).player_id || null;
       const extras: string[] = ((parentRow as any).roles_extra || []) as string[];
       setLinkedPlayerId(playerId);
@@ -1766,15 +1766,15 @@ export default function App() {
       setActiveRole('parent');
       setLoggedIn(true);
     } else if (roleRow.role === 'player') {
-      // Compte joueur direct (loisir/senior) â€” si plus tard on a ce role pur
+      // Compte joueur direct (loisir/senior) — si plus tard on a ce role pur
       const { data: userRow } = await supabase.from('users').select('id, email, is_active, player_id, roles_extra').eq('auth_id', authId).maybeSingle();
       if (!userRow) {
-        setLoginError("â³ Votre compte est en attente de validation.");
+        setLoginError("⏳ Votre compte est en attente de validation.");
         await supabase.auth.signOut();
         return;
       }
       if (userRow.is_active === false) {
-        setLoginError("ðŸš« Votre accÃ¨s a Ã©tÃ© dÃ©sactivÃ©.");
+        setLoginError("🚫 Votre accès a été désactivé.");
         await supabase.auth.signOut();
         return;
       }
@@ -1790,7 +1790,7 @@ export default function App() {
 
   async function handleLogout() {
     presenceHistoryLoggedRef.current = false;
-    // Conserver la derniÃ¨re activitÃ© pour l'historique admin.
+    // Conserver la dernière activité pour l'historique admin.
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -1811,7 +1811,7 @@ export default function App() {
     setLoginError('');
   }
 
-  // â”€â”€ Helpers â”€â”€
+  // ── Helpers ──
   function getPlayerName(p: Partial<Player>) { return `${p.first_name || ''} ${p.last_name || ''}`.trim(); }
 
   function getPlayerAge(birthDate: string | null | undefined): number | null {
@@ -1832,14 +1832,14 @@ export default function App() {
       .from('player-photos')
       .upload(path, file, { upsert: true, contentType: file.type });
     if (uploadError) { console.error('Upload error', uploadError); return null; }
-    // RÃ©cupÃ©rer l'URL publique propre (sans paramÃ¨tres parasites)
+    // Récupérer l'URL publique propre (sans paramètres parasites)
     const { data } = supabase.storage.from('player-photos').getPublicUrl(path);
-    // Ajouter un timestamp pour forcer le rafraÃ®chissement du cache navigateur
+    // Ajouter un timestamp pour forcer le rafraîchissement du cache navigateur
     const photoUrl = `${data.publicUrl}?v=${Date.now()}`;
     // Sauvegarder en base
     const { error: updateError } = await supabase.from('players').update({ photo_url: photoUrl }).eq('id', playerId);
     if (updateError) { console.error('Update error', updateError); return null; }
-    // Mettre Ã  jour localement sans recharger toute la page
+    // Mettre à jour localement sans recharger toute la page
     setPlayers((prev) => prev.map((p) => p.id === playerId ? { ...p, photo_url: photoUrl } : p));
     return photoUrl;
   }
@@ -1858,7 +1858,7 @@ export default function App() {
     return photoUrl;
   }
   function getUserName(u: Partial<UserItem>) { return `${u.first_name || ''} ${u.last_name || ''}`.trim(); }
-  // â”€â”€ Club Events CRUD â”€â”€
+  // ── Club Events CRUD ──
   async function saveEvent() {
     if (!newEventTitle.trim() || !newEventDate) return;
     setSavingEvent(true);
@@ -1886,7 +1886,7 @@ export default function App() {
   }
 
   async function deleteEvent(ev: ClubEvent) {
-    if (!window.confirm(`Supprimer l'Ã©vÃ©nement "${ev.title}" ?`)) return;
+    if (!window.confirm(`Supprimer l'événement "${ev.title}" ?`)) return;
     await supabase.from('events').delete().eq('id', ev.id);
     setClubEvents((p) => p.filter((e) => e.id !== ev.id));
   }
@@ -1917,9 +1917,9 @@ export default function App() {
 
   function renderEventVoters(eventId: string) {
     const groups: { status: 'present' | 'absent' | 'pending'; label: string; bg: string; color: string }[] = [
-      { status: 'present', label: 'PrÃ©sents', bg: '#dcfce7', color: '#166534' },
+      { status: 'present', label: 'Présents', bg: '#dcfce7', color: '#166534' },
       { status: 'absent', label: 'Absents', bg: '#fee2e2', color: '#991b1b' },
-      { status: 'pending', label: 'Sans rÃ©ponse', bg: '#f1f5f9', color: '#475569' },
+      { status: 'pending', label: 'Sans réponse', bg: '#f1f5f9', color: '#475569' },
     ];
     const attendees = eventAttendance.filter((a) => a.event_id === eventId);
     if (attendees.length === 0) {
@@ -1965,7 +1965,7 @@ export default function App() {
       .sort((a, b) => a.event_date.localeCompare(b.event_date));
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ HELPERS PRÃ‰SENCE EN LIGNE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ────────────── HELPERS PRÉSENCE EN LIGNE ──────────────
   function getOnlineCounts() {
     const cutoff = presenceTick - PRESENCE_ONLINE_WINDOW_MS;
     const fresh = onlinePresence.filter((p) => new Date(p.last_seen).getTime() >= cutoff);
@@ -2019,7 +2019,7 @@ export default function App() {
     };
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ HELPERS SONDAGES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ────────────── HELPERS SONDAGES ──────────────
   function resetPollForm() {
     setEditingPollId('');
     setNewPollQuestion('');
@@ -2075,8 +2075,8 @@ export default function App() {
       }))
       .filter((q) => q.question.length > 0 || q.options.length > 0);
     if (cleanQuestions.length === 0) { alert('Ajoute au moins une question.'); return; }
-    if (cleanQuestions.some((q) => !q.question)) { alert('Chaque question doit avoir un intitulÃ©.'); return; }
-    if (cleanQuestions.some((q) => q.options.length < 2)) { alert('Chaque question doit avoir au moins 2 options de rÃ©ponse.'); return; }
+    if (cleanQuestions.some((q) => !q.question)) { alert('Chaque question doit avoir un intitulé.'); return; }
+    if (cleanQuestions.some((q) => q.options.length < 2)) { alert('Chaque question doit avoir au moins 2 options de réponse.'); return; }
     setSavingPoll(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -2119,7 +2119,7 @@ export default function App() {
           created_by: createdBy,
         }).select().single();
         if (error || !np) {
-          if (!isMissingPollMigrationError(error)) throw error || new Error('Impossible de crÃ©er le sondage');
+          if (!isMissingPollMigrationError(error)) throw error || new Error('Impossible de créer le sondage');
           const { data: legacyPoll, error: legacyError } = await supabase.from('polls').insert({
             question: mainQuestion,
             description: [
@@ -2130,7 +2130,7 @@ export default function App() {
             multiple_choice: cleanQuestions.some((q) => q.multiple_choice),
             created_by: createdBy,
           }).select().single();
-          if (legacyError || !legacyPoll) throw legacyError || new Error('Impossible de crÃ©er le sondage');
+          if (legacyError || !legacyPoll) throw legacyError || new Error('Impossible de créer le sondage');
           pollId = legacyPoll.id;
         } else {
           pollId = np.id;
@@ -2157,7 +2157,7 @@ export default function App() {
       const { data: pvData } = await supabase.from('poll_votes').select('*');
       if (pvData) setPollVotes(pvData as PollVote[]);
       resetPollForm();
-      alert(editingPollId ? 'âœ… Sondage modifiÃ©' : 'âœ… Sondage crÃ©Ã© et envoyÃ©');
+      alert(editingPollId ? '✅ Sondage modifié' : '✅ Sondage créé et envoyé');
     } catch (e: any) { console.error(e); alert('Erreur : ' + (e?.message || 'inconnue')); }
     finally { setSavingPoll(false); }
   }
@@ -2176,7 +2176,7 @@ export default function App() {
   }
 
   async function votePoll(pollId: string, optionIds: string[], voterUserId: string | null, voterPlayerId: string | null, voterLabel: string) {
-    // Supprimer anciens votes du mÃªme voter
+    // Supprimer anciens votes du même voter
     if (voterUserId) await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('voter_user_id', voterUserId);
     if (voterPlayerId) await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('voter_player_id', voterPlayerId);
     const rows = optionIds.map((option_id) => ({
@@ -2241,7 +2241,7 @@ export default function App() {
     return polls.filter((p) => p.team_ids.length === 0 || p.team_ids.some((tid) => playerTeamIds.includes(tid)));
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ HELPERS FORMULAIRES D'Ã‰VÃ‰NEMENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ────────────── HELPERS FORMULAIRES D'ÉVÉNEMENTS ──────────────
   function getQuestionsForEvent(eventId: string): EventFormQuestion[] {
     return eventFormQuestions.filter((q) => q.event_id === eventId).sort((a, b) => a.display_order - b.display_order);
   }
@@ -2293,7 +2293,7 @@ export default function App() {
       if (error) throw error;
       setEventFormQuestions((p) => [...p.filter((q) => q.event_id !== eventId), ...((data || []) as EventFormQuestion[])]);
       setEditingEventFormId(''); setDraftFormQuestions([]);
-      alert('âœ… Formulaire enregistrÃ©');
+      alert('✅ Formulaire enregistré');
     } catch (e: any) { console.error(e); alert('Erreur : ' + (e?.message || 'inconnue')); }
     finally { setSavingEventForm(false); }
   }
@@ -2329,10 +2329,10 @@ export default function App() {
   function getWeekdayLabel(w: number) {
     return ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][w] || '-';
   }
-  function getTeamName(teamId: string) { return teams.find((t) => t.id === teamId)?.name || 'Ã‰quipe inconnue'; }
+  function getTeamName(teamId: string) { return teams.find((t) => t.id === teamId)?.name || 'Équipe inconnue'; }
   function getTeamCategory(teamId: string) {
     const t = teams.find((x) => x.id === teamId);
-    return t?.category || t?.name || 'Sans catÃ©gorie';
+    return t?.category || t?.name || 'Sans catégorie';
   }
   function getPlayersForTeam(teamId: string) { return players.filter((p) => p.team_id === teamId); }
   function getSeasonAssignment(playerId: string, seasonId = ''): PlayerSeasonAssignment | null {
@@ -2410,7 +2410,7 @@ export default function App() {
     const test = new Date(date); test.setHours(0, 0, 0, 0);
     return test >= today;
   }
-  // Filtre par saison : retourne les bornes de la saison sÃ©lectionnÃ©e
+  // Filtre par saison : retourne les bornes de la saison sélectionnée
   function getSeasonBounds(seasonId: string): { start: Date | null; end: Date | null } {
     if (!seasonId) return { start: null, end: null };
     const s = seasons.find((x) => x.id === seasonId);
@@ -2516,17 +2516,17 @@ export default function App() {
       ? squadIds.map((id) => players.find((p) => p.id === id)).filter(Boolean) as Player[]
       : getPlayersForTeam(match.team_id || '');
     const groups = [
-      { key: 'present', label: 'PrÃ©sents', bg: '#dcfce7', color: '#166534', list: displayPlayers.filter((p) => getMatchAttendanceStatus(match.id, p.id) === 'present') },
+      { key: 'present', label: 'Présents', bg: '#dcfce7', color: '#166534', list: displayPlayers.filter((p) => getMatchAttendanceStatus(match.id, p.id) === 'present') },
       { key: 'absent', label: 'Absents', bg: '#fee2e2', color: '#991b1b', list: displayPlayers.filter((p) => getMatchAttendanceStatus(match.id, p.id) === 'absent') },
-      { key: 'unknown', label: 'Sans rÃ©ponse', bg: '#f1f5f9', color: '#475569', list: displayPlayers.filter((p) => getMatchAttendanceStatus(match.id, p.id) === 'unknown') },
-      { key: 'squad', label: 'ConvoquÃ©s', bg: '#dbeafe', color: '#1e40af', list: squadDefined ? displayPlayers : [] },
+      { key: 'unknown', label: 'Sans réponse', bg: '#f1f5f9', color: '#475569', list: displayPlayers.filter((p) => getMatchAttendanceStatus(match.id, p.id) === 'unknown') },
+      { key: 'squad', label: 'Convoqués', bg: '#dbeafe', color: '#1e40af', list: squadDefined ? displayPlayers : [] },
     ];
     return (
       <div style={{ ...styles.panelCard, marginBottom: 20, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
-        <h4 style={{ margin: '0 0 12px 0', color: '#1e40af' }}>PrÃ©sences du match</h4>
+        <h4 style={{ margin: '0 0 12px 0', color: '#1e40af' }}>Présences du match</h4>
         {!squadDefined && (
           <div style={{ marginBottom: 10, padding: '8px 10px', borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: 12, fontWeight: 700 }}>
-            Convocation pas encore dÃ©finie : la liste affiche les joueurs de l'Ã©quipe.
+            Convocation pas encore définie : la liste affiche les joueurs de l'équipe.
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10 }}>
@@ -2562,24 +2562,24 @@ export default function App() {
     return users.filter((u) => (u.role === 'parent' || u.role === 'player') && ids.includes(u.id));
   }
   /**
-   * VisibilitÃ© des stats individuelles dans la vue "Ã‰quipe" :
+   * Visibilité des stats individuelles dans la vue "Équipe" :
    * - Mes propres enfants : TOUJOURS visibles (le parent voit ses enfants)
-   * - Les autres : JAMAIS visibles cÃ´tÃ© parent (carte sans stats/grade/OVR)
-   * - Si l'Ã©quipe a stats_hidden_for_parents = true : mÃªme mes enfants sont masquÃ©s
-   *   (le coach a dÃ©cidÃ© que personne ne voit les stats de cette Ã©quipe)
-   * - Coach et admin voient TOUJOURS tout (cette fonction n'est pas utilisÃ©e par eux)
+   * - Les autres : JAMAIS visibles côté parent (carte sans stats/grade/OVR)
+   * - Si l'équipe a stats_hidden_for_parents = true : même mes enfants sont masqués
+   *   (le coach a décidé que personne ne voit les stats de cette équipe)
+   * - Coach et admin voient TOUJOURS tout (cette fonction n'est pas utilisée par eux)
    */
   function isPlayerStatsVisibleForParent(player: Player, isMyChild: boolean, seasonId = ''): boolean {
     const team = teams.find((t) => t.id === getPlayerTeamIdForSeason(player, seasonId));
     const teamHidden = team?.stats_hidden_for_parents === true;
-    if (teamHidden) return false; // Ã©quipe verrouillÃ©e par le coach
+    if (teamHidden) return false; // équipe verrouillée par le coach
     return isMyChild; // sinon, visible uniquement pour mon propre enfant
   }
   /**
-   * Construit la liste de donnÃ©es nÃ©cessaires pour les cartes FIFA d'une Ã©quipe,
-   * dans l'ordre tel qu'affichÃ© Ã  l'Ã©cran (par nÂ° de maillot puis nom).
-   * `forParent` = true â†’ applique la rÃ¨gle de visibilitÃ© parent.
-   * `forParent` = false â†’ coach/admin â†’ tout est visible.
+   * Construit la liste de données nécessaires pour les cartes FIFA d'une équipe,
+   * dans l'ordre tel qu'affiché à l'écran (par n° de maillot puis nom).
+   * `forParent` = true → applique la règle de visibilité parent.
+   * `forParent` = false → coach/admin → tout est visible.
    */
   function buildFifaCardsForTeam(teamId: string, forParent: boolean, seasonId: string = '') {
     const tps = getPlayersForTeamSeason(teamId, seasonId);
@@ -2631,7 +2631,7 @@ export default function App() {
     const current = matchSquad[matchId] || [];
     const inSquad = current.includes(playerId);
 
-    // Mettre Ã  jour le state local immÃ©diatement
+    // Mettre à jour le state local immédiatement
     setSquadInitialized((p) => ({ ...p, [matchId]: true }));
     if (inSquad) {
       setMatchSquad((prev) => ({ ...prev, [matchId]: current.filter((id) => id !== playerId) }));
@@ -2639,7 +2639,7 @@ export default function App() {
     } else {
       setMatchSquad((prev) => ({ ...prev, [matchId]: [...current, playerId] }));
       await supabase.from('match_squads').upsert({ match_id: matchId, player_id: playerId }, { onConflict: 'match_id,player_id' });
-      // Initialiser la prÃ©sence Ã  "unknown" si pas encore dÃ©finie
+      // Initialiser la présence à "unknown" si pas encore définie
       const existingAtt = matchAttendance.find((a) => a.match_id === matchId && a.player_id === playerId);
       if (!existingAtt) {
         await supabase.from('match_attendance').upsert({ match_id: matchId, player_id: playerId, status: 'unknown' }, { onConflict: 'match_id,player_id' });
@@ -2691,7 +2691,7 @@ export default function App() {
           });
         }
       }
-      if (playersToNotify.length === 0) { alert('Aucun parent avec email trouvÃ© pour cette convocation'); return; }
+      if (playersToNotify.length === 0) { alert('Aucun parent avec email trouvé pour cette convocation'); return; }
       const { data, error } = await supabase.functions.invoke('send-convocation', {
         body: {
           players: playersToNotify,
@@ -2700,7 +2700,7 @@ export default function App() {
         },
       });
       if (error) throw error;
-      alert(`âœ… ${data?.sent || 0} email(s) envoyÃ©(s)${data?.failed > 0 ? `, ${data.failed} Ã©chec(s)` : ''}`);
+      alert(`✅ ${data?.sent || 0} email(s) envoyé(s)${data?.failed > 0 ? `, ${data.failed} échec(s)` : ''}`);
     } catch (e) { console.error(e); alert("Erreur lors de l'envoi des emails"); }
     finally { setSendingConvocations(false); }
   }
@@ -2717,7 +2717,7 @@ export default function App() {
       });
       const recipients = users.filter((u) => u.role === 'parent' && allParentIds.has(u.id) && u.email);
       if (recipients.length === 0) {
-        alert('Aucun parent avec email trouvÃ© pour cette Ã©quipe.');
+        alert('Aucun parent avec email trouvé pour cette équipe.');
         return;
       }
       const { data, error } = await supabase.functions.invoke('send-training-reminder', {
@@ -2727,7 +2727,7 @@ export default function App() {
             name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
           })),
           training: {
-            title: template.title || 'EntraÃ®nement',
+            title: template.title || 'Entraînement',
             date,
             startTime: template.start_time,
             endTime: template.end_time,
@@ -2739,7 +2739,7 @@ export default function App() {
         },
       });
       if (error) throw error;
-      alert(`âœ… Rappel envoyÃ© Ã  ${data?.sent || recipients.length} parent(s) !`);
+      alert(`✅ Rappel envoyé à ${data?.sent || recipients.length} parent(s) !`);
     } catch (e) {
       console.error(e);
       alert("Erreur lors de l'envoi du rappel.");
@@ -2760,7 +2760,7 @@ export default function App() {
   async function cancelTraining(template: TrainingTemplate, date: string) {
     const existing = getTrainingCancellation(template.id, date);
     if (existing) {
-      if (!window.confirm(`Remettre l'entraÃ®nement du ${formatDate(date)} comme prÃ©vu ?`)) return;
+      if (!window.confirm(`Remettre l'entraînement du ${formatDate(date)} comme prévu ?`)) return;
       const { error } = await supabase.from('training_cancellations').delete().eq('id', existing.id);
       if (error) { alert("Erreur lors de la remise au planning"); return; }
       await loadData();
@@ -2768,7 +2768,7 @@ export default function App() {
     }
     const reason = window.prompt(`Raison de l'annulation du ${formatDate(date)} (optionnel)`, '');
     if (reason === null) return;
-    if (!window.confirm(`Annuler l'entraÃ®nement ${template.title || 'EntraÃ®nement'} du ${formatDate(date)} et prÃ©venir les parents par email ?`)) return;
+    if (!window.confirm(`Annuler l'entraînement ${template.title || 'Entraînement'} du ${formatDate(date)} et prévenir les parents par email ?`)) return;
     const key = `${template.id}-${date}`;
     setCancelingTrainingKey(key);
     try {
@@ -2788,7 +2788,7 @@ export default function App() {
             name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
           })),
           training: {
-            title: template.title || 'EntraÃ®nement',
+            title: template.title || 'Entraînement',
             date,
             startTime: template.start_time,
             endTime: template.end_time,
@@ -2806,7 +2806,7 @@ export default function App() {
               recipientEmail: u.email,
               recipientName: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
               senderName: 'Le Staff CA Gorcy',
-              message: `EntraÃ®nement annulÃ© : ${template.title || 'EntraÃ®nement'} du ${formatDate(date)} (${template.start_time}-${template.end_time}) Ã  ${template.location || '-'}.${reason.trim() ? ` Raison : ${reason.trim()}` : ''}`,
+              message: `Entraînement annulé : ${template.title || 'Entraînement'} du ${formatDate(date)} (${template.start_time}-${template.end_time}) à ${template.location || '-'}.${reason.trim() ? ` Raison : ${reason.trim()}` : ''}`,
               appUrl: appSettings.app_url,
             },
           }).catch(console.error)));
@@ -2814,18 +2814,18 @@ export default function App() {
       }
 
       await loadData();
-      alert(`âœ… EntraÃ®nement annulÃ©${recipients.length > 0 ? `, email envoyÃ© Ã  ${recipients.length} parent(s).` : '. Aucun parent avec email trouvÃ©.'}`);
+      alert(`✅ Entraînement annulé${recipients.length > 0 ? `, email envoyé à ${recipients.length} parent(s).` : '. Aucun parent avec email trouvé.'}`);
     } catch (e) {
       console.error(e);
-      alert("Erreur lors de l'annulation de l'entraÃ®nement.");
+      alert("Erreur lors de l'annulation de l'entraînement.");
     } finally {
       setCancelingTrainingKey('');
     }
   }
 
   async function addTrainingBreak() {
-    if (!newBreakTitle.trim() || !newBreakStart || !newBreakEnd) { alert('Titre, dÃ©but et fin obligatoires.'); return; }
-    if (newBreakEnd < newBreakStart) { alert('La date de fin doit Ãªtre aprÃ¨s la date de dÃ©but.'); return; }
+    if (!newBreakTitle.trim() || !newBreakStart || !newBreakEnd) { alert('Titre, début et fin obligatoires.'); return; }
+    if (newBreakEnd < newBreakStart) { alert('La date de fin doit être après la date de début.'); return; }
     const targetTeamId = isAdmin ? (newBreakTeamId || null) : (selectedCoachTeamId || null);
     const { error } = await supabase.from('training_breaks').insert({
       team_id: targetTeamId,
@@ -2834,25 +2834,25 @@ export default function App() {
       end_date: newBreakEnd,
       reason: newBreakReason.trim() || null,
     });
-    if (error) { alert("Erreur lors de l'ajout de la pÃ©riode."); return; }
+    if (error) { alert("Erreur lors de l'ajout de la période."); return; }
     setNewBreakTitle('Vacances'); setNewBreakStart(''); setNewBreakEnd(''); setNewBreakReason('');
     await loadData();
   }
 
   async function deleteTrainingBreak(id: string) {
-    if (!window.confirm('Supprimer cette pÃ©riode de vacances ?')) return;
+    if (!window.confirm('Supprimer cette période de vacances ?')) return;
     const { error } = await supabase.from('training_breaks').delete().eq('id', id);
     if (error) { alert('Erreur lors de la suppression.'); return; }
     await loadData();
   }
 
-  // â”€â”€ Actions â”€â”€
+  // ── Actions ──
   async function saveAttendance(templateId: string, playerId: string, trainingDate: string, status: 'present' | 'absent') {
     const { error } = await supabase.from('training_attendance').upsert(
       { training_template_id: templateId, player_id: playerId, training_date: trainingDate, status },
       { onConflict: 'training_template_id,player_id,training_date' }
     );
-    if (error) { alert("Erreur lors de l'enregistrement de la prÃ©sence"); return; }
+    if (error) { alert("Erreur lors de l'enregistrement de la présence"); return; }
     await loadData();
   }
 
@@ -2861,7 +2861,7 @@ export default function App() {
       { match_id: matchId, player_id: playerId, status },
       { onConflict: 'match_id,player_id' }
     );
-    if (error) { alert("Erreur lors de l'enregistrement de la prÃ©sence au match"); return; }
+    if (error) { alert("Erreur lors de l'enregistrement de la présence au match"); return; }
     await loadData();
   }
 
@@ -2874,7 +2874,7 @@ export default function App() {
       );
       if (error) { alert("Erreur lors de l'enregistrement des stats pour " + row.playerName); return; }
     }
-    // Mettre Ã  jour player_stats global (recalcul depuis match_player_stats)
+    // Mettre à jour player_stats global (recalcul depuis match_player_stats)
     for (const row of rows) {
       const { data: allMatchStats } = await supabase.from('match_player_stats').select('goals, assists, shots, saves').eq('player_id', row.playerId);
       if (!allMatchStats) continue;
@@ -2928,8 +2928,8 @@ export default function App() {
       }).eq('id', matchId);
       if (error) throw error;
       await loadData();
-      alert('RÃ©sultat enregistrÃ©');
-    } catch (e) { console.error(e); alert("Erreur lors de l'enregistrement du rÃ©sultat"); }
+      alert('Résultat enregistré');
+    } catch (e) { console.error(e); alert("Erreur lors de l'enregistrement du résultat"); }
     finally { setSavingMatchResult(false); }
   }
 
@@ -3535,17 +3535,17 @@ export default function App() {
       weekday: Number(newTrainingWeekday), start_time: newTrainingStart,
       end_time: newTrainingEnd, location: newTrainingLocation, active: true,
     });
-    if (error) { alert("Erreur lors de la crÃ©ation de l'entraÃ®nement"); return; }
-    setNewTrainingTitle('EntraÃ®nement'); setNewTrainingWeekday('3');
+    if (error) { alert("Erreur lors de la création de l'entraînement"); return; }
+    setNewTrainingTitle('Entraînement'); setNewTrainingWeekday('3');
     setNewTrainingStart('18:30'); setNewTrainingEnd('20:00');
     setNewTrainingLocation('Gymnase de Gorcy');
     setEditingTrainingTemplateId('');
     await loadData();
-    alert('EntraÃ®nement ajoutÃ©');
+    alert('Entraînement ajouté');
   }
 
   async function addMatch() {
-    if (!newMatchTeamId || !newMatchOpponent.trim() || !newMatchDate) { alert('Remplir Ã©quipe, adversaire et date'); return; }
+    if (!newMatchTeamId || !newMatchOpponent.trim() || !newMatchDate) { alert('Remplir équipe, adversaire et date'); return; }
     const detectedScore = getFinalScoreFromActions(newMatchFdmActions, newMatchHomeAway);
     const matchSupporterPayload: any = {
       fdm_url: newMatchFdmUrl.trim() || null,
@@ -3570,7 +3570,7 @@ export default function App() {
       setEditingMatchId('');
       setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary(''); setNewMatchFdmActions(''); setNewMatchFdmFileName('');
       await loadData();
-      alert('Match modifiÃ©');
+      alert('Match modifié');
     } else {
       let { data: newMatch, error } = await supabase.from('matches').insert({
         team_id: newMatchTeamId, opponent: newMatchOpponent.trim(),
@@ -3585,10 +3585,10 @@ export default function App() {
         newMatch = retry.data;
         error = retry.error;
       }
-      if (error) { alert("Erreur lors de la crÃ©ation du match"); return; }
+      if (error) { alert("Erreur lors de la création du match"); return; }
       setNewMatchOpponent(''); setNewMatchDate(''); setNewMatchLocation(''); setNewMatchHomeAway('home'); setNewMatchFdmUrl(''); setNewMatchSupporterSummary(''); setNewMatchFdmActions(''); setNewMatchFdmFileName('');
       await loadData();
-      // Notifier les coaches concernÃ©s par email
+      // Notifier les coaches concernés par email
       if (newMatch) {
         const teamCoaches = coachAccessList.filter((ca) => ca.team_id === newMatchTeamId && ca.first_name);
         const coachEmails: string[] = [];
@@ -3611,12 +3611,12 @@ export default function App() {
           }).catch(console.error);
         }
       }
-      alert('Match ajoutÃ©');
+      alert('Match ajouté');
     }
   }
 
   async function deleteMatch(match: MatchItem) {
-    if (!window.confirm(`Supprimer le match vs ${match.opponent} du ${formatDate(match.match_date)} ? Toutes les stats seront supprimÃ©es.`)) return;
+    if (!window.confirm(`Supprimer le match vs ${match.opponent} du ${formatDate(match.match_date)} ? Toutes les stats seront supprimées.`)) return;
     await supabase.from('match_player_stats').delete().eq('match_id', match.id);
     await supabase.from('match_attendance').delete().eq('match_id', match.id);
     await supabase.from('match_squads').delete().eq('match_id', match.id);
@@ -3631,7 +3631,7 @@ export default function App() {
       await supabase.from('player_stats').update({ goals: totalGoals, assists: totalAssists, saves: totalSaves, matches_played: allStats.length }).eq('player_id', pid);
     }
     await loadData();
-    alert('Match supprimÃ©');
+    alert('Match supprimé');
   }
 
   function startEditMatch(match: MatchItem, targetAdminTab = false) {
@@ -3672,7 +3672,7 @@ export default function App() {
 
   async function toggleTemplateActive(template: TrainingTemplate) {
     const { error } = await supabase.from('training_templates').update({ active: !template.active }).eq('id', template.id);
-    if (error) { alert('Erreur lors de la mise Ã  jour'); return; }
+    if (error) { alert('Erreur lors de la mise à jour'); return; }
     await loadData();
   }
 
@@ -3755,14 +3755,14 @@ export default function App() {
   }
 
   async function addSeason() {
-    if (!newSeasonName.trim() || !newSeasonStart || !newSeasonEnd) { alert('Remplir le nom, la date de dÃ©but et la date de fin'); return; }
+    if (!newSeasonName.trim() || !newSeasonStart || !newSeasonEnd) { alert('Remplir le nom, la date de début et la date de fin'); return; }
     setSavingSeason(true);
     try {
       const { error } = await supabase.from('seasons').insert({ name: newSeasonName.trim(), start_date: newSeasonStart, end_date: newSeasonEnd, team_id: newSeasonTeamId || null });
       if (error) throw error;
       await loadSeasons();
-      alert('Saison crÃ©Ã©e');
-    } catch { alert('Erreur lors de la crÃ©ation de la saison'); }
+      alert('Saison créée');
+    } catch { alert('Erreur lors de la création de la saison'); }
     finally { setSavingSeason(false); }
   }
 
@@ -3770,7 +3770,7 @@ export default function App() {
     const { data } = await supabase.from('seasons').select('*').order('start_date', { ascending: false });
     const list = data || [];
     setSeasons(list);
-    // Auto-sÃ©lectionner la saison courante pour les licences
+    // Auto-sélectionner la saison courante pour les licences
     const today = new Date().toISOString().slice(0, 10);
     const cur = list.find((s) => s.start_date <= today && s.end_date >= today) || list[0];
     if (cur) {
@@ -3804,7 +3804,7 @@ export default function App() {
       for (const [key, value] of Object.entries(appSettings)) {
         await supabase.from('settings').upsert({ id: key, value, updated_at: new Date().toISOString() }, { onConflict: 'id' });
       }
-      alert('âœ… ParamÃ¨tres enregistrÃ©s !');
+      alert('✅ Paramètres enregistrés !');
     } catch (e) { console.error(e); alert('Erreur lors de la sauvegarde'); }
     finally { setSavingSettings(false); }
   }
@@ -3828,7 +3828,7 @@ export default function App() {
   }
 
   async function resetTrainingAttendance(teamId: string) {
-    if (!window.confirm('RÃ©initialiser TOUTES les prÃ©sences entraÃ®nements de cette Ã©quipe ? Cette action est irrÃ©versible.')) return;
+    if (!window.confirm('Réinitialiser TOUTES les présences entraînements de cette équipe ? Cette action est irréversible.')) return;
     setResetingTraining(true);
     try {
       const templateIds = trainingTemplates.filter((t) => t.team_id === teamId).map((t) => t.id);
@@ -3837,8 +3837,8 @@ export default function App() {
         if (error) throw error;
       }
       await loadData();
-      alert('PrÃ©sences entraÃ®nements rÃ©initialisÃ©es.');
-    } catch { alert('Erreur lors de la rÃ©initialisation'); }
+      alert('Présences entraînements réinitialisées.');
+    } catch { alert('Erreur lors de la réinitialisation'); }
     finally { setResetingTraining(false); }
   }
 
@@ -3849,7 +3849,7 @@ export default function App() {
     const list = data || [];
     setConversations(list);
     // Init lastRead = updated_at de la conv pour les NOUVELLES convs (jamais vues).
-    // Tout nouveau message remontera updated_at au-dessus â†’ pastille.
+    // Tout nouveau message remontera updated_at au-dessus → pastille.
     updateMessageReadTimestamps((prev) => {
       const next = { ...prev };
       list.forEach((c) => { if (!next[c.id]) next[c.id] = c.updated_at; });
@@ -3883,7 +3883,7 @@ export default function App() {
   }
 
   async function ensureParentConversation(parentId: string) {
-    // Just load existing conversations â€” don't auto-create blank ones
+    // Just load existing conversations — don't auto-create blank ones
     await loadConversationsForParent(parentId);
   }
 
@@ -3949,7 +3949,7 @@ export default function App() {
         }
       } else {
         await loadConversationsForParent(selectedParentId);
-        // Envoyer email aux coachs de l'Ã©quipe
+        // Envoyer email aux coachs de l'équipe
         const conv = conversations.find((c) => c.id === convId);
         if (conv?.team_id) {
           const sender = users.find((u) => u.id === senderId);
@@ -3982,12 +3982,12 @@ export default function App() {
     setNewConvTeamId(''); setNewConvParentId(''); setNewConvIsGroup(false);
   }
 
-  // â”€â”€ Admin â€” gestion coaches â”€â”€
+  // ── Admin — gestion coaches ──
   async function addCoachAccess() {
-    if (!newCoachFirstName.trim() || !newCoachLastName.trim()) { alert('PrÃ©nom et nom obligatoires'); return; }
-    if (newCoachTeamIds.length === 0) { alert('SÃ©lectionne au moins une Ã©quipe'); return; }
-    if (!editingCoachId && !newCoachEmail.trim()) { alert('Email obligatoire pour crÃ©er un coach'); return; }
-    if (!editingCoachId && newCoachPassword.trim().length < 8) { alert('Mot de passe minimum 8 caractÃ¨res'); return; }
+    if (!newCoachFirstName.trim() || !newCoachLastName.trim()) { alert('Prénom et nom obligatoires'); return; }
+    if (newCoachTeamIds.length === 0) { alert('Sélectionne au moins une équipe'); return; }
+    if (!editingCoachId && !newCoachEmail.trim()) { alert('Email obligatoire pour créer un coach'); return; }
+    if (!editingCoachId && newCoachPassword.trim().length < 8) { alert('Mot de passe minimum 8 caractères'); return; }
     setSavingCoach(true);
     try {
       let coachId: string;
@@ -4002,24 +4002,24 @@ export default function App() {
         }).eq('id', coachId);
         await supabase.from('coach_teams').delete().eq('coach_id', coachId);
       } else {
-        // CrÃ©er le compte Supabase Auth via Admin API
+        // Créer le compte Supabase Auth via Admin API
         authId = await createAuthUser(newCoachEmail.trim(), newCoachPassword.trim());
 
-        // CrÃ©er le coach dans la table coaches
+        // Créer le coach dans la table coaches
         const { data: newCoach, error: ce } = await supabase.from('coaches').insert({
           first_name: newCoachFirstName.trim(),
           last_name: newCoachLastName.trim(),
           code: newCoachCode.trim() || null,
           auth_id: authId,
         }).select('id').single();
-        if (ce || !newCoach) throw ce || new Error('Impossible de crÃ©er le coach');
+        if (ce || !newCoach) throw ce || new Error('Impossible de créer le coach');
         coachId = newCoach.id;
 
-        // CrÃ©er le rÃ´le dans user_roles
+        // Créer le rôle dans user_roles
         await supabase.from('user_roles').insert({ auth_id: authId, role: 'coach', ref_id: coachId });
       }
 
-      // Assigner les Ã©quipes
+      // Assigner les équipes
       const rows = newCoachTeamIds.map((teamId) => ({ coach_id: coachId, team_id: teamId }));
       await supabase.from('coach_teams').insert(rows);
 
@@ -4028,7 +4028,7 @@ export default function App() {
       setNewCoachFirstName(''); setNewCoachLastName(''); setNewCoachTeamIds([]);
       setEditingCoachId('');
       await loadData();
-      alert(editingCoachId ? 'Coach mis Ã  jour !' : `Coach crÃ©Ã© ! Identifiants envoyÃ©s Ã  ${newCoachEmail.trim()}`);
+      alert(editingCoachId ? 'Coach mis à jour !' : `Coach créé ! Identifiants envoyés à ${newCoachEmail.trim()}`);
     } catch (e: any) { console.error(e); alert('Erreur : ' + (e.message || 'inconnue')); }
     finally { setSavingCoach(false); }
   }
@@ -4037,8 +4037,8 @@ export default function App() {
     const email = newAdminEmail.trim().toLowerCase();
     const password = newAdminPassword.trim();
     if (!email) { alert('Email admin obligatoire'); return; }
-    if (password.length < 8) { alert('Mot de passe admin minimum 8 caractÃ¨res'); return; }
-    if (!window.confirm(`CrÃ©er un accÃ¨s administrateur pour ${email} ?`)) return;
+    if (password.length < 8) { alert('Mot de passe admin minimum 8 caractères'); return; }
+    if (!window.confirm(`Créer un accès administrateur pour ${email} ?`)) return;
     setSavingAdminAccess(true);
     try {
       const authId = await createAuthUser(email, password);
@@ -4048,10 +4048,10 @@ export default function App() {
         const { error } = await supabase.from('user_roles').insert({ auth_id: authId, role: 'admin', ref_id: null });
         if (error) throw error;
       }
-      alert(`AccÃ¨s admin crÃ©Ã© pour ${email}`);
+      alert(`Accès admin créé pour ${email}`);
     } catch (e: any) {
       console.error(e);
-      alert('Erreur crÃ©ation admin : ' + (e?.message || 'inconnue'));
+      alert('Erreur création admin : ' + (e?.message || 'inconnue'));
     } finally {
       setSavingAdminAccess(false);
     }
@@ -4115,7 +4115,7 @@ export default function App() {
   }
 
   async function deleteCoachAccess(coachId: string, coachName: string) {
-    if (!window.confirm(`Supprimer le coach ${coachName} ? Son compte de connexion sera aussi supprimÃ©.`)) return;
+    if (!window.confirm(`Supprimer le coach ${coachName} ? Son compte de connexion sera aussi supprimé.`)) return;
     const { data: coach } = await supabase.from('coaches').select('id, auth_id').eq('id', coachId).maybeSingle();
     if (coach) {
       await supabase.from('coach_teams').delete().eq('coach_id', coach.id);
@@ -4135,7 +4135,7 @@ export default function App() {
     );
   }
 
-  // â”€â”€ Admin â€” joueur â”€â”€
+  // ── Admin — joueur ──
   function resetPlayerForm() {
     setEditingPlayerId(''); setPlayerFormFirstName(''); setPlayerFormLastName('');
     setPlayerFormTeamId(teams[0]?.id || ''); setPlayerFormBirthDate(''); setPlayerFormJerseyNumber('');
@@ -4155,7 +4155,7 @@ export default function App() {
     return String(error?.message || error?.details || '').toLowerCase().includes('gender');
   }
   async function savePlayer() {
-    if (!playerFormFirstName.trim() || !playerFormLastName.trim() || !playerFormTeamId) { alert('Remplir prÃ©nom, nom et Ã©quipe'); return; }
+    if (!playerFormFirstName.trim() || !playerFormLastName.trim() || !playerFormTeamId) { alert('Remplir prénom, nom et équipe'); return; }
     setSavingPlayer(true);
     try {
       if (editingPlayerId) {
@@ -4173,10 +4173,10 @@ export default function App() {
           error = retry.error;
         }
         if (error) throw error;
-        alert('Joueur modifiÃ©');
+        alert('Joueur modifié');
       } else {
         if (await playerAlreadyExists(playerFormFirstName, playerFormLastName, playerFormTeamId)) {
-          alert(`Le joueur ${playerFormFirstName.trim()} ${playerFormLastName.trim()} existe dÃ©jÃ  dans cette Ã©quipe.`); return;
+          alert(`Le joueur ${playerFormFirstName.trim()} ${playerFormLastName.trim()} existe déjà dans cette équipe.`); return;
         }
         const payload = {
           first_name: playerFormFirstName.trim(), last_name: playerFormLastName.trim(),
@@ -4190,9 +4190,9 @@ export default function App() {
           const { gender, ...payloadWithoutGender } = payload;
           res = await supabase.from('players').insert(payloadWithoutGender).select().single();
         }
-        if (res.error || !res.data) throw res.error || new Error('Impossible de crÃ©er le joueur');
+        if (res.error || !res.data) throw res.error || new Error('Impossible de créer le joueur');
         await supabase.from('player_stats').insert({ player_id: res.data.id, goals: 0, assists: 0, saves: 0, matches_played: 0 });
-        alert('Joueur ajoutÃ©');
+        alert('Joueur ajouté');
       }
       resetPlayerForm();
       await loadData();
@@ -4209,14 +4209,14 @@ export default function App() {
     await supabase.from('players').delete().eq('id', player.id);
     if (editingPlayerId === player.id) resetPlayerForm();
     await loadData();
-    alert('Joueur supprimÃ©');
+    alert('Joueur supprimé');
   }
 
   async function linkPlayerToParent() {
-    if (!selectedLinkParentId || !selectedLinkPlayerId) { alert('SÃ©lectionne un parent et un joueur'); return; }
-    if (parentLinks.some((l) => l.parent_id === selectedLinkParentId && l.player_id === selectedLinkPlayerId)) { alert('DÃ©jÃ  liÃ©'); return; }
+    if (!selectedLinkParentId || !selectedLinkPlayerId) { alert('Sélectionne un parent et un joueur'); return; }
+    if (parentLinks.some((l) => l.parent_id === selectedLinkParentId && l.player_id === selectedLinkPlayerId)) { alert('Déjà lié'); return; }
     const existingLinks = parentLinks.filter((l) => l.parent_id === selectedLinkParentId);
-    if (existingLinks.length >= 2) { alert('Un parent ne peut pas Ãªtre liÃ© Ã  plus de 2 enfants.'); return; }
+    if (existingLinks.length >= 2) { alert('Un parent ne peut pas être lié à plus de 2 enfants.'); return; }
     setLinkingPlayer(true);
     try {
       const { error } = await supabase.from('parent_player').insert({ parent_id: selectedLinkParentId, player_id: selectedLinkPlayerId });
@@ -4236,8 +4236,8 @@ export default function App() {
           },
         }).catch(console.error);
       }
-      alert('Lien ajoutÃ©');
-    } catch (e) { console.error(e); alert('Erreur lors de la crÃ©ation du lien'); }
+      alert('Lien ajouté');
+    } catch (e) { console.error(e); alert('Erreur lors de la création du lien'); }
     finally { setLinkingPlayer(false); }
   }
 
@@ -4249,8 +4249,8 @@ export default function App() {
   }
 
   async function saveManagedParent() {
-    if (!selectedManagedParentId) { alert('SÃ©lectionne un parent'); return; }
-    if (!managedParentFirstName.trim() || !managedParentLastName.trim()) { alert('Remplir le prÃ©nom et le nom'); return; }
+    if (!selectedManagedParentId) { alert('Sélectionne un parent'); return; }
+    if (!managedParentFirstName.trim() || !managedParentLastName.trim()) { alert('Remplir le prénom et le nom'); return; }
     if (managedParentPin && !/^\d{4}$/.test(managedParentPin)) { alert('Le code doit contenir 4 chiffres'); return; }
     setSavingManagedParent(true);
     try {
@@ -4260,8 +4260,8 @@ export default function App() {
       }).eq('id', selectedManagedParentId);
       if (error) throw error;
       await loadData();
-      alert('Parent mis Ã  jour');
-    } catch (e) { console.error(e); alert('Erreur lors de la mise Ã  jour'); }
+      alert('Parent mis à jour');
+    } catch (e) { console.error(e); alert('Erreur lors de la mise à jour'); }
     finally { setSavingManagedParent(false); }
   }
 
@@ -4274,11 +4274,11 @@ export default function App() {
     const trimmed = jerseyEditValue.trim();
     const jerseyNumber = trimmed ? Number(trimmed) : null;
     if (jerseyNumber !== null && (!Number.isInteger(jerseyNumber) || jerseyNumber < 1 || jerseyNumber > 99)) {
-      alert('NumÃ©ro de maillot entre 1 et 99.');
+      alert('Numéro de maillot entre 1 et 99.');
       return;
     }
     const { error } = await supabase.from('players').update({ jersey_number: jerseyNumber }).eq('id', playerId);
-    if (error) { alert('Erreur lors de la mise Ã  jour du numÃ©ro.'); return; }
+    if (error) { alert('Erreur lors de la mise à jour du numéro.'); return; }
     setPlayers((prev) => prev.map((p) => p.id === playerId ? { ...p, jersey_number: jerseyNumber } : p));
     setJerseyEditId(null);
     setJerseyEditValue('');
@@ -4301,7 +4301,7 @@ export default function App() {
     setPlayers((prev) => prev.map((p) => p.id === player.id ? { ...p, card_powers: next } : p));
   }
 
-  // â”€â”€ Helper : crÃ©er un compte Auth via Edge Function â”€â”€
+  // ── Helper : créer un compte Auth via Edge Function ──
   async function callEdgeFunction(body: object): Promise<any> {
     const session = (await supabase.auth.getSession()).data.session;
     const res = await fetch('https://zrkixsxexoyicmunzodx.supabase.co/functions/v1/create-auth-user', {
@@ -4345,24 +4345,24 @@ export default function App() {
       const childFullName = `${newChildFirstName.trim()} ${newChildLastName.trim()}`.trim();
 
       if (!parentEmail) { alert('Email parent obligatoire'); setCreatingChildAccount(false); return; }
-      if (!newParentPassword || newParentPassword.length < 8) { alert('Mot de passe parent minimum 8 caractÃ¨res'); setCreatingChildAccount(false); return; }
+      if (!newParentPassword || newParentPassword.length < 8) { alert('Mot de passe parent minimum 8 caractères'); setCreatingChildAccount(false); return; }
 
-      // VÃ©rifier si le parent existe dÃ©jÃ 
+      // Vérifier si le parent existe déjà
       const existing = await supabase.from('users').select('*').eq('email', parentEmail).eq('role', 'parent').maybeSingle();
       if (existing.data) {
         parentId = existing.data.id;
         await supabase.from('users').update({ first_name: newParentFirstName.trim(), last_name: newParentLastName.trim() }).eq('id', parentId);
       } else {
-        // CrÃ©er le compte Auth pour le parent
+        // Créer le compte Auth pour le parent
         const authUserId = await createAuthUser(parentEmail, newParentPassword.trim());
 
         const res = await supabase.from('users').insert({
           first_name: newParentFirstName.trim(), last_name: newParentLastName.trim(),
           email: parentEmail, role: 'parent', auth_id: authUserId,
         }).select().single();
-        if (res.error || !res.data) throw res.error || new Error('Impossible de crÃ©er le parent');
+        if (res.error || !res.data) throw res.error || new Error('Impossible de créer le parent');
         parentId = res.data.id;
-        // CrÃ©er le rÃ´le
+        // Créer le rôle
         await supabase.from('user_roles').insert({ auth_id: authUserId, role: 'parent', ref_id: parentId });
       }
       const childPayload = {
@@ -4376,7 +4376,7 @@ export default function App() {
         const { gender, ...childPayloadWithoutGender } = childPayload;
         playerRes = await supabase.from('players').insert(childPayloadWithoutGender).select().single();
       }
-      if (playerRes.error || !playerRes.data) throw playerRes.error || new Error("Impossible de crÃ©er l'enfant");
+      if (playerRes.error || !playerRes.data) throw playerRes.error || new Error("Impossible de créer l'enfant");
       const playerId = playerRes.data.id;
       await supabase.from('parent_player').insert({ parent_id: parentId, player_id: playerId });
       await supabase.from('player_stats').insert({ player_id: playerId, goals: 0, assists: 0, saves: 0, matches_played: 0 });
@@ -4388,17 +4388,17 @@ export default function App() {
       setNewChildGender('');
       setShowCreateChildForm(false);
       await loadData();
-      alert(`Compte parent crÃ©Ã© pour ${parentEmail}. Email de connexion envoyÃ©.`);
-    } catch (e) { console.error(e); alert("Erreur lors de la crÃ©ation du compte enfant"); }
+      alert(`Compte parent créé pour ${parentEmail}. Email de connexion envoyé.`);
+    } catch (e) { console.error(e); alert("Erreur lors de la création du compte enfant"); }
     finally { setCreatingChildAccount(false); }
   }
 
-  // â”€â”€ Suppression parent (admin) â”€â”€
+  // ── Suppression parent (admin) ──
   async function toggleParentAccess(parentId: string, currentActive: boolean) {
-    const action = currentActive ? 'dÃ©sactiver' : 'rÃ©activer';
-    if (!window.confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} l'accÃ¨s de ce parent ?`)) return;
+    const action = currentActive ? 'désactiver' : 'réactiver';
+    if (!window.confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} l'accès de ce parent ?`)) return;
     await supabase.from('users').update({ is_active: !currentActive }).eq('id', parentId);
-    // Si on dÃ©sactive, supprimer la session Auth
+    // Si on désactive, supprimer la session Auth
     if (currentActive) {
       const user = users.find(u => u.id === parentId);
       if (user && (user as any).auth_id) {
@@ -4411,19 +4411,19 @@ export default function App() {
   async function deleteParent(parentId: string) {
     const par = users.find((u) => u.id === parentId);
     if (!par) return;
-    if (!window.confirm(`Supprimer le parent ${getUserName(par)} ? Les liens avec ses enfants seront aussi supprimÃ©s.`)) return;
+    if (!window.confirm(`Supprimer le parent ${getUserName(par)} ? Les liens avec ses enfants seront aussi supprimés.`)) return;
     await supabase.from('parent_player').delete().eq('parent_id', parentId);
     await supabase.from('conversations').delete().eq('parent_id', parentId);
     await supabase.from('users').delete().eq('id', parentId);
     await loadData();
-    alert('Parent supprimÃ©');
+    alert('Parent supprimé');
   }
 
-  // â”€â”€ CatÃ©gories "directes" (pas de parent) â”€â”€
+  // ── Catégories "directes" (pas de parent) ──
   async function deleteParentAndAuth(parentId: string) {
     const par = users.find((u) => u.id === parentId);
     if (!par) return;
-    if (!window.confirm(`Supprimer le parent ${getUserName(par)} ? Les liens avec ses enfants et son compte de connexion seront aussi supprimÃ©s.`)) return;
+    if (!window.confirm(`Supprimer le parent ${getUserName(par)} ? Les liens avec ses enfants et son compte de connexion seront aussi supprimés.`)) return;
     try {
       const authId = par.auth_id || null;
       await supabase.from('parent_player').delete().eq('parent_id', parentId);
@@ -4436,7 +4436,7 @@ export default function App() {
       await supabase.from('users').delete().eq('id', parentId);
       await loadData();
       setSelectedManagedParentId('');
-      alert(authId ? 'Parent supprimÃ©, compte Auth supprimÃ© aussi.' : 'Parent supprimÃ©. Aucun compte Auth liÃ© trouvÃ©.');
+      alert(authId ? 'Parent supprimé, compte Auth supprimé aussi.' : 'Parent supprimé. Aucun compte Auth lié trouvé.');
     } catch (e: any) {
       console.error(e);
       alert(`Erreur lors de la suppression : ${e?.message || 'inconnue'}`);
@@ -4463,7 +4463,7 @@ export default function App() {
     });
   }
 
-  // VÃ©rifier doublon joueur
+  // Vérifier doublon joueur
   async function playerAlreadyExists(firstName: string, lastName: string, teamId: string): Promise<boolean> {
     const { data } = await supabase.from('players')
       .select('id')
@@ -4473,18 +4473,18 @@ export default function App() {
     return (data || []).length > 0;
   }
 
-  // GÃ©nÃ©rer un code PIN unique (pas dÃ©jÃ  utilisÃ©)
+  // Générer un code PIN unique (pas déjà utilisé)
   async function generateUniquePin(): Promise<string> {
     for (let i = 0; i < 20; i++) {
       const pin = String(Math.floor(1000 + Math.random() * 9000));
       const { data } = await supabase.from('users').select('id').eq('parent_pin', pin).maybeSingle();
       if (!data) return pin;
     }
-    // fallback : gÃ©nÃ©rer un pin Ã  6 chiffres si vraiment pas de place
+    // fallback : générer un pin à 6 chiffres si vraiment pas de place
     return String(Math.floor(100000 + Math.random() * 900000));
   }
 
-  // RÃ©soudre l'enfant (existant ou nouveau) â†’ retourne { playerId, playerName }
+  // Résoudre l'enfant (existant ou nouveau) → retourne { playerId, playerName }
   async function resolveChild(
     mode: 'existing' | 'new',
     existingId: string,
@@ -4496,7 +4496,7 @@ export default function App() {
     if (mode === 'existing') {
       if (!existingId) return null;
       const p = players.find((x) => x.id === existingId);
-      // Mettre Ã  jour la date de naissance si fournie et absente
+      // Mettre à jour la date de naissance si fournie et absente
       if (p && birthDate && !p.birth_date) {
         await supabase.from('players').update({ birth_date: birthDate }).eq('id', existingId);
       }
@@ -4504,19 +4504,19 @@ export default function App() {
     }
     if (!firstName.trim() || !lastName.trim() || !teamId) return null;
     if (await playerAlreadyExists(firstName, lastName, teamId)) {
-      throw new Error(`Le joueur ${firstName.trim()} ${lastName.trim()} existe dÃ©jÃ  dans cette Ã©quipe.`);
+      throw new Error(`Le joueur ${firstName.trim()} ${lastName.trim()} existe déjà dans cette équipe.`);
     }
     const { data: np, error } = await supabase.from('players').insert({
       first_name: firstName.trim(), last_name: lastName.trim(),
       team_id: teamId, birth_date: birthDate || null,
     }).select().single();
-    if (error || !np) throw error || new Error('Impossible de crÃ©er le joueur');
+    if (error || !np) throw error || new Error('Impossible de créer le joueur');
     await supabase.from('player_stats').insert({ player_id: np.id, goals: 0, assists: 0, saves: 0, matches_played: 0 });
     return { playerId: np.id, playerName: `${firstName.trim()} ${lastName.trim()}` };
   }
 
-  // â”€â”€ Inscription publique â€” crÃ©e une demande en attente â”€â”€
-  // Soumission directe avec linkedIds dÃ©jÃ  connus (Ã©vite race condition setState)
+  // ── Inscription publique — crée une demande en attente ──
+  // Soumission directe avec linkedIds déjà connus (évite race condition setState)
   async function submitWithLinked(linkedIds: Record<number, string>) {
     setRegError('');
     setRegSuccess('');
@@ -4547,7 +4547,7 @@ export default function App() {
       if (regErr) throw regErr;
       supabase.functions.invoke('send-registration-pending', { body: { email: regParentEmail.trim(), parentName: `${regParentFirstName.trim()} ${regParentLastName.trim()}`, childrenNames: [child1Name, child2Name].filter(Boolean).join(' et '), appUrl: appSettings.app_url } }).catch(console.error);
       notifyAdminsNewRegistration({ parentName: `${regParentFirstName.trim()} ${regParentLastName.trim()}`, parentEmail: regParentEmail.trim(), childrenNames: [child1Name, child2Name].filter(Boolean).join(' et '), appUrl: appSettings.app_url });
-      setRegSuccess("âœ… Demande envoyÃ©e ! Votre compte sera activÃ© aprÃ¨s validation par l'administrateur.");
+      setRegSuccess("✅ Demande envoyée ! Votre compte sera activé après validation par l'administrateur.");
       setRegParentFirstName(''); setRegParentLastName(''); setRegParentEmail('');
       setRegChildFirstName(''); setRegChildLastName(''); setRegChildTeamId(''); setRegChildBirthDate('');
       setRegChildMode('existing'); setRegChildExistingId('');
@@ -4560,7 +4560,7 @@ export default function App() {
     finally { setRegistering(false); }
   }
 
-  // DÃ©tection joueur similaire (Levenshtein simplifiÃ©)
+  // Détection joueur similaire (Levenshtein simplifié)
   function stringSimilar(a: string, b: string): boolean {
     a = a.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     b = b.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -4583,19 +4583,19 @@ export default function App() {
     setRegError('');
     setRegSuccess('');
     setSimilarPlayers([]);
-    if (!regParentFirstName.trim() || !regParentLastName.trim()) { setRegError('PrÃ©nom et nom du parent obligatoires.'); return; }
+    if (!regParentFirstName.trim() || !regParentLastName.trim()) { setRegError('Prénom et nom du parent obligatoires.'); return; }
     if (!regParentEmail.trim()) { setRegError("L'email est obligatoire."); return; }
-    if (regParentPassword.trim().length < 8) { setRegError('Le mot de passe doit faire au moins 8 caractÃ¨res.'); return; }
+    if (regParentPassword.trim().length < 8) { setRegError('Le mot de passe doit faire au moins 8 caractères.'); return; }
     // Validation enfant 1
-    if (regChildMode === 'existing' && !regChildExistingId) { setRegError("SÃ©lectionne un joueur pour l'enfant 1 ou choisis 'Nouveau joueur'."); return; }
-    if (regChildMode === 'new' && (!regChildFirstName.trim() || !regChildLastName.trim() || !regChildTeamId)) { setRegError("Informations de l'enfant 1 incomplÃ¨tes (prÃ©nom, nom, Ã©quipe)."); return; }
+    if (regChildMode === 'existing' && !regChildExistingId) { setRegError("Sélectionne un joueur pour l'enfant 1 ou choisis 'Nouveau joueur'."); return; }
+    if (regChildMode === 'new' && (!regChildFirstName.trim() || !regChildLastName.trim() || !regChildTeamId)) { setRegError("Informations de l'enfant 1 incomplètes (prénom, nom, équipe)."); return; }
     // Validation enfant 2
     if (regHasSecondChild) {
-      if (regChild2Mode === 'existing' && !regChild2ExistingId) { setRegError("SÃ©lectionne un joueur pour l'enfant 2 ou choisis 'Nouveau joueur'."); return; }
-      if (regChild2Mode === 'new' && (!regChild2FirstName.trim() || !regChild2LastName.trim() || !regChild2TeamId)) { setRegError("Informations de l'enfant 2 incomplÃ¨tes."); return; }
+      if (regChild2Mode === 'existing' && !regChild2ExistingId) { setRegError("Sélectionne un joueur pour l'enfant 2 ou choisis 'Nouveau joueur'."); return; }
+      if (regChild2Mode === 'new' && (!regChild2FirstName.trim() || !regChild2LastName.trim() || !regChild2TeamId)) { setRegError("Informations de l'enfant 2 incomplètes."); return; }
     }
 
-    // DÃ©tecter joueurs similaires (seulement en mode 'new' et pas encore traitÃ©)
+    // Détecter joueurs similaires (seulement en mode 'new' et pas encore traité)
     const sim1 = regChildMode === 'new' && !regChildLinked && !regLinkedPlayerIds[1] ? findSimilarPlayers(regChildFirstName.trim(), regChildLastName.trim()) : [];
     const sim2 = regHasSecondChild && regChild2Mode === 'new' && !regChild2Linked && !regLinkedPlayerIds[2] ? findSimilarPlayers(regChild2FirstName.trim(), regChild2LastName.trim()) : [];
     const newSimilar = [];
@@ -4603,12 +4603,12 @@ export default function App() {
     if (sim2.length > 0) newSimilar.push({ child: 2 as 1|2, players: sim2 });
     if (newSimilar.length > 0) {
       setSimilarPlayers(newSimilar);
-      setRegError('âš ï¸ Des joueurs similaires ont Ã©tÃ© trouvÃ©s. VÃ©rifiez ci-dessous puis confirmez ou modifiez.');
+      setRegError('⚠️ Des joueurs similaires ont été trouvés. Vérifiez ci-dessous puis confirmez ou modifiez.');
       return;
     }
     setRegistering(true);
     try {
-      // RÃ©cupÃ©rer infos enfants (toujours nouveau joueur)
+      // Récupérer infos enfants (toujours nouveau joueur)
       const child1Name = `${regChildFirstName.trim()} ${regChildLastName.trim()}`;
       const child1TeamId = regChildTeamId;
       const child2Name = regHasSecondChild ? `${regChild2FirstName.trim()} ${regChild2LastName.trim()}` : '';
@@ -4650,7 +4650,7 @@ export default function App() {
         },
       }).catch(console.error);
 
-      // Email Ã  l'admin : nouvelle inscription Ã  valider
+      // Email à l'admin : nouvelle inscription à valider
       notifyAdminsNewRegistration({
         parentName: `${regParentFirstName.trim()} ${regParentLastName.trim()}`,
         parentEmail: regParentEmail.trim(),
@@ -4658,7 +4658,7 @@ export default function App() {
         appUrl: appSettings.app_url,
       });
 
-      setRegSuccess('âœ… Demande envoyÃ©e ! Votre compte sera activÃ© aprÃ¨s validation par l\'administrateur. Vous pourrez alors vous connecter avec votre email et mot de passe.');
+      setRegSuccess('✅ Demande envoyée ! Votre compte sera activé après validation par l\'administrateur. Vous pourrez alors vous connecter avec votre email et mot de passe.');
       setRegParentFirstName(''); setRegParentLastName(''); setRegParentEmail('');
       setRegChildFirstName(''); setRegChildLastName(''); setRegChildTeamId(''); setRegChildBirthDate('');
       setRegChildMode('existing'); setRegChildExistingId('');
@@ -4674,18 +4674,18 @@ export default function App() {
       setRegLinkedPlayerIds({});
     } catch (e: any) {
       console.error(e);
-      setRegError(e?.message || "Erreur lors de l'inscription. Veuillez rÃ©essayer.");
+      setRegError(e?.message || "Erreur lors de l'inscription. Veuillez réessayer.");
     } finally { setRegistering(false); }
   }
 
-  // â”€â”€ Inscription directe joueur (loisir/senior) â€” en attente de validation â”€â”€
+  // ── Inscription directe joueur (loisir/senior) — en attente de validation ──
   async function handleDirectRegister() {
     setRegError('');
     setRegSuccess('');
     const selectedDirectTeamIds = getSelectedDirectTeamIds();
     if (!regDirectFirstName.trim() || !regDirectLastName.trim() || selectedDirectTeamIds.length === 0) { setRegError('Tous les champs sont obligatoires.'); return; }
     if (!regDirectEmail.trim()) { setRegError('L\'email est obligatoire.'); return; }
-    if (!regDirectPassword || regDirectPassword.length < 8) { setRegError('Le mot de passe doit faire au moins 8 caractÃ¨res.'); return; }
+    if (!regDirectPassword || regDirectPassword.length < 8) { setRegError('Le mot de passe doit faire au moins 8 caractères.'); return; }
     setRegistering(true);
     try {
       const payload: any = {
@@ -4737,9 +4737,9 @@ export default function App() {
         appUrl: appSettings.app_url,
       });
 
-      setRegSuccess('âœ… Votre demande a bien Ã©tÃ© envoyÃ©e ! Vous recevrez un email dÃ¨s que votre accÃ¨s sera validÃ© par l\'administrateur.');
+      setRegSuccess('✅ Votre demande a bien été envoyée ! Vous recevrez un email dès que votre accès sera validé par l\'administrateur.');
       setRegDirectFirstName(''); setRegDirectLastName(''); setRegDirectTeamId(''); setRegDirectTeamIds([]); setRegDirectBirthDate(''); setRegDirectEmail(''); setRegDirectPassword('');
-    } catch (e: any) { console.error(e); setRegError(e?.message || "Erreur lors de l'inscription. Veuillez rÃ©essayer."); }
+    } catch (e: any) { console.error(e); setRegError(e?.message || "Erreur lors de l'inscription. Veuillez réessayer."); }
     finally { setRegistering(false); }
   }
 
@@ -4748,23 +4748,23 @@ export default function App() {
     setRegSuccess('');
     const child1Existing = players.find((p) => p.id === regChildExistingId);
     const child2Existing = players.find((p) => p.id === regChild2ExistingId);
-    if (!regParentFirstName.trim() || !regParentLastName.trim()) { setRegError('PrÃ©nom et nom obligatoires.'); return; }
+    if (!regParentFirstName.trim() || !regParentLastName.trim()) { setRegError('Prénom et nom obligatoires.'); return; }
     if (!regParentEmail.trim()) { setRegError("L'email est obligatoire."); return; }
-    if (regParentPassword.trim().length < 8) { setRegError('Le mot de passe doit faire au moins 8 caractÃ¨res.'); return; }
+    if (regParentPassword.trim().length < 8) { setRegError('Le mot de passe doit faire au moins 8 caractères.'); return; }
     if (!regAdultIsPlayer && !regHasFirstChild && !regHasSecondChild) { setRegError('Coche au moins une option : je suis joueur, un enfant ou deux enfants.'); return; }
     const selectedAdultTeamIds = getSelectedDirectTeamIds();
-    if (regAdultIsPlayer && selectedAdultTeamIds.length === 0) { setRegError('Choisis au moins une catÃ©gorie du joueur adulte.'); return; }
+    if (regAdultIsPlayer && selectedAdultTeamIds.length === 0) { setRegError('Choisis au moins une catégorie du joueur adulte.'); return; }
     if (regHasFirstChild) {
-      if (!regChildTeamId) { setRegError("Choisis la catÃ©gorie de l'enfant 1."); return; }
-      if (regChildMode === 'existing' && !regChildExistingId) { setRegError("SÃ©lectionne l'enfant 1 dans la liste ou coche \"Mon enfant n'est pas dans la liste\"."); return; }
-      if (regChildMode === 'existing' && child1Existing && !child1Existing.birth_date && !regChildBirthDate) { setRegError("La date de naissance de l'enfant 1 est obligatoire car elle n'est pas encore renseignÃ©e."); return; }
-      if (regChildMode === 'new' && (!regChildFirstName.trim() || !regChildLastName.trim() || !regChildBirthDate)) { setRegError("Informations de l'enfant 1 incomplÃ¨tes (prÃ©nom, nom, date de naissance)."); return; }
+      if (!regChildTeamId) { setRegError("Choisis la catégorie de l'enfant 1."); return; }
+      if (regChildMode === 'existing' && !regChildExistingId) { setRegError("Sélectionne l'enfant 1 dans la liste ou coche \"Mon enfant n'est pas dans la liste\"."); return; }
+      if (regChildMode === 'existing' && child1Existing && !child1Existing.birth_date && !regChildBirthDate) { setRegError("La date de naissance de l'enfant 1 est obligatoire car elle n'est pas encore renseignée."); return; }
+      if (regChildMode === 'new' && (!regChildFirstName.trim() || !regChildLastName.trim() || !regChildBirthDate)) { setRegError("Informations de l'enfant 1 incomplètes (prénom, nom, date de naissance)."); return; }
     }
     if (regHasSecondChild) {
-      if (!regChild2TeamId) { setRegError("Choisis la catÃ©gorie de l'enfant 2."); return; }
-      if (regChild2Mode === 'existing' && !regChild2ExistingId) { setRegError("SÃ©lectionne l'enfant 2 dans la liste ou coche \"Mon enfant n'est pas dans la liste\"."); return; }
-      if (regChild2Mode === 'existing' && child2Existing && !child2Existing.birth_date && !regChild2BirthDate) { setRegError("La date de naissance de l'enfant 2 est obligatoire car elle n'est pas encore renseignÃ©e."); return; }
-      if (regChild2Mode === 'new' && (!regChild2FirstName.trim() || !regChild2LastName.trim() || !regChild2BirthDate)) { setRegError("Informations de l'enfant 2 incomplÃ¨tes (prÃ©nom, nom, date de naissance)."); return; }
+      if (!regChild2TeamId) { setRegError("Choisis la catégorie de l'enfant 2."); return; }
+      if (regChild2Mode === 'existing' && !regChild2ExistingId) { setRegError("Sélectionne l'enfant 2 dans la liste ou coche \"Mon enfant n'est pas dans la liste\"."); return; }
+      if (regChild2Mode === 'existing' && child2Existing && !child2Existing.birth_date && !regChild2BirthDate) { setRegError("La date de naissance de l'enfant 2 est obligatoire car elle n'est pas encore renseignée."); return; }
+      if (regChild2Mode === 'new' && (!regChild2FirstName.trim() || !regChild2LastName.trim() || !regChild2BirthDate)) { setRegError("Informations de l'enfant 2 incomplètes (prénom, nom, date de naissance)."); return; }
     }
 
     setRegistering(true);
@@ -4843,22 +4843,22 @@ export default function App() {
       }).catch(console.error);
       notifyAdminsNewRegistration({ parentName, parentEmail: regParentEmail.trim(), childrenNames: peopleNames, appUrl: appSettings.app_url });
 
-      setRegSuccess("âœ… Demande envoyÃ©e ! Votre compte sera activÃ© aprÃ¨s validation par l'administrateur.");
+      setRegSuccess("✅ Demande envoyée ! Votre compte sera activé après validation par l'administrateur.");
       setRegParentFirstName(''); setRegParentLastName(''); setRegParentEmail(''); setRegParentPassword('');
       setRegAdultIsPlayer(false); setRegDirectTeamId(''); setRegDirectTeamIds([]); setRegDirectBirthDate('');
       setRegHasFirstChild(false); setRegChildMode('existing'); setRegChildExistingId(''); setRegChildFirstName(''); setRegChildLastName(''); setRegChildTeamId(''); setRegChildBirthDate('');
       setRegHasSecondChild(false); setRegChild2Mode('existing'); setRegChild2ExistingId(''); setRegChild2FirstName(''); setRegChild2LastName(''); setRegChild2TeamId(''); setRegChild2BirthDate('');
     } catch (e: any) {
       console.error(e);
-      setRegError(e?.message || "Erreur lors de l'inscription. Veuillez rÃ©essayer.");
+      setRegError(e?.message || "Erreur lors de l'inscription. Veuillez réessayer.");
     } finally { setRegistering(false); }
   }
 
-  // â”€â”€ Valider une inscription (admin) â”€â”€
+  // ── Valider une inscription (admin) ──
   async function approveRegistration(reg: Registration) {
     try {
       if (reg.type === 'parent') {
-        // CrÃ©er le compte Auth parent
+        // Créer le compte Auth parent
         let parentId = '';
         let authId: string | null = null;
 
@@ -4868,7 +4868,7 @@ export default function App() {
           if (existingAny) {
             parentId = existingAny.id;
             authId = existingAny.auth_id || null;
-            // Si c'Ã©tait un user 'player' qui demande parent â†’ ajouter le rÃ´le parent
+            // Si c'était un user 'player' qui demande parent → ajouter le rôle parent
             const currentExtras: string[] = ((existingAny as any).roles_extra || []) as string[];
             if (existingAny.role !== 'parent' && !currentExtras.includes('parent')) {
               await supabase.from('users').update({
@@ -4887,7 +4887,7 @@ export default function App() {
           }
         }
         if (!parentId) {
-          // RÃ©cupÃ©rer le mot de passe stockÃ© dans la registration
+          // Récupérer le mot de passe stocké dans la registration
           const password = (reg as any).parent_password;
           if (!password) throw new Error('Mot de passe introuvable dans la demande');
 
@@ -4900,7 +4900,7 @@ export default function App() {
           parentId = newPar.id;
           await supabase.from('user_roles').insert({ auth_id: authId, role: 'parent', ref_id: parentId });
         }
-        // RÃ©soudre enfant 1
+        // Résoudre enfant 1
         const child1 = await resolveChild(
           reg.child1_mode as 'existing' | 'new',
           reg.child1_existing_id || '',
@@ -4913,7 +4913,7 @@ export default function App() {
           const already = parentLinks.some((l) => l.parent_id === parentId && l.player_id === child1.playerId);
           if (!already) await supabase.from('parent_player').insert({ parent_id: parentId, player_id: child1.playerId });
         }
-        // RÃ©soudre enfant 2
+        // Résoudre enfant 2
         if (reg.child2_mode) {
           const child2 = await resolveChild(
             reg.child2_mode as 'existing' | 'new',
@@ -4928,7 +4928,7 @@ export default function App() {
             if (!already2) await supabase.from('parent_player').insert({ parent_id: parentId, player_id: child2.playerId });
           }
         }
-        // Email de bienvenue (compte dÃ©jÃ  crÃ©Ã© avec leur propre mot de passe)
+        // Email de bienvenue (compte déjà créé avec leur propre mot de passe)
         if (reg.email) {
           const childrenNames = [reg.child1_name, reg.child2_name].filter(Boolean).join(' et ');
           supabase.functions.invoke('send-inscription-confirmation', {
@@ -4943,10 +4943,10 @@ export default function App() {
       } else {
         // Inscription directe (loisir/senior)
         const directTeamIds = [...new Set(((reg as any).direct_team_ids && Array.isArray((reg as any).direct_team_ids) ? (reg as any).direct_team_ids : [reg.child1_team_id]).filter(Boolean))] as string[];
-        if (directTeamIds.length === 0) throw new Error('Aucune catÃ©gorie sÃ©lectionnÃ©e pour cette inscription.');
+        if (directTeamIds.length === 0) throw new Error('Aucune catégorie sélectionnée pour cette inscription.');
         for (const teamId of directTeamIds) {
           if (await playerAlreadyExists(reg.child1_first_name || '', reg.child1_last_name || '', teamId)) {
-            alert(`Le joueur ${reg.child1_first_name} ${reg.child1_last_name} existe dÃ©jÃ  dans ${getTeamName(teamId)}.`); return;
+            alert(`Le joueur ${reg.child1_first_name} ${reg.child1_last_name} existe déjà dans ${getTeamName(teamId)}.`); return;
           }
         }
         const createdPlayers: Player[] = [];
@@ -4961,13 +4961,13 @@ export default function App() {
         }
         const mainPlayer = createdPlayers[0];
 
-        // Si email + password fournis : crÃ©er/lier un compte de connexion
+        // Si email + password fournis : créer/lier un compte de connexion
         const directPassword = (reg as any).direct_password as string | undefined;
         if (reg.email && directPassword) {
-          // VÃ©rifier si un user (parent ou autre) existe dÃ©jÃ  avec cet email
+          // Vérifier si un user (parent ou autre) existe déjà avec cet email
           const { data: existingUser } = await supabase.from('users').select('*').eq('email', reg.email).maybeSingle();
           if (existingUser) {
-            // Email dÃ©jÃ  utilisÃ© : on attache le profil joueur au user existant
+            // Email déjà utilisé : on attache le profil joueur au user existant
             const currentExtras: string[] = ((existingUser as any).roles_extra || []) as string[];
             const newExtras = currentExtras.includes('player') ? currentExtras : [...currentExtras, 'player'];
             await supabase.from('users').update({
@@ -4978,7 +4978,7 @@ export default function App() {
               const already = parentLinks.some((l) => l.parent_id === existingUser.id && l.player_id === player.id);
               if (!already) await supabase.from('parent_player').insert({ parent_id: existingUser.id, player_id: player.id });
             }
-            // S'assurer qu'un rÃ´le 'player' existe dans user_roles si auth_id prÃ©sent
+            // S'assurer qu'un rôle 'player' existe dans user_roles si auth_id présent
             if (existingUser.auth_id) {
               const { data: existingRoles } = await supabase.from('user_roles').select('*').eq('auth_id', existingUser.auth_id);
               const hasPlayerRoleRow = (existingRoles || []).some((r: any) => r.role === 'player');
@@ -4987,7 +4987,7 @@ export default function App() {
               }
             }
           } else {
-            // Email nouveau : crÃ©er un compte Auth + user
+            // Email nouveau : créer un compte Auth + user
             try {
               const authId = await createAuthUser(reg.email, directPassword);
               const { data: newUser, error: ue } = await supabase.from('users').insert({
@@ -5006,7 +5006,7 @@ export default function App() {
               }
             } catch (e: any) {
               console.warn('Auth creation failed for direct registration', e);
-              // On laisse le joueur exister mÃªme sans compte auth
+              // On laisse le joueur exister même sans compte auth
             }
           }
         }
@@ -5025,7 +5025,7 @@ export default function App() {
       }
       await supabase.from('registrations').update({ status: 'approved' }).eq('id', reg.id);
       await loadData();
-      alert('âœ… Inscription approuvÃ©e et email de bienvenue envoyÃ© !');
+      alert('✅ Inscription approuvée et email de bienvenue envoyé !');
     } catch (e: any) { console.error(e); alert('Erreur lors de la validation : ' + (e?.message || e)); }
   }
 
@@ -5036,7 +5036,7 @@ export default function App() {
   }
 
 
-  // â”€â”€ Computed for coach UI â”€â”€
+  // ── Computed for coach UI ──
   const parentUsers = useMemo(() => users.filter((u) => u.role === 'parent' || u.role === 'player'), [users]);
   const selectedCoachTemplate = visibleTemplates.find((t) => t.id === selectedTrainingTemplateId) || null;
   const coachTemplateDates = selectedCoachTemplate ? getNextTrainingsForTemplate(selectedCoachTemplate, 8, true).map((t) => t.date) : [];
@@ -5075,8 +5075,8 @@ export default function App() {
     if (player.gender === 'male' || player.gender === 'female') return player.gender;
     const team = teams.find((t) => t.id === player.team_id);
     const text = `${team?.name || ''} ${team?.category || ''}`.toLowerCase();
-    if (text.includes('fille') || text.includes('fÃ©min') || text.includes('feminin') || text.includes('female')) return 'female';
-    if (text.includes('garÃ§on') || text.includes('garcon') || text.includes('masculin') || text.includes('male')) return 'male';
+    if (text.includes('fille') || text.includes('fémin') || text.includes('feminin') || text.includes('female')) return 'female';
+    if (text.includes('garçon') || text.includes('garcon') || text.includes('masculin') || text.includes('male')) return 'male';
     return 'unknown';
   }
 
@@ -5109,18 +5109,18 @@ export default function App() {
   }
 
   async function transferSelectedPlayers() {
-    if (!promotionSourceTeamId || !promotionTargetTeamId) { alert('Choisir une catÃ©gorie de dÃ©part et une catÃ©gorie dâ€™arrivÃ©e'); return; }
-    if (promotionSourceTeamId === promotionTargetTeamId) { alert('Choisir deux catÃ©gories diffÃ©rentes'); return; }
-    if (promotionSelectedIds.length === 0) { alert('SÃ©lectionner au moins un joueur'); return; }
+    if (!promotionSourceTeamId || !promotionTargetTeamId) { alert('Choisir une catégorie de départ et une catégorie d’arrivée'); return; }
+    if (promotionSourceTeamId === promotionTargetTeamId) { alert('Choisir deux catégories différentes'); return; }
+    if (promotionSelectedIds.length === 0) { alert('Sélectionner au moins un joueur'); return; }
     const targetName = getTeamName(promotionTargetTeamId);
-    if (!window.confirm(`TransfÃ©rer ${promotionSelectedIds.length} joueur(s) vers ${targetName} ?`)) return;
+    if (!window.confirm(`Transférer ${promotionSelectedIds.length} joueur(s) vers ${targetName} ?`)) return;
     setPromotionSaving(true);
     try {
       const { error } = await supabase.from('players').update({ team_id: promotionTargetTeamId }).in('id', promotionSelectedIds);
       if (error) throw error;
       setPromotionSelectedIds([]);
       await loadData();
-      alert('Transfert terminÃ©');
+      alert('Transfert terminé');
     } catch (e) {
       console.error(e);
       alert('Erreur pendant le transfert');
@@ -5133,7 +5133,7 @@ export default function App() {
   const selectedTrainingAbsentCount = coachPlayersForSelectedTraining.filter((p) => selectedCoachTemplate && selectedTrainingDate && getAttendanceStatus(selectedCoachTemplate.id, p.id, selectedTrainingDate) === 'absent').length;
   const selectedTrainingUnknownCount = coachPlayersForSelectedTraining.filter((p) => selectedCoachTemplate && selectedTrainingDate && getAttendanceStatus(selectedCoachTemplate.id, p.id, selectedTrainingDate) === 'unknown').length;
 
-  // RÃ©sumÃ© des coaches existants
+  // Résumé des coaches existants
   const coachSummary = useMemo(() => {
     const map: Record<string, { teamIds: string[], firstName: string, lastName: string, id: string }> = {};
     coachAccessList.forEach((row) => {
@@ -5143,25 +5143,25 @@ export default function App() {
     return map;
   }, [coachAccessList]);
 
-  // â”€â”€ Parent â”€â”€
+  // ── Parent ──
   const linkedPlayerIds = parentLinks.filter((l) => l.parent_id === selectedParentId).map((l) => l.player_id).filter(Boolean) as string[];
   const parentPlayers = players.filter((p) => linkedPlayerIds.includes(p.id));
 
-  // â”€â”€ RENDER â”€â”€
+  // ── RENDER ──
   if (loading) {
     return (
       <div style={styles.page}>
         <div style={styles.loadingCard}>
           <div style={styles.loadingBadge}>CA Gorcy Handball</div>
           <h2 style={{ margin: '18px 0 8px 0' }}>Chargement...</h2>
-          <p style={{ margin: 0, color: '#5b6472' }}>{"RÃ©cupÃ©ration des donnÃ©es"}</p>
+          <p style={{ margin: 0, color: '#5b6472' }}>{"Récupération des données"}</p>
         </div>
       </div>
     );
   }
 
   if (!loggedIn) {
-    // â”€â”€â”€ PAGE D'INSCRIPTION â”€â”€â”€
+    // ─── PAGE D'INSCRIPTION ───
     if (showRegisterPage) {
       const directTeams = teams.filter((t) => isDirectCategory(t.id));
       const childTeams = teams.filter((t) => !isDirectCategory(t.id));
@@ -5171,7 +5171,7 @@ export default function App() {
             <div style={styles.topBanner}>
               <img src={CLUB_LOGO} alt="CA Gorcy Handball"
                 style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 10px auto', display: 'block', border: '3px solid rgba(255,255,255,0.3)' }} />
-              <h1 style={{ ...styles.appTitle, fontSize: 22 }}>Inscription â€” CA Gorcy Handball</h1>
+              <h1 style={{ ...styles.appTitle, fontSize: 22 }}>Inscription — CA Gorcy Handball</h1>
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
                 <HandLifeLogo variant="dark" size="sm" />
               </div>
@@ -5181,7 +5181,7 @@ export default function App() {
               <div style={{ marginTop: 24, padding: 20, background: '#dcfce7', borderRadius: 18, border: '1px solid #86efac' }}>
                 <p style={{ margin: 0, fontWeight: 800, color: '#166534', fontSize: 16 }}>{regSuccess}</p>
                 <button onClick={() => { setRegSuccess(''); setRegStep('parent'); setShowRegisterPage(false); }}
-                  style={{ ...styles.primaryButton, marginTop: 16 }}>Retour Ã  l'accueil</button>
+                  style={{ ...styles.primaryButton, marginTop: 16 }}>Retour à l'accueil</button>
               </div>
             ) : (
               <>
@@ -5191,21 +5191,21 @@ export default function App() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       <button onClick={() => { setRegStep('parent'); setRegError(''); }}
                         style={{ ...styles.roleButton, textAlign: 'left' }}>
-                        <div style={styles.roleEmoji}>ðŸ‘ª</div>
-                        <div style={styles.roleTitle}>Un enfant (U7 Ã  U18)</div>
-                        <div style={styles.roleText}>CrÃ©er un compte parent et lier votre/vos enfant(s) Ã  votre espace.</div>
+                        <div style={styles.roleEmoji}>👪</div>
+                        <div style={styles.roleTitle}>Un enfant (U7 à U18)</div>
+                        <div style={styles.roleText}>Créer un compte parent et lier votre/vos enfant(s) à votre espace.</div>
                       </button>
                       {directTeams.length > 0 && (
                         <button onClick={() => { const first = directTeams[0]?.id || ''; setRegStep('direct'); setRegDirectTeamId(first); setRegDirectTeamIds(first ? [first] : []); setRegError(''); }}
                           style={{ ...styles.roleButton, textAlign: 'left' }}>
-                          <div style={styles.roleEmoji}>ðŸ…</div>
+                          <div style={styles.roleEmoji}>🏅</div>
                           <div style={styles.roleTitle}>Loisirs / Senior</div>
                           <div style={styles.roleText}>Inscription directe en tant que joueur adulte ou loisir.</div>
                         </button>
                       )}
                     </div>
                     <button onClick={() => setShowRegisterPage(false)}
-                      style={{ ...styles.secondaryOutlineButton, marginTop: 16 }}>â† Retour</button>
+                      style={{ ...styles.secondaryOutlineButton, marginTop: 16 }}>← Retour</button>
                   </div>
                 )}
 
@@ -5220,15 +5220,15 @@ export default function App() {
                       <div style={{ ...styles.formCard, marginBottom: 16 }}>
                         <h4 style={{ margin: '0 0 12px 0', color: '#0A5FB5' }}>Informations du parent</h4>
                         <div style={styles.formGrid}>
-                          <div><label style={styles.inputLabel}>PrÃ©nom *</label><input value={regParentFirstName} onChange={(e) => setRegParentFirstName(e.target.value)} style={styles.input} placeholder="PrÃ©nom" /></div>
+                          <div><label style={styles.inputLabel}>Prénom *</label><input value={regParentFirstName} onChange={(e) => setRegParentFirstName(e.target.value)} style={styles.input} placeholder="Prénom" /></div>
                           <div><label style={styles.inputLabel}>Nom *</label><input value={regParentLastName} onChange={(e) => setRegParentLastName(e.target.value)} style={styles.input} placeholder="Nom" /></div>
                           <div style={{ gridColumn: '1/-1' }}><label style={styles.inputLabel}>Email * (pour se connecter)</label><input value={regParentEmail} onChange={(e) => setRegParentEmail(e.target.value)} style={styles.input} placeholder="email@exemple.com" type="email" /></div>
-                          <div style={{ gridColumn: '1/-1' }}><label style={styles.inputLabel}>Choisissez un mot de passe * (min. 8 caractÃ¨res)</label><input value={regParentPassword} onChange={(e) => setRegParentPassword(e.target.value)} style={styles.input} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" type="password" /></div>
+                          <div style={{ gridColumn: '1/-1' }}><label style={styles.inputLabel}>Choisissez un mot de passe * (min. 8 caractères)</label><input value={regParentPassword} onChange={(e) => setRegParentPassword(e.target.value)} style={styles.input} placeholder="••••••••" type="password" /></div>
                         </div>
                       </div>
 
                       <div style={{ ...styles.formCard, marginBottom: 16 }}>
-                        <h4 style={{ margin: '0 0 12px 0', color: '#0A5FB5' }}>Profils Ã  rattacher au compte</h4>
+                        <h4 style={{ margin: '0 0 12px 0', color: '#0A5FB5' }}>Profils à rattacher au compte</h4>
                         <div style={{ display: 'grid', gap: 10 }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 800, color: '#10233b' }}>
                             <input type="checkbox" checked={regAdultIsPlayer} onChange={(e) => setRegAdultIsPlayer(e.target.checked)} />
@@ -5250,10 +5250,10 @@ export default function App() {
                           <h4 style={{ margin: '0 0 12px 0', color: '#0A5FB5' }}>Mon profil joueur</h4>
                           <div style={styles.formGrid}>
                             <div><label style={styles.inputLabel}>Nom</label><input value={regParentLastName} onChange={(e) => setRegParentLastName(e.target.value)} style={styles.input} placeholder="Nom" /></div>
-                            <div><label style={styles.inputLabel}>PrÃ©nom</label><input value={regParentFirstName} onChange={(e) => setRegParentFirstName(e.target.value)} style={styles.input} placeholder="PrÃ©nom" /></div>
+                            <div><label style={styles.inputLabel}>Prénom</label><input value={regParentFirstName} onChange={(e) => setRegParentFirstName(e.target.value)} style={styles.input} placeholder="Prénom" /></div>
                             <div><label style={styles.inputLabel}>Date de naissance</label><input type="date" value={regDirectBirthDate} onChange={(e) => setRegDirectBirthDate(e.target.value)} style={styles.input} /></div>
                             <div>
-                              <label style={styles.inputLabel}>CatÃ©gories *</label>
+                              <label style={styles.inputLabel}>Catégories *</label>
                               <div style={{ display: 'grid', gap: 8 }}>
                                 {(directTeams.length > 0 ? directTeams : teams).map((t) => {
                                   const checked = regDirectTeamIds.includes(t.id) || (!regDirectTeamIds.length && regDirectTeamId === t.id);
@@ -5275,17 +5275,17 @@ export default function App() {
                           <h4 style={{ margin: '0 0 12px 0', color: '#0A5FB5' }}>Enfant 1</h4>
                           <div style={styles.formGrid}>
                             <div style={{ gridColumn: '1/-1' }}>
-                              <label style={styles.inputLabel}>CatÃ©gorie *</label>
+                              <label style={styles.inputLabel}>Catégorie *</label>
                               <select value={regChildTeamId} onChange={(e) => { setRegChildTeamId(e.target.value); setRegChildExistingId(''); setRegChildBirthDate(''); }} style={styles.select}>
-                                <option value="">-- Choisir la catÃ©gorie --</option>
+                                <option value="">-- Choisir la catégorie --</option>
                                 {childTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                               </select>
                             </div>
                             {regChildTeamId && regChildMode === 'existing' && (
                               <div style={{ gridColumn: '1/-1' }}>
-                                <label style={styles.inputLabel}>Enfant dÃ©jÃ  dans la liste *</label>
+                                <label style={styles.inputLabel}>Enfant déjà dans la liste *</label>
                                 <select value={regChildExistingId} onChange={(e) => { const p = players.find((x) => x.id === e.target.value); setRegChildExistingId(e.target.value); setRegChildBirthDate(p?.birth_date || ''); }} style={styles.select}>
-                                  <option value="">-- SÃ©lectionner l'enfant --</option>
+                                  <option value="">-- Sélectionner l'enfant --</option>
                                   {players.filter((p) => p.team_id === regChildTeamId).sort((a, b) => getPlayerName(a).localeCompare(getPlayerName(b), 'fr')).map((p) => (
                                     <option key={p.id} value={p.id}>{getPlayerName(p)}</option>
                                   ))}
@@ -5303,7 +5303,7 @@ export default function App() {
                             {regChildMode === 'new' && (
                               <>
                                 <div><label style={styles.inputLabel}>Nom *</label><input value={regChildLastName} onChange={(e) => setRegChildLastName(e.target.value)} style={styles.input} placeholder="Nom" /></div>
-                                <div><label style={styles.inputLabel}>PrÃ©nom *</label><input value={regChildFirstName} onChange={(e) => setRegChildFirstName(e.target.value)} style={styles.input} placeholder="PrÃ©nom" /></div>
+                                <div><label style={styles.inputLabel}>Prénom *</label><input value={regChildFirstName} onChange={(e) => setRegChildFirstName(e.target.value)} style={styles.input} placeholder="Prénom" /></div>
                               </>
                             )}
                             {(regChildMode === 'new' || regChildExistingId) && (
@@ -5321,17 +5321,17 @@ export default function App() {
                           <h4 style={{ margin: '0 0 12px 0', color: '#0A5FB5' }}>Enfant 2</h4>
                           <div style={styles.formGrid}>
                             <div style={{ gridColumn: '1/-1' }}>
-                              <label style={styles.inputLabel}>CatÃ©gorie *</label>
+                              <label style={styles.inputLabel}>Catégorie *</label>
                               <select value={regChild2TeamId} onChange={(e) => { setRegChild2TeamId(e.target.value); setRegChild2ExistingId(''); setRegChild2BirthDate(''); }} style={styles.select}>
-                                <option value="">-- Choisir la catÃ©gorie --</option>
+                                <option value="">-- Choisir la catégorie --</option>
                                 {childTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                               </select>
                             </div>
                             {regChild2TeamId && regChild2Mode === 'existing' && (
                               <div style={{ gridColumn: '1/-1' }}>
-                                <label style={styles.inputLabel}>Enfant dÃ©jÃ  dans la liste *</label>
+                                <label style={styles.inputLabel}>Enfant déjà dans la liste *</label>
                                 <select value={regChild2ExistingId} onChange={(e) => { const p = players.find((x) => x.id === e.target.value); setRegChild2ExistingId(e.target.value); setRegChild2BirthDate(p?.birth_date || ''); }} style={styles.select}>
-                                  <option value="">-- SÃ©lectionner l'enfant --</option>
+                                  <option value="">-- Sélectionner l'enfant --</option>
                                   {players.filter((p) => p.team_id === regChild2TeamId).sort((a, b) => getPlayerName(a).localeCompare(getPlayerName(b), 'fr')).map((p) => (
                                     <option key={p.id} value={p.id}>{getPlayerName(p)}</option>
                                   ))}
@@ -5349,7 +5349,7 @@ export default function App() {
                             {regChild2Mode === 'new' && (
                               <>
                                 <div><label style={styles.inputLabel}>Nom *</label><input value={regChild2LastName} onChange={(e) => setRegChild2LastName(e.target.value)} style={styles.input} placeholder="Nom" /></div>
-                                <div><label style={styles.inputLabel}>PrÃ©nom *</label><input value={regChild2FirstName} onChange={(e) => setRegChild2FirstName(e.target.value)} style={styles.input} placeholder="PrÃ©nom" /></div>
+                                <div><label style={styles.inputLabel}>Prénom *</label><input value={regChild2FirstName} onChange={(e) => setRegChild2FirstName(e.target.value)} style={styles.input} placeholder="Prénom" /></div>
                               </>
                             )}
                             {(regChild2Mode === 'new' || regChild2ExistingId) && (
@@ -5365,7 +5365,7 @@ export default function App() {
                       {/* Alerte joueurs similaires */}
                       {similarPlayers.length > 0 && (
                         <div style={{ background: '#fffbeb', border: '2px solid #f59e0b', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-                          <div style={{ fontWeight: 800, color: '#92400e', fontSize: 15, marginBottom: 12 }}>âš ï¸ Des joueurs similaires existent dÃ©jÃ  dans le club :</div>
+                          <div style={{ fontWeight: 800, color: '#92400e', fontSize: 15, marginBottom: 12 }}>⚠️ Des joueurs similaires existent déjà dans le club :</div>
                           {similarPlayers.map(({ child, players: sims }) => (
                             <div key={child} style={{ marginBottom: 12 }}>
                               <div style={{ fontWeight: 700, color: '#78350f', marginBottom: 8 }}>Pour l'enfant {child} ({child === 1 ? regChildFirstName : regChild2FirstName} {child === 1 ? regChildLastName : regChild2LastName}) :</div>
@@ -5375,29 +5375,29 @@ export default function App() {
                                 const isLinked = child === 1 ? regChildLinked : regChild2Linked;
                                 return (
                                   <div key={p.id} style={{ background: 'white', borderRadius: 12, padding: 12, border: '1px solid #fde68a', marginBottom: 8 }}>
-                                    <div style={{ fontWeight: 800, color: '#062C5D', fontSize: 14 }}>ðŸ‘¤ {p.first_name} {p.last_name}</div>
+                                    <div style={{ fontWeight: 800, color: '#062C5D', fontSize: 14 }}>👤 {p.first_name} {p.last_name}</div>
                                     <div style={{ fontSize: 13, color: '#5b6472', marginTop: 3 }}>
-                                      ðŸ… {team?.name || 'Ã‰quipe inconnue'} Â· {team?.category || ''}{age !== null ? ` Â· ${age} ans` : ' Â· Ã‚ge inconnu'}
+                                      🏅 {team?.name || 'Équipe inconnue'} · {team?.category || ''}{age !== null ? ` · ${age} ans` : ' · Âge inconnu'}
                                     </div>
                                     <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                                       <button onClick={() => {
-                                        // Mettre Ã  jour le payload directement et soumettre
+                                        // Mettre à jour le payload directement et soumettre
                                         const updatedLinked = { ...regLinkedPlayerIds, [child]: p.id };
                                         setRegLinkedPlayerIds(updatedLinked);
                                         if (child === 1) setRegChildLinked(true);
                                         else setRegChild2Linked(true);
                                         setSimilarPlayers([]);
                                         setRegError('');
-                                        // Soumettre directement avec les valeurs Ã  jour
+                                        // Soumettre directement avec les valeurs à jour
                                         setTimeout(() => submitWithLinked(updatedLinked), 50);
                                       }} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', background: '#16a34a', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                                        âœ… C'est bien mon enfant â€” lier ce joueur
+                                        ✅ C'est bien mon enfant — lier ce joueur
                                       </button>
                                       <button onClick={() => {
                                         setSimilarPlayers([]);
                                         setRegError('');
                                       }} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', background: '#e5e7eb', color: '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                                        âŒ Ce n'est pas mon enfant â€” continuer
+                                        ❌ Ce n'est pas mon enfant — continuer
                                       </button>
                                     </div>
                                   </div>
@@ -5410,9 +5410,9 @@ export default function App() {
 
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                         <button onClick={handleUnifiedRegister} disabled={registering} style={{ ...styles.primaryButton, flex: 1 }}>
-                          {registering ? 'Inscription en cours...' : "âœ… Valider l'inscription"}
+                          {registering ? 'Inscription en cours...' : "✅ Valider l'inscription"}
                         </button>
-                        <button onClick={() => { setShowRegisterPage(false); setRegError(''); setSimilarPlayers([]); }} style={styles.secondaryOutlineButton}>â† Retour</button>
+                        <button onClick={() => { setShowRegisterPage(false); setRegError(''); setSimilarPlayers([]); }} style={styles.secondaryOutlineButton}>← Retour</button>
                       </div>
                     </div>
                   );
@@ -5420,14 +5420,14 @@ export default function App() {
 
                 {regStep === 'direct' && (
                   <div style={{ marginTop: 24 }}>
-                    <h3 style={{ margin: '0 0 16px 0', color: '#062C5D' }}>ðŸ… Inscription Loisirs / Senior</h3>
+                    <h3 style={{ margin: '0 0 16px 0', color: '#062C5D' }}>🏅 Inscription Loisirs / Senior</h3>
                     {regError && <div style={{ padding: '10px 14px', background: '#fee2e2', borderRadius: 12, color: '#991b1b', fontWeight: 700, marginBottom: 14, fontSize: 14 }}>{regError}</div>}
                     <div style={styles.formCard}>
                       <div style={styles.formGrid}>
-                        <div><label style={styles.inputLabel}>PrÃ©nom *</label><input value={regDirectFirstName} onChange={(e) => setRegDirectFirstName(e.target.value)} style={styles.input} placeholder="PrÃ©nom" /></div>
+                        <div><label style={styles.inputLabel}>Prénom *</label><input value={regDirectFirstName} onChange={(e) => setRegDirectFirstName(e.target.value)} style={styles.input} placeholder="Prénom" /></div>
                         <div><label style={styles.inputLabel}>Nom *</label><input value={regDirectLastName} onChange={(e) => setRegDirectLastName(e.target.value)} style={styles.input} placeholder="Nom" /></div>
                         <div style={{ gridColumn: '1/-1' }}>
-                          <label style={styles.inputLabel}>CatÃ©gories *</label>
+                          <label style={styles.inputLabel}>Catégories *</label>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
                             {directTeams.map((t) => {
                               const checked = regDirectTeamIds.includes(t.id) || (!regDirectTeamIds.length && regDirectTeamId === t.id);
@@ -5439,7 +5439,7 @@ export default function App() {
                               );
                             })}
                           </div>
-                          <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: 12 }}>Tu peux cocher plusieurs catÃ©gories, par exemple Loisir et Senior masculin.</p>
+                          <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: 12 }}>Tu peux cocher plusieurs catégories, par exemple Loisir et Senior masculin.</p>
                         </div>
                         <div style={{ gridColumn: '1/-1' }}>
                           <label style={styles.inputLabel}>Date de naissance</label>
@@ -5450,19 +5450,19 @@ export default function App() {
                           <input type="email" value={regDirectEmail} onChange={(e) => setRegDirectEmail(e.target.value)} style={styles.input} placeholder="votre@email.fr" />
                         </div>
                         <div style={{ gridColumn: '1/-1' }}>
-                          <label style={styles.inputLabel}>Mot de passe * (min. 8 caractÃ¨res)</label>
-                          <input type="password" value={regDirectPassword} onChange={(e) => setRegDirectPassword(e.target.value)} style={styles.input} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autoComplete="new-password" />
+                          <label style={styles.inputLabel}>Mot de passe * (min. 8 caractères)</label>
+                          <input type="password" value={regDirectPassword} onChange={(e) => setRegDirectPassword(e.target.value)} style={styles.input} placeholder="••••••••" autoComplete="new-password" />
                           <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#94a3b8' }}>
-                            Si votre email est dÃ©jÃ  utilisÃ© pour un compte parent, votre profil joueur sera ajoutÃ© Ã  votre compte existant â€” vous garderez le mÃªme mot de passe.
+                            Si votre email est déjà utilisé pour un compte parent, votre profil joueur sera ajouté à votre compte existant — vous garderez le même mot de passe.
                           </p>
                         </div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
                       <button onClick={handleDirectRegister} disabled={registering} style={{ ...styles.primaryButton, flex: 1 }}>
-                        {registering ? 'Inscription en cours...' : "âœ… Valider l'inscription"}
+                        {registering ? 'Inscription en cours...' : "✅ Valider l'inscription"}
                       </button>
-                      <button onClick={() => { setRegStep('choose'); setRegError(''); }} style={styles.secondaryOutlineButton}>â† Retour</button>
+                      <button onClick={() => { setRegStep('choose'); setRegError(''); }} style={styles.secondaryOutlineButton}>← Retour</button>
                     </div>
                   </div>
                 )}
@@ -5473,41 +5473,41 @@ export default function App() {
       );
     }
 
-    // â”€â”€â”€ PAGE CHANGEMENT MOT DE PASSE (depuis lien email) â”€â”€â”€
+    // ─── PAGE CHANGEMENT MOT DE PASSE (depuis lien email) ───
     if (showChangePassword) {
       return (
         <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg,#edf4ff,#dbeaff)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Arial, sans-serif' }}>
           <div style={{ width: '100%', maxWidth: 480, background: 'white', borderRadius: 28, padding: 28, boxShadow: '0 18px 40px rgba(6,44,93,0.15)' }}>
             <div style={{ background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', borderRadius: 20, padding: 24, textAlign: 'center', marginBottom: 24 }}>
-              <div style={{ fontSize: 48, marginBottom: 10 }}>ðŸ”</div>
+              <div style={{ fontSize: 48, marginBottom: 10 }}>🔐</div>
               <h2 style={{ margin: 0, color: 'white', fontWeight: 900, fontSize: 22 }}>Nouveau mot de passe</h2>
               <p style={{ margin: '8px 0 0 0', color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>CA Gorcy Handball</p>
             </div>
 
             {changePwSuccess ? (
               <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 16, padding: '20px 24px', textAlign: 'center' }}>
-                <div style={{ fontSize: 40, marginBottom: 10 }}>âœ…</div>
-                <div style={{ fontWeight: 800, color: '#166534', fontSize: 16, marginBottom: 8 }}>Mot de passe modifiÃ© !</div>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+                <div style={{ fontWeight: 800, color: '#166534', fontSize: 16, marginBottom: 8 }}>Mot de passe modifié !</div>
                 <p style={{ margin: '0 0 16px 0', color: '#166534', fontSize: 14 }}>Tu peux maintenant te connecter avec ton nouveau mot de passe.</p>
                 <button onClick={() => { setShowChangePassword(false); setChangePwSuccess(false); }}
                   style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: '#0A5FB5', color: 'white', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>
-                  Aller Ã  la connexion â†’
+                  Aller à la connexion →
                 </button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <p style={{ margin: 0, color: '#5b6472', fontSize: 14 }}>Choisis un nouveau mot de passe pour ton compte.</p>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 700, color: '#5b6472', display: 'block', marginBottom: 6 }}>Nouveau mot de passe (min. 8 caractÃ¨res)</label>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: '#5b6472', display: 'block', marginBottom: 6 }}>Nouveau mot de passe (min. 8 caractères)</label>
                   <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autoComplete="new-password"
+                    placeholder="••••••••" autoComplete="new-password"
                     style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid #d5dfeb', fontSize: 15, outline: 'none', boxSizing: 'border-box' as const }}
                     onKeyDown={(e) => e.key === 'Enter' && handleChangePassword()} />
                 </div>
                 <div>
                   <label style={{ fontSize: 13, fontWeight: 700, color: '#5b6472', display: 'block', marginBottom: 6 }}>Confirmer le mot de passe</label>
                   <input type="password" value={newPassword2} onChange={(e) => setNewPassword2(e.target.value)}
-                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autoComplete="new-password"
+                    placeholder="••••••••" autoComplete="new-password"
                     style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid #d5dfeb', fontSize: 15, outline: 'none', boxSizing: 'border-box' as const }}
                     onKeyDown={(e) => e.key === 'Enter' && handleChangePassword()} />
                 </div>
@@ -5518,7 +5518,7 @@ export default function App() {
                 )}
                 <button onClick={handleChangePassword} disabled={changePwLoading || !newPassword || !newPassword2}
                   style={{ padding: '14px', borderRadius: 14, border: 'none', background: changePwLoading ? '#94a3b8' : '#0A5FB5', color: 'white', fontWeight: 800, fontSize: 16, cursor: changePwLoading ? 'not-allowed' : 'pointer' }}>
-                  {changePwLoading ? 'â³ Enregistrement...' : 'âœ… Enregistrer le nouveau mot de passe'}
+                  {changePwLoading ? '⏳ Enregistrement...' : '✅ Enregistrer le nouveau mot de passe'}
                 </button>
               </div>
             )}
@@ -5527,11 +5527,11 @@ export default function App() {
       );
     }
 
-    // â”€â”€â”€ PAGE DE LOGIN â”€â”€â”€
+    // ─── PAGE DE LOGIN ───
     if (!authChecked) {
       return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4fa' }}>
-          <div style={{ fontSize: 40 }}>â³</div>
+          <div style={{ fontSize: 40 }}>⏳</div>
         </div>
       );
     }
@@ -5570,27 +5570,27 @@ export default function App() {
                 <button
                   onClick={() => { setShowResetForm(true); setLoginError(''); setResetSent(false); setResetEmail(''); }}
                   style={{ marginTop: 14, background: 'none', border: 'none', color: '#0A5FB5', fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
-                  Mot de passe oubliÃ© ?
+                  Mot de passe oublié ?
                 </button>
               </>
             ) : (
               <div>
-                <p style={styles.sectionLabel}>RÃ©initialiser le mot de passe</p>
+                <p style={styles.sectionLabel}>Réinitialiser le mot de passe</p>
                 {resetSent ? (
                   <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 14, padding: '16px 18px' }}>
-                    <div style={{ fontWeight: 800, color: '#166534', fontSize: 15, marginBottom: 6 }}>âœ… Email envoyÃ© !</div>
+                    <div style={{ fontWeight: 800, color: '#166534', fontSize: 15, marginBottom: 6 }}>✅ Email envoyé !</div>
                     <p style={{ margin: 0, color: '#166534', fontSize: 14 }}>
-                      VÃ©rifie ta boÃ®te mail ({resetEmail}) et clique sur le lien pour choisir un nouveau mot de passe.
+                      Vérifie ta boîte mail ({resetEmail}) et clique sur le lien pour choisir un nouveau mot de passe.
                     </p>
                     <button onClick={() => { setShowResetForm(false); setResetSent(false); setResetEmail(''); }}
                       style={{ marginTop: 14, padding: '10px 18px', borderRadius: 12, border: 'none', background: '#0A5FB5', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
-                      Retour Ã  la connexion
+                      Retour à la connexion
                     </button>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <p style={{ margin: 0, fontSize: 14, color: '#5b6472' }}>
-                      Entre ton adresse email â€” tu recevras un lien pour crÃ©er un nouveau mot de passe.
+                      Entre ton adresse email — tu recevras un lien pour créer un nouveau mot de passe.
                     </p>
                     <div>
                       <label style={{ fontSize: 13, fontWeight: 700, color: '#5b6472', display: 'block', marginBottom: 6 }}>Email</label>
@@ -5608,11 +5608,11 @@ export default function App() {
                     )}
                     <button onClick={handleResetPassword} disabled={resetLoading || !resetEmail.trim()}
                       style={{ padding: '14px', borderRadius: 14, border: 'none', background: resetLoading ? '#94a3b8' : '#0A5FB5', color: 'white', fontWeight: 800, fontSize: 16, cursor: resetLoading ? 'not-allowed' : 'pointer' }}>
-                      {resetLoading ? 'â³ Envoi...' : 'ðŸ“§ Envoyer le lien de rÃ©initialisation'}
+                      {resetLoading ? '⏳ Envoi...' : '📧 Envoyer le lien de réinitialisation'}
                     </button>
                     <button onClick={() => { setShowResetForm(false); setLoginError(''); }}
                       style={{ background: 'none', border: 'none', color: '#5b6472', fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'underline', padding: 0, textAlign: 'left' as const }}>
-                      â† Retour Ã  la connexion
+                      ← Retour à la connexion
                     </button>
                   </div>
                 )}
@@ -5650,7 +5650,7 @@ export default function App() {
     );
   }
 
-  // â”€â”€â”€ APP CONNECTÃ‰E â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── APP CONNECTÉE ─────────────────────────────────────────────────────────
   return (
     <div style={styles.appPage}>
       <div style={styles.container}>
@@ -5662,12 +5662,12 @@ export default function App() {
             <div style={{ minWidth: 0 }}>
               <div style={styles.headerBadge}>CA Gorcy Handball</div>
               <h1 style={{ margin: '8px 0 6px 0', fontSize: 'clamp(28px, 8vw, 46px)', lineHeight: 1.05 }}>
-                {activeRole === 'coach' ? (isAdmin ? 'ðŸ‘‘ Admin' : 'ðŸ† Espace Coach') : 'ðŸ‘ª Espace Parent'}
+                {activeRole === 'coach' ? (isAdmin ? '👑 Admin' : '🏆 Espace Coach') : '👪 Espace Parent'}
               </h1>
               <p style={{ margin: 0, opacity: 0.92, overflowWrap: 'anywhere' }}>
                 {activeRole === 'coach'
-                  ? isAdmin ? 'AccÃ¨s complet Ã  toutes les Ã©quipes' : `Vos Ã©quipes : ${allowedTeamIds.map(getTeamName).join(', ')}`
-                  : 'PrÃ©sences et infos Ã©quipe'}
+                  ? isAdmin ? 'Accès complet à toutes les équipes' : `Vos équipes : ${allowedTeamIds.map(getTeamName).join(', ')}`
+                  : 'Présences et infos équipe'}
               </p>
               <div style={{ marginTop: 10 }}>
                 <HandLifeLogo variant="dark" size="sm" />
@@ -5675,7 +5675,7 @@ export default function App() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
-            {/* Photo de profil du coach connectÃ© */}
+            {/* Photo de profil du coach connecté */}
             {activeRole === 'coach' && !isAdmin && connectedCoachId && (() => {
               const me = coachAccessList.find((c) => c.id === connectedCoachId);
               const initials = `${me?.first_name?.[0] || ''}${me?.last_name?.[0] || ''}`.toUpperCase();
@@ -5684,10 +5684,10 @@ export default function App() {
                   {me?.photo_url
                     ? <img src={me.photo_url} alt="Ma photo" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.7)', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }} />
                     : <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: 'white' }}>
-                        {initials || 'ðŸ†'}
+                        {initials || '🏆'}
                       </div>
                   }
-                  <label htmlFor="coach-self-photo" style={{ position: 'absolute', bottom: -2, right: -2, background: 'white', color: '#0A5FB5', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} title="Changer ma photo">ðŸ“·</label>
+                  <label htmlFor="coach-self-photo" style={{ position: 'absolute', bottom: -2, right: -2, background: 'white', color: '#0A5FB5', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} title="Changer ma photo">📷</label>
                   <input id="coach-self-photo" type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file || !connectedCoachId) return;
@@ -5751,7 +5751,7 @@ export default function App() {
                 const unreadCount = getUnreadMessageConversations().length;
                 return (
                   <button onClick={openMessagesPanel} style={{ position: 'relative', padding: '10px 14px', borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: 18 }} title="Messages">
-                    ðŸ’¬
+                    💬
                     {unreadCount > 0 && (
                       <span style={{ position: 'absolute', top: 2, right: 2, background: '#dc2626', color: 'white', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px', minWidth: 16, textAlign: 'center', lineHeight: '14px', display: 'block' }}>
                         {unreadCount}
@@ -5760,8 +5760,8 @@ export default function App() {
                   </button>
                 );
               })()}
-              <button onClick={() => setShowCalendar(true)} title="Calendrier" aria-label="Calendrier" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>ðŸ“…</button>
-              <button onClick={handleLogout} title="DÃ©connexion" aria-label="DÃ©connexion" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'white', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>â»</button>
+              <button onClick={() => setShowCalendar(true)} title="Calendrier" aria-label="Calendrier" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>📅</button>
+              <button onClick={handleLogout} title="Déconnexion" aria-label="Déconnexion" style={{ width: 48, height: 48, borderRadius: 14, border: 'none', background: 'white', color: '#062C5D', fontWeight: 900, cursor: 'pointer', fontSize: 20 }}>⏻</button>
             </div>
           </div>
         </div>
@@ -5802,12 +5802,12 @@ export default function App() {
           />
         )}
 
-        {/* â”€â”€â”€ VUE COACH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─── VUE COACH ─────────────────────────────────────────────────── */}
         {activeRole === 'coach' && (
           <>
             {visibleTeams.length > 0 && (
               <div style={{ ...styles.panelCard, marginBottom: 12, padding: 12, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: '#0A5FB5', textTransform: 'uppercase', letterSpacing: 0, marginBottom: 8 }}>CatÃ©gorie affichÃ©e</div>
+                <div style={{ fontSize: 12, fontWeight: 900, color: '#0A5FB5', textTransform: 'uppercase', letterSpacing: 0, marginBottom: 8 }}>Catégorie affichée</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(126px, 1fr))', gap: 8 }}>
                   {visibleTeams.map((team) => {
                     const active = selectedCoachTeamId === team.id;
@@ -5825,14 +5825,14 @@ export default function App() {
             <div style={styles.coachMenu}>
               {(['trainings', 'matches', 'stats', 'composition', 'team', 'players', 'users', 'messages', 'licenses', 'events', 'polls', 'supporter', 'password', ...(isAdmin ? ['admin'] : [])] as CoachTab[]).map((tab) => {
                 const labels: Record<CoachTab, string> = {
-                  trainings: 'ðŸ“… EntraÃ®nements', matches: 'âš½ Matchs', stats: 'ðŸ“Š Stats',
-                  composition: 'ðŸ Composition',
-                  team: 'ðŸ‘• Mon Ã©quipe', players: 'ðŸ‘¥ Joueurs', users: 'ðŸ”’ Utilisateurs',
-                  messages: 'ðŸ’¬ Messages', licenses: 'ðŸªª Licences', password: 'ðŸ”‘ Mot de passe',
-                  accessibility: 'âš™ï¸ Administration', admin: 'âš™ï¸ Administration',
-                  events: 'ðŸŽ‰ Ã‰vÃ©nements',
-                  polls: 'ðŸ“Š Sondages',
-                  supporter: 'ðŸ“£ Supporter',
+                  trainings: '📅 Entraînements', matches: '⚽ Matchs', stats: '📊 Stats',
+                  composition: '🏐 Composition',
+                  team: '👕 Mon équipe', players: '👥 Joueurs', users: '🔒 Utilisateurs',
+                  messages: '💬 Messages', licenses: '🪪 Licences', password: '🔑 Mot de passe',
+                  accessibility: '⚙️ Administration', admin: '⚙️ Administration',
+                  events: '🎉 Événements',
+                  polls: '📊 Sondages',
+                  supporter: '📣 Supporter',
                 };
                 // Badges de notification
                 let badgeCount = 0;
@@ -5863,22 +5863,22 @@ export default function App() {
               })}
             </div>
 
-            {/* â”€â”€ ENTRAÃŽNEMENTS â”€â”€ */}
+            {/* ── ENTRAÎNEMENTS ── */}
             {coachTab === 'trainings' && (
               <div style={styles.contentCard}>
-                <h2 style={styles.blockTitle}>{"EntraÃ®nements"}</h2>
-                <p style={styles.blockSubtitle}>{"Les 2 prochaines sÃ©ances Ã  partir d'aujourd'hui."}</p>
+                <h2 style={styles.blockTitle}>{"Entraînements"}</h2>
+                <p style={styles.blockSubtitle}>{"Les 2 prochaines séances à partir d'aujourd'hui."}</p>
 
-                {/* Filtre Ã©quipe */}
+                {/* Filtre équipe */}
                 <div style={{ ...styles.filterBar, marginBottom: 20 }}>
-                  <label style={styles.inputLabel}>Ã‰quipe</label>
+                  <label style={styles.inputLabel}>Équipe</label>
                   <select value={selectedCoachTeamId} onChange={(e) => chooseCoachTeam(e.target.value)} style={styles.select}>
                     {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
 
                 {(() => {
-                  // Calculer les 2 prochaines sÃ©ances toutes templates confondues
+                  // Calculer les 2 prochaines séances toutes templates confondues
                   const today = new Date(); today.setHours(0,0,0,0);
                   const upcoming: { template: TrainingTemplate; date: string; cancelled?: boolean; cancellationReason?: string | null }[] = [];
                   for (const template of coachTemplates) {
@@ -5891,7 +5891,7 @@ export default function App() {
                   upcoming.sort((a, b) => a.date.localeCompare(b.date));
                   const next2 = upcoming.slice(0, 2);
 
-                  if (next2.length === 0) return <div style={styles.emptyState}>Aucun entraÃ®nement prÃ©vu.</div>;
+                  if (next2.length === 0) return <div style={styles.emptyState}>Aucun entraînement prévu.</div>;
 
                   return (
                     <div style={{ display: 'grid', gap: 20 }}>
@@ -5906,27 +5906,27 @@ export default function App() {
                             {/* Header */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
                               <div>
-                                <h3 style={{ margin: 0 }}>{template.title || 'EntraÃ®nement'} â€“ {getTeamName(template.team_id)}</h3>
+                                <h3 style={{ margin: 0 }}>{template.title || 'Entraînement'} – {getTeamName(template.team_id)}</h3>
                                 <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>
-                                  ðŸ“… {formatDate(date)} Â· {getWeekdayLabel(template.weekday)} Â· {template.start_time}â€“{template.end_time} Â· ðŸ“ {template.location || '-'}
+                                  📅 {formatDate(date)} · {getWeekdayLabel(template.weekday)} · {template.start_time}–{template.end_time} · 📍 {template.location || '-'}
                                 </p>
                                 {cancelled && (
                                   <div style={{ marginTop: 8, display: 'inline-flex', padding: '6px 10px', borderRadius: 999, background: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 900 }}>
-                                    AnnulÃ©{cancellationReason ? ` Â· ${cancellationReason}` : ''}
+                                    Annulé{cancellationReason ? ` · ${cancellationReason}` : ''}
                                   </div>
                                 )}
                               </div>
                               <div style={{ display: 'flex', gap: 8 }}>
-                                <span style={{ ...styles.statusBadge, ...styles.badgeGreen }}>âœ… {counts.present}</span>
-                                <span style={{ ...styles.statusBadge, ...styles.badgeRed }}>âŒ {counts.absent}</span>
-                                <span style={{ ...styles.statusBadge, ...styles.badgeGray }}>â“ {counts.unknown}</span>
+                                <span style={{ ...styles.statusBadge, ...styles.badgeGreen }}>✅ {counts.present}</span>
+                                <span style={{ ...styles.statusBadge, ...styles.badgeRed }}>❌ {counts.absent}</span>
+                                <span style={{ ...styles.statusBadge, ...styles.badgeGray }}>❓ {counts.unknown}</span>
                               </div>
                             </div>
 
-                            {/* PrÃ©sents */}
+                            {/* Présents */}
                             {!cancelled && presentPlayers.length > 0 && (
                               <div style={{ marginBottom: 10 }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', marginBottom: 6 }}>âœ… PrÃ©sents ({presentPlayers.length})</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', marginBottom: 6 }}>✅ Présents ({presentPlayers.length})</div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                   {presentPlayers.map((p) => (
                                     <span key={p.id} style={{ background: '#e8f7ee', color: '#166534', padding: '4px 10px', borderRadius: 999, fontSize: 13, fontWeight: 700 }}>{getPlayerName(p)}</span>
@@ -5938,7 +5938,7 @@ export default function App() {
                             {/* Absents */}
                             {!cancelled && absentPlayers.length > 0 && (
                               <div style={{ marginBottom: 10 }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: '#991b1b', marginBottom: 6 }}>âŒ Absents ({absentPlayers.length})</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#991b1b', marginBottom: 6 }}>❌ Absents ({absentPlayers.length})</div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                   {absentPlayers.map((p) => (
                                     <span key={p.id} style={{ background: '#fdecec', color: '#991b1b', padding: '4px 10px', borderRadius: 999, fontSize: 13, fontWeight: 700 }}>{getPlayerName(p)}</span>
@@ -5947,10 +5947,10 @@ export default function App() {
                               </div>
                             )}
 
-                            {/* Sans rÃ©ponse */}
+                            {/* Sans réponse */}
                             {!cancelled && unknownPlayers.length > 0 && (
                               <div>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: '#526071', marginBottom: 6 }}>â“ Sans rÃ©ponse ({unknownPlayers.length})</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#526071', marginBottom: 6 }}>❓ Sans réponse ({unknownPlayers.length})</div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                   {unknownPlayers.map((p) => (
                                     <span key={p.id} style={{ background: '#eef2f7', color: '#526071', padding: '4px 10px', borderRadius: 999, fontSize: 13, fontWeight: 700 }}>{getPlayerName(p)}</span>
@@ -5971,16 +5971,16 @@ export default function App() {
                                   color: 'white', fontWeight: 800, fontSize: 14, cursor: cancelled || sendingTrainingReminder === `${template.id}-${date}` ? 'default' : 'pointer',
                                   transition: 'background 0.15s',
                                 }}>
-                                {sendingTrainingReminder === `${template.id}-${date}` ? 'â³ Envoi...' : 'ðŸ“§ Envoyer un rappel aux parents'}
+                                {sendingTrainingReminder === `${template.id}-${date}` ? '⏳ Envoi...' : '📧 Envoyer un rappel aux parents'}
                               </button>
                               <button
                                 onClick={() => cancelTraining(template, date)}
                                 disabled={cancelingTrainingKey === `${template.id}-${date}`}
                                 style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: cancelled ? '#16a34a' : '#dc2626', color: 'white', fontWeight: 800, fontSize: 14, cursor: cancelingTrainingKey === `${template.id}-${date}` ? 'default' : 'pointer' }}>
-                                {cancelingTrainingKey === `${template.id}-${date}` ? 'â³...' : cancelled ? 'Remettre au planning' : "Annuler l'entraÃ®nement"}
+                                {cancelingTrainingKey === `${template.id}-${date}` ? '⏳...' : cancelled ? 'Remettre au planning' : "Annuler l'entraînement"}
                               </button>
                               <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>
-                                {cancelled ? 'Les parents voient la sÃ©ance annulÃ©e.' : 'Annulation avec email aux parents'}
+                                {cancelled ? 'Les parents voient la séance annulée.' : 'Annulation avec email aux parents'}
                               </span>
                             </div>
                           </div>
@@ -6025,20 +6025,20 @@ export default function App() {
                 </div>
 
                 <div style={{ ...styles.panelCard, marginTop: 20, background: '#f8fafc', border: '1px solid #dbe4ef' }}>
-                  <h3 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>PÃ©riodes de vacances</h3>
+                  <h3 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Périodes de vacances</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
                     <div><label style={styles.inputLabel}>Titre</label><input value={newBreakTitle} onChange={(e) => setNewBreakTitle(e.target.value)} style={styles.input} placeholder="Vacances scolaires" /></div>
-                    <div><label style={styles.inputLabel}>DÃ©but</label><input type="date" value={newBreakStart} onChange={(e) => setNewBreakStart(e.target.value)} style={styles.input} /></div>
+                    <div><label style={styles.inputLabel}>Début</label><input type="date" value={newBreakStart} onChange={(e) => setNewBreakStart(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Fin</label><input type="date" value={newBreakEnd} onChange={(e) => setNewBreakEnd(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Note</label><input value={newBreakReason} onChange={(e) => setNewBreakReason(e.target.value)} style={styles.input} placeholder="Optionnel" /></div>
                   </div>
-                  <button onClick={addTrainingBreak} style={{ ...styles.secondaryButton, marginTop: 10, background: '#0A5FB5' }}>Ajouter la pÃ©riode</button>
+                  <button onClick={addTrainingBreak} style={{ ...styles.secondaryButton, marginTop: 10, background: '#0A5FB5' }}>Ajouter la période</button>
                   <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
                     {trainingBreaks.filter((b) => !b.team_id || b.team_id === selectedCoachTeamId).map((b) => (
                       <div key={b.id} style={{ ...styles.linkRow, background: 'white' }}>
                         <div style={{ flex: 1 }}>
                           <strong>{b.title}</strong>
-                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{formatDate(b.start_date)} au {formatDate(b.end_date)} Â· {b.team_id ? getTeamName(b.team_id) : 'Toutes les Ã©quipes'}{b.reason ? ` Â· ${b.reason}` : ''}</div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{formatDate(b.start_date)} au {formatDate(b.end_date)} · {b.team_id ? getTeamName(b.team_id) : 'Toutes les équipes'}{b.reason ? ` · ${b.reason}` : ''}</div>
                         </div>
                         <button onClick={() => deleteTrainingBreak(b.id)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>Supprimer</button>
                       </div>
@@ -6048,29 +6048,29 @@ export default function App() {
               </div>
             )}
 
-            {/* â”€â”€ MATCHS â”€â”€ */}
+            {/* ── MATCHS ── */}
             {coachTab === 'matches' && (
               <div style={styles.contentCard}>
-                <h2 style={styles.blockTitle}>âš½ Matchs</h2>
+                <h2 style={styles.blockTitle}>⚽ Matchs</h2>
 
                 {/* Sous-onglets */}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '2px solid #e5e7eb', paddingBottom: 0 }}>
                   {(['planning', 'convocation'] as const).map((sub) => (
                     <button key={sub} onClick={() => setMatchSubTab(sub)}
                       style={{ padding: '10px 22px', border: 'none', background: 'none', fontWeight: 800, fontSize: 15, cursor: 'pointer', color: matchSubTab === sub ? '#0A5FB5' : '#94a3b8', borderBottom: matchSubTab === sub ? '3px solid #0A5FB5' : '3px solid transparent', marginBottom: -2, transition: 'all 0.15s' }}>
-                      {sub === 'planning' ? 'ðŸ“‹ Planning des matchs' : 'ðŸ“£ Convocations & rÃ©sultats'}
+                      {sub === 'planning' ? '📋 Planning des matchs' : '📣 Convocations & résultats'}
                     </button>
                   ))}
                 </div>
 
-                {/* â”€â”€ SOUS-ONGLET : PLANNING â”€â”€ */}
+                {/* ── SOUS-ONGLET : PLANNING ── */}
                 {matchSubTab === 'planning' && (
                   <>
                     <div style={{ ...styles.formCard, marginBottom: 18 }}>
-                      <h3 style={styles.panelTitle}>{editingMatchId ? 'âœï¸ Modifier le match' : 'âž• Ajouter un match'}</h3>
+                      <h3 style={styles.panelTitle}>{editingMatchId ? '✏️ Modifier le match' : '➕ Ajouter un match'}</h3>
                       <div style={styles.formGrid}>
                         <div>
-                          <label style={styles.inputLabel}>Ã‰quipe</label>
+                          <label style={styles.inputLabel}>Équipe</label>
                           <select value={newMatchTeamId} onChange={(e) => setNewMatchTeamId(e.target.value)} style={styles.select}>
                             {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                           </select>
@@ -6081,12 +6081,12 @@ export default function App() {
                         <div>
                           <label style={styles.inputLabel}>Type</label>
                           <select value={newMatchHomeAway} onChange={(e) => setNewMatchHomeAway(e.target.value as 'home' | 'away')} style={styles.select}>
-                            <option value="home">Domicile</option><option value="away">ExtÃ©rieur</option>
+                            <option value="home">Domicile</option><option value="away">Extérieur</option>
                           </select>
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                        <button onClick={addMatch} style={styles.primaryButton}>{editingMatchId ? 'ðŸ’¾ Enregistrer' : 'Ajouter le match'}</button>
+                        <button onClick={addMatch} style={styles.primaryButton}>{editingMatchId ? '💾 Enregistrer' : 'Ajouter le match'}</button>
                         {editingMatchId && (
                           <button onClick={resetMatchForm} style={styles.secondaryOutlineButton}>Annuler</button>
                         )}
@@ -6094,9 +6094,9 @@ export default function App() {
                     </div>
 
                     <div style={styles.panelCard}>
-                      <h3 style={styles.panelTitle}>ðŸ“‹ Liste des matchs</h3>
+                      <h3 style={styles.panelTitle}>📋 Liste des matchs</h3>
                       <div style={{ ...styles.filterBar, marginBottom: 16 }}>
-                        <label style={styles.inputLabel}>CatÃ©gorie</label>
+                        <label style={styles.inputLabel}>Catégorie</label>
                         <select value={selectedCoachTeamId} onChange={(e) => chooseCoachTeam(e.target.value)} style={styles.select}>
                           {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
@@ -6108,36 +6108,36 @@ export default function App() {
                             <div key={m.id} style={{ ...styles.linkRow, flexWrap: 'wrap' }}>
                               <div style={{ flex: 1 }}>
                                 <strong>{getTeamName(m.team_id)} vs {m.opponent}</strong>
-                                <div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{formatDate(m.match_date)} {formatTime(m.match_date)} Â· {m.location || '-'} Â· {m.home_away === 'home' ? 'Domicile' : 'ExtÃ©rieur'}</div>
+                                <div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{formatDate(m.match_date)} {formatTime(m.match_date)} · {m.location || '-'} · {m.home_away === 'home' ? 'Domicile' : 'Extérieur'}</div>
                                 {(() => {
                                   const squad = getSquadForMatch(m.id);
                                   if (squad.length === 0) return null;
-                                  return <div style={{ fontSize: 12, color: '#0A5FB5', marginTop: 4, fontWeight: 700 }}>ðŸ“£ {squad.length} joueur{squad.length > 1 ? 's' : ''} convoquÃ©{squad.length > 1 ? 's' : ''}</div>;
+                                  return <div style={{ fontSize: 12, color: '#0A5FB5', marginTop: 4, fontWeight: 700 }}>📣 {squad.length} joueur{squad.length > 1 ? 's' : ''} convoqué{squad.length > 1 ? 's' : ''}</div>;
                                 })()}
                               </div>
                               <div style={{ display: 'flex', gap: 8 }}>
                                 <button onClick={() => startEditMatch(m)} style={{ ...styles.secondaryButton, fontSize: 13, padding: '8px 12px' }}>Modifier</button>
-                                <button onClick={() => deleteMatch(m)} style={{ ...styles.linkRemoveButton, fontSize: 13 }}>ðŸ—‘</button>
+                                <button onClick={() => deleteMatch(m)} style={{ ...styles.linkRemoveButton, fontSize: 13 }}>🗑</button>
                               </div>
                             </div>
                           ))}
                         </div>}
                       {selectedCoachTeamId && getTournamentsForTeam(selectedCoachTeamId).length > 0 && (
                         <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
-                          <h4 style={{ margin: '0 0 4px 0', color: '#92400e' }}>ðŸ† Tournois</h4>
+                          <h4 style={{ margin: '0 0 4px 0', color: '#92400e' }}>🏆 Tournois</h4>
                           {getTournamentsForTeam(selectedCoachTeamId).map((ev) => {
                             const counts = getEventCounts(ev.id);
-                            const teamLabel = ev.team_ids?.length > 0 ? ev.team_ids.map(getTeamName).join(', ') : 'Toutes les catÃ©gories';
+                            const teamLabel = ev.team_ids?.length > 0 ? ev.team_ids.map(getTeamName).join(', ') : 'Toutes les catégories';
                             return (
                               <div key={ev.id} style={{ ...styles.linkRow, background: '#fffbeb', border: '1px solid #fde68a', flexWrap: 'wrap' }}>
                                 <div style={{ flex: 1 }}>
-                                  <strong>ðŸ† {ev.title}</strong>
-                                  <div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{formatDate(ev.event_date)} {formatTime(ev.event_date)} Â· {ev.location || '-'} Â· {teamLabel}</div>
+                                  <strong>🏆 {ev.title}</strong>
+                                  <div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{formatDate(ev.event_date)} {formatTime(ev.event_date)} · {ev.location || '-'} · {teamLabel}</div>
                                   {ev.description && <div style={{ fontSize: 13, color: '#374151', marginTop: 4 }}>{ev.description}</div>}
                                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8, fontSize: 12, fontWeight: 800 }}>
-                                    <span style={{ color: '#16a34a' }}>âœ… {counts.present} prÃ©sents</span>
-                                    <span style={{ color: '#dc2626' }}>âŒ {counts.absent} absents</span>
-                                    <span style={{ color: '#64748b' }}>â³ {counts.pending} sans rÃ©ponse</span>
+                                    <span style={{ color: '#16a34a' }}>✅ {counts.present} présents</span>
+                                    <span style={{ color: '#dc2626' }}>❌ {counts.absent} absents</span>
+                                    <span style={{ color: '#64748b' }}>⏳ {counts.pending} sans réponse</span>
                                   </div>
                                 </div>
                               </div>
@@ -6149,13 +6149,13 @@ export default function App() {
                   </>
                 )}
 
-                {/* â”€â”€ SOUS-ONGLET : CONVOCATIONS & RÃ‰SULTATS â”€â”€ */}
+                {/* ── SOUS-ONGLET : CONVOCATIONS & RÉSULTATS ── */}
                 {matchSubTab === 'convocation' && (
                   <div style={styles.panelCard}>
-                    <h3 style={styles.panelTitle}>SÃ©lectionner un match</h3>
+                    <h3 style={styles.panelTitle}>Sélectionner un match</h3>
                     <div style={styles.formGrid}>
                       <div>
-                        <label style={styles.inputLabel}>Ã‰quipe</label>
+                        <label style={styles.inputLabel}>Équipe</label>
                         <select value={selectedCoachTeamId} onChange={(e) => chooseCoachTeam(e.target.value)} style={styles.select}>
                           {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
@@ -6164,24 +6164,24 @@ export default function App() {
                         <label style={styles.inputLabel}>Match</label>
                         <select value={selectedMatchId} onChange={(e) => setSelectedMatchId(e.target.value)} style={styles.select}>
                           <option value="">Choisir un match</option>
-                          {coachMatches.map((m) => <option key={m.id} value={m.id}>{getTeamName(m.team_id)} vs {m.opponent || '-'} â€“ {formatDate(m.match_date)}</option>)}
+                          {coachMatches.map((m) => <option key={m.id} value={m.id}>{getTeamName(m.team_id)} vs {m.opponent || '-'} – {formatDate(m.match_date)}</option>)}
                         </select>
                       </div>
                     </div>
 
                     {!selectedMatch
-                      ? <div style={styles.emptyState}>Choisis un match pour voir le dÃ©tail.</div>
+                      ? <div style={styles.emptyState}>Choisis un match pour voir le détail.</div>
                       : (
                         <div style={{ marginTop: 16 }}>
                           <h4 style={{ marginTop: 0 }}>{getTeamName(selectedMatch.team_id)} vs {selectedMatch.opponent || '-'}</h4>
                           <p style={{ color: '#5b6472', marginTop: 0 }}>
-                            {formatDate(selectedMatch.match_date)} {formatTime(selectedMatch.match_date)} â€“ {selectedMatch.location || '-'} â€“ {selectedMatch.home_away === 'home' ? 'Domicile' : 'ExtÃ©rieur'}
+                            {formatDate(selectedMatch.match_date)} {formatTime(selectedMatch.match_date)} – {selectedMatch.location || '-'} – {selectedMatch.home_away === 'home' ? 'Domicile' : 'Extérieur'}
                           </p>
 
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, margin: '14px 0 18px 0' }}>
                             {([
                               ['convocation', 'Convocation'],
-                              ['presence', 'PrÃ©sence'],
+                              ['presence', 'Présence'],
                               ['stats', 'Stats'],
                             ] as const).map(([key, label]) => (
                               <button key={key} onClick={() => setMatchDetailTab(key)}
@@ -6191,10 +6191,10 @@ export default function App() {
                             ))}
                           </div>
 
-                          {/* RÃ©sultat */}
+                          {/* Résultat */}
                           {matchDetailTab === 'stats' && (
                           <div style={{ ...styles.panelCard, marginBottom: 20, background: '#fffbeb', border: '1px solid #fde68a' }}>
-                            <h4 style={{ margin: '0 0 12px 0', color: '#92400e' }}>RÃ©sultat du match</h4>
+                            <h4 style={{ margin: '0 0 12px 0', color: '#92400e' }}>Résultat du match</h4>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                               <div style={{ textAlign: 'center' }}>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: '#5b6472', marginBottom: 4 }}>{getTeamName(selectedMatch.team_id)}</div>
@@ -6204,7 +6204,7 @@ export default function App() {
                                   style={{ ...styles.input, width: 80, textAlign: 'center', fontSize: 28, fontWeight: 800, padding: '8px', minHeight: 'auto' }}
                                   placeholder="0" />
                               </div>
-                              <div style={{ fontSize: 28, fontWeight: 800, color: '#374151', alignSelf: 'flex-end', paddingBottom: 8 }}>â€“</div>
+                              <div style={{ fontSize: 28, fontWeight: 800, color: '#374151', alignSelf: 'flex-end', paddingBottom: 8 }}>–</div>
                               <div style={{ textAlign: 'center' }}>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: '#5b6472', marginBottom: 4 }}>{selectedMatch.opponent || 'Adversaire'}</div>
                                 <input type="number" min={0}
@@ -6240,7 +6240,7 @@ export default function App() {
                                 </div>
                               </div>
                               <div>
-                                <label style={styles.inputLabel}>Lignes dÃ©tectÃ©es Temps / Score / Action</label>
+                                <label style={styles.inputLabel}>Lignes détectées Temps / Score / Action</label>
                                 <div style={{ fontSize: 12, color: '#78350f', fontWeight: 700, marginBottom: 6 }}>
                                   Nouvelle lecture PDF FFHB active : choisis le fichier, les actions doivent apparaitre ici.
                                 </div>
@@ -6279,15 +6279,15 @@ export default function App() {
                           {matchDetailTab === 'convocation' && (
                           <div style={{ ...styles.panelCard, marginBottom: 20, background: '#f0f7ff' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                              <h4 style={{ margin: 0 }}>ðŸ“£ Convocation</h4>
+                              <h4 style={{ margin: 0 }}>📣 Convocation</h4>
                               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                                 <span style={{ ...styles.statusBadge, ...styles.badgeGreen }}>
-                                  {squadForSelectedMatch.length} joueur{squadForSelectedMatch.length !== 1 ? 's' : ''} convoquÃ©{squadForSelectedMatch.length !== 1 ? 's' : ''}
+                                  {squadForSelectedMatch.length} joueur{squadForSelectedMatch.length !== 1 ? 's' : ''} convoqué{squadForSelectedMatch.length !== 1 ? 's' : ''}
                                 </span>
                                 {isSquadDefined(selectedMatch.id) && squadForSelectedMatch.length > 0 && (
                                   <button onClick={() => sendAllConvocations(selectedMatch.id)} disabled={sendingConvocations}
                                     style={{ padding: '8px 14px', borderRadius: 12, border: 'none', background: sendingConvocations ? '#9ca3af' : '#0A5FB5', color: 'white', fontWeight: 700, fontSize: 13, cursor: sendingConvocations ? 'default' : 'pointer' }}>
-                                    {sendingConvocations ? 'â³ Envoi...' : 'ðŸ“§ Envoyer les convocations'}
+                                    {sendingConvocations ? '⏳ Envoi...' : '📧 Envoyer les convocations'}
                                   </button>
                                 )}
                               </div>
@@ -6295,7 +6295,7 @@ export default function App() {
 
                             <div style={{ display: 'grid', gap: 8 }}>
                               {playersForSelectedMatch.length === 0
-                                ? <div style={styles.emptyState}>Aucun joueur dans cette Ã©quipe.</div>
+                                ? <div style={styles.emptyState}>Aucun joueur dans cette équipe.</div>
                                 : playersForSelectedMatch.map((player) => {
                                   const inSquad = squadForSelectedMatch.includes(player.id);
                                   return (
@@ -6312,7 +6312,7 @@ export default function App() {
                                 })}
                             </div>
 
-                            {/* â”€â”€ Convocation cross-catÃ©gorie (occasionnel) â”€â”€ */}
+                            {/* ── Convocation cross-catégorie (occasionnel) ── */}
                             {(() => {
                               const matchTeamId = selectedMatch.team_id;
                               // Helper: extract numeric age from category/name
@@ -6326,9 +6326,9 @@ export default function App() {
                                 return 50;
                               }
                               const matchAge = getCategoryAge(matchTeamId);
-                              // Joueurs d'autres Ã©quipes dÃ©jÃ  dans la convocation
+                              // Joueurs d'autres équipes déjà dans la convocation
                               const guestIds = squadForSelectedMatch.filter((id) => !playersForSelectedMatch.some((p) => p.id === id));
-                              // Toutes les Ã©quipes sauf celle du match, triÃ©es par proximitÃ© d'Ã¢ge infÃ©rieur
+                              // Toutes les équipes sauf celle du match, triées par proximité d'âge inférieur
                               const otherTeams = teams
                                 .filter((t) => t.id !== matchTeamId)
                                 .sort((a, b) => {
@@ -6342,7 +6342,7 @@ export default function App() {
                                 });
                               if (otherTeams.length === 0 && guestIds.length === 0) return null;
 
-                              // Ã‰quipe sÃ©lectionnÃ©e dans le dropdown (auto: premiÃ¨re catÃ©gorie infÃ©rieure)
+                              // Équipe sélectionnée dans le dropdown (auto: première catégorie inférieure)
                               const defaultTeam = otherTeams.find((t) => getCategoryAge(t.id) < matchAge) || otherTeams[0];
                               const activeTeamId = crossCategoryTeamId && otherTeams.some((t) => t.id === crossCategoryTeamId)
                                 ? crossCategoryTeamId
@@ -6354,13 +6354,13 @@ export default function App() {
                               return (
                                 <div style={{ marginTop: 14, padding: '14px 16px', background: '#fdf4ff', border: '1px solid #e9d5ff', borderRadius: 14 }}>
                                   <div style={{ fontWeight: 800, color: '#7c3aed', fontSize: 14, marginBottom: 12 }}>
-                                    ðŸ”„ Inviter un joueur d'une autre catÃ©gorie
+                                    🔄 Inviter un joueur d'une autre catégorie
                                   </div>
 
-                                  {/* Joueurs dÃ©jÃ  invitÃ©s */}
+                                  {/* Joueurs déjà invités */}
                                   {guestIds.length > 0 && (
                                     <div style={{ marginBottom: 12 }}>
-                                      <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>DÃ©jÃ  invitÃ©s :</div>
+                                      <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Déjà invités :</div>
                                       <div style={{ display: 'grid', gap: 6 }}>
                                         {guestIds.map((gid) => {
                                           const gp = players.find((p) => p.id === gid);
@@ -6370,7 +6370,7 @@ export default function App() {
                                             <div key={gid} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f3e8ff', borderRadius: 10, border: '1px solid #c4b5fd' }}>
                                               <div>
                                                 <span style={{ fontWeight: 700, color: '#5b21b6' }}>{getPlayerName(gp)}</span>
-                                                <span style={{ fontSize: 12, color: '#7c3aed', marginLeft: 8, background: '#ede9fe', padding: '2px 6px', borderRadius: 6 }}>{gTeam?.name || 'Ã‰quipe'}</span>
+                                                <span style={{ fontSize: 12, color: '#7c3aed', marginLeft: 8, background: '#ede9fe', padding: '2px 6px', borderRadius: 6 }}>{gTeam?.name || 'Équipe'}</span>
                                               </div>
                                               <button onClick={() => togglePlayerInSquad(selectedMatch.id, gid)}
                                                 style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: '#fee2e2', color: '#991b1b', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
@@ -6383,18 +6383,18 @@ export default function App() {
                                     </div>
                                   )}
 
-                                  {/* Dropdown sÃ©lection de catÃ©gorie */}
+                                  {/* Dropdown sélection de catégorie */}
                                   {otherTeams.length > 0 && (
                                     <>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                                        <label style={{ fontSize: 13, fontWeight: 700, color: '#5b21b6', flexShrink: 0 }}>CatÃ©gorie :</label>
+                                        <label style={{ fontSize: 13, fontWeight: 700, color: '#5b21b6', flexShrink: 0 }}>Catégorie :</label>
                                         <select
                                           value={activeTeamId}
                                           onChange={(e) => setCrossCategoryTeamId(e.target.value)}
                                           style={{ flex: 1, minWidth: 160, padding: '8px 12px', borderRadius: 10, border: '1.5px solid #c4b5fd', fontSize: 13, fontWeight: 700, color: '#5b21b6', background: 'white', outline: 'none', cursor: 'pointer' }}>
                                           {otherTeams.map((t) => {
                                             const age = getCategoryAge(t.id);
-                                            const label = age < matchAge ? `â¬‡ ${t.name}` : age > matchAge ? `â¬† ${t.name}` : t.name;
+                                            const label = age < matchAge ? `⬇ ${t.name}` : age > matchAge ? `⬆ ${t.name}` : t.name;
                                             return <option key={t.id} value={t.id}>{label}</option>;
                                           })}
                                         </select>
@@ -6403,8 +6403,8 @@ export default function App() {
                                       {activeTeamPlayers.length === 0 ? (
                                         <div style={{ fontSize: 13, color: '#94a3b8', padding: '8px 0' }}>
                                           {squadForSelectedMatch.some((id) => players.find((p) => p.id === id)?.team_id === activeTeamId)
-                                            ? 'Tous les joueurs de cette catÃ©gorie sont dÃ©jÃ  invitÃ©s.'
-                                            : 'Aucun joueur dans cette catÃ©gorie.'}
+                                            ? 'Tous les joueurs de cette catégorie sont déjà invités.'
+                                            : 'Aucun joueur dans cette catégorie.'}
                                         </div>
                                       ) : (
                                         <div style={{ display: 'grid', gap: 5 }}>
@@ -6427,7 +6427,7 @@ export default function App() {
 
                           )}
 
-                          {/* PrÃ©sences & stats */}
+                          {/* Présences & stats */}
                           {playersForSelectedMatch.length > 0 && (
                             <>
                               {matchDetailTab === 'presence' && (
@@ -6435,12 +6435,12 @@ export default function App() {
                               <div style={styles.attendanceRow}>
                                 {(() => {
                                   const counts = getMatchCounts(selectedMatch.id, selectedMatch.team_id || '');
-                                  return (<><span>PrÃ©sents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans rÃ©ponse : {counts.unknown}</span><span>ConvoquÃ©s : {squadForSelectedMatch.length}</span></>);
+                                  return (<><span>Présents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans réponse : {counts.unknown}</span><span>Convoqués : {squadForSelectedMatch.length}</span></>);
                                 })()}
                               </div>
                               {!isSquadDefined(selectedMatch.id) && (
                                 <div style={{ ...styles.panelCard, background: '#fffbeb', border: '1px solid #fde68a', marginBottom: 12 }}>
-                                  <p style={{ margin: 0, color: '#92400e', fontSize: 13 }}>DÃ©finis d'abord la convocation ci-dessus.</p>
+                                  <p style={{ margin: 0, color: '#92400e', fontSize: 13 }}>Définis d'abord la convocation ci-dessus.</p>
                                 </div>
                               )}
 
@@ -6465,16 +6465,16 @@ export default function App() {
                                       <div key={player.id} style={{ ...styles.playerAttendanceRow, background: inSquad ? (isGuest ? '#fdf4ff' : '#f8fbff') : '#f9fafb', border: inSquad ? `1px solid ${isGuest ? '#e9d5ff' : '#d8e5f2'}` : '1px dashed #e2e8f0' }}>
                                         <div>
                                           <strong>{getPlayerName(player)}</strong>
-                                          {isGuest && guestTeam && <span style={{ marginLeft: 8, fontSize: 12, color: '#7c3aed', fontWeight: 700, background: '#f3e8ff', padding: '2px 8px', borderRadius: 999 }}>ðŸ”„ {guestTeam.name}</span>}
+                                          {isGuest && guestTeam && <span style={{ marginLeft: 8, fontSize: 12, color: '#7c3aed', fontWeight: 700, background: '#f3e8ff', padding: '2px 8px', borderRadius: 999 }}>🔄 {guestTeam.name}</span>}
                                         </div>
                                         {inSquad
                                           ? <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                            <button onClick={() => saveMatchAttendance(selectedMatch.id, player.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>PrÃ©sent</button>
+                                            <button onClick={() => saveMatchAttendance(selectedMatch.id, player.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>Présent</button>
                                             <button onClick={() => saveMatchAttendance(selectedMatch.id, player.id, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>Absent</button>
-                                            <button onClick={() => saveMatchAttendance(selectedMatch.id, player.id, 'unknown' as any)} style={{ ...styles.statusButton, background: status === 'unknown' ? '#64748b' : '#eef2f7', color: status === 'unknown' ? 'white' : '#526071' }}>Sans rÃ©ponse</button>
+                                            <button onClick={() => saveMatchAttendance(selectedMatch.id, player.id, 'unknown' as any)} style={{ ...styles.statusButton, background: status === 'unknown' ? '#64748b' : '#eef2f7', color: status === 'unknown' ? 'white' : '#526071' }}>Sans réponse</button>
                                           </div>
                                           : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 14px', background: '#f1f5f9', borderRadius: 12 }}>
-                                            <span style={{ fontSize: 22 }}>ðŸ˜´</span>
+                                            <span style={{ fontSize: 22 }}>😴</span>
                                             <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Repos</span>
                                           </div>}
                                       </div>
@@ -6487,9 +6487,9 @@ export default function App() {
 
                               {matchDetailTab === 'stats' && isSquadDefined(selectedMatch.id) && squadForSelectedMatch.length > 0 && (
                                 <div style={{ ...styles.panelCard, background: '#f0f7ff', border: '1px solid #bfdbfe' }}>
-                                  <h4 style={{ margin: '0 0 14px 0', color: '#1e40af' }}>ðŸ“Š Stats du match â€” tableau groupÃ©</h4>
+                                  <h4 style={{ margin: '0 0 14px 0', color: '#1e40af' }}>📊 Stats du match — tableau groupé</h4>
                                   {(() => {
-                                    // Include all squad players â€” including guests from other categories
+                                    // Include all squad players — including guests from other categories
                                     const allSquadPlayers = squadForSelectedMatch
                                       .map((id) => players.find((p) => p.id === id))
                                       .filter(Boolean)
@@ -6525,24 +6525,24 @@ export default function App() {
               </div>
             )}
 
-            {/* â”€â”€ STATS â”€â”€ */}
+            {/* ── STATS ── */}
             {coachTab === 'stats' && (
               <div style={styles.contentCard}>
                 <h2 style={styles.blockTitle}>Stats joueurs</h2>
-                <p style={styles.blockSubtitle}>{"Classement par buts â€“ prÃ©sences entraÃ®nements et matchs."}</p>
+                <p style={styles.blockSubtitle}>{"Classement par buts – présences entraînements et matchs."}</p>
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
                   <div style={styles.filterBar}>
-                    <label style={styles.inputLabel}>Ã‰quipe</label>
+                    <label style={styles.inputLabel}>Équipe</label>
                     <select value={selectedCoachTeamId} onChange={(e) => setSelectedCoachTeamId(e.target.value)} style={styles.select}>
                       {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                   </div>
                   <div style={{ minWidth: 200 }}>
-                    <label style={styles.inputLabel}>ðŸ—“ Saison</label>
+                    <label style={styles.inputLabel}>🗓 Saison</label>
                     <select value={selectedSeasonId} onChange={(e) => setSelectedSeasonId(e.target.value)} style={styles.select}>
                       <option value="">Toutes les saisons</option>
                       {seasons.filter((s) => s.team_id === selectedCoachTeamId || !s.team_id).map((s) => (
-                        <option key={s.id} value={s.id}>{s.name} ({s.start_date} â†’ {s.end_date})</option>
+                        <option key={s.id} value={s.id}>{s.name} ({s.start_date} → {s.end_date})</option>
                       ))}
                     </select>
                   </div>
@@ -6550,11 +6550,11 @@ export default function App() {
                     onClick={() => resetTrainingAttendance(selectedCoachTeamId)}
                     disabled={resetingTraining || !selectedCoachTeamId}
                     style={{ ...styles.smallButton, background: '#fee2e2', color: '#991b1b', padding: '12px 16px', borderRadius: 12, border: '1px solid #fca5a5' }}>
-                    {resetingTraining ? 'RÃ©initialisation...' : 'ðŸ”„ Reset prÃ©sences entraÃ®nements'}
+                    {resetingTraining ? 'Réinitialisation...' : '🔄 Reset présences entraînements'}
                   </button>
                 </div>
                 {coachTeamPlayers.length === 0
-                  ? <div style={styles.emptyState}>{"Aucun joueur dans cette Ã©quipe."}</div>
+                  ? <div style={styles.emptyState}>{"Aucun joueur dans cette équipe."}</div>
                   : (() => {
                     const totalTrainings = getTrainingTotalCount(selectedCoachTeamId, selectedSeasonId);
                     const totalMatches = getMatchTotalCount(selectedCoachTeamId, selectedSeasonId);
@@ -6565,7 +6565,7 @@ export default function App() {
                     });
                     const seasonLabel = selectedSeasonId ? seasons.find(s => s.id === selectedSeasonId)?.name : '';
 
-                    // Stats globales Ã©quipe
+                    // Stats globales équipe
                     const allTeamStats = coachTeamPlayers.flatMap((p) => getMatchPlayerStatsForSeason(p.id, selectedSeasonId));
                     const teamTotalGoals = allTeamStats.reduce((s, r) => s + (r.goals || 0), 0);
                     const teamTotalShots = allTeamStats.reduce((s, r) => s + (r.shots || 0), 0);
@@ -6577,19 +6577,19 @@ export default function App() {
 
                     return (
                       <div style={{ overflowX: 'auto' }}>
-                        {selectedSeasonId && <div style={{ marginBottom: 12, padding: '8px 14px', background: '#eaf4ff', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#0A5FB5', display: 'inline-block' }}>ðŸ“… Saison : {seasonLabel}</div>}
+                        {selectedSeasonId && <div style={{ marginBottom: 12, padding: '8px 14px', background: '#eaf4ff', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#0A5FB5', display: 'inline-block' }}>📅 Saison : {seasonLabel}</div>}
 
-                        {/* RÃ©sumÃ© global Ã©quipe */}
+                        {/* Résumé global équipe */}
                         <div style={{ marginBottom: 20 }}>
-                          <div style={{ fontWeight: 800, color: '#0f2743', fontSize: 15, marginBottom: 12 }}>ðŸ“Š RÃ©sumÃ© de l'Ã©quipe</div>
+                          <div style={{ fontWeight: 800, color: '#0f2743', fontSize: 15, marginBottom: 12 }}>📊 Résumé de l'équipe</div>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 8 }}>
                             {[
-                              { label: 'âš½ Buts totaux', value: teamTotalGoals, bg: '#dbeafe', color: '#1e40af' },
-                              { label: 'ðŸŽ¯ Tirs totaux', value: teamTotalShots, bg: '#ede9fe', color: '#5b21b6' },
-                              { label: 'ðŸ¥… % RÃ©ussite tir', value: teamTotalShots > 0 ? `${teamShootPct}%` : '-', bg: teamShootPct >= 50 ? '#d1fae5' : '#fef3c7', color: teamShootPct >= 50 ? '#065f46' : '#92400e' },
-                              { label: 'ðŸ§¤ ArrÃªts gardien', value: teamTotalSaves, bg: '#d1fae5', color: '#065f46' },
-                              { label: 'ðŸ¤ Passes dÃ©c.', value: teamTotalAssists, bg: '#fef3c7', color: '#92400e' },
-                              { label: 'ðŸ“ˆ Buts/match', value: avgGoalsPerMatch, bg: '#f0fdf4', color: '#15803d' },
+                              { label: '⚽ Buts totaux', value: teamTotalGoals, bg: '#dbeafe', color: '#1e40af' },
+                              { label: '🎯 Tirs totaux', value: teamTotalShots, bg: '#ede9fe', color: '#5b21b6' },
+                              { label: '🥅 % Réussite tir', value: teamTotalShots > 0 ? `${teamShootPct}%` : '-', bg: teamShootPct >= 50 ? '#d1fae5' : '#fef3c7', color: teamShootPct >= 50 ? '#065f46' : '#92400e' },
+                              { label: '🧤 Arrêts gardien', value: teamTotalSaves, bg: '#d1fae5', color: '#065f46' },
+                              { label: '🤝 Passes déc.', value: teamTotalAssists, bg: '#fef3c7', color: '#92400e' },
+                              { label: '📈 Buts/match', value: avgGoalsPerMatch, bg: '#f0fdf4', color: '#15803d' },
                             ].map((stat) => (
                               <div key={stat.label} style={{ background: stat.bg, borderRadius: 16, padding: '14px 12px', textAlign: 'center', border: '1px solid rgba(0,0,0,0.06)' }}>
                                 <div style={{ fontSize: 24, fontWeight: 800, color: stat.color, marginBottom: 4 }}>{stat.value}</div>
@@ -6606,8 +6606,8 @@ export default function App() {
                               <th style={{ ...styles.th, textAlign: 'center' }}>Buts</th>
                               <th style={{ ...styles.th, textAlign: 'center' }}>Tirs</th>
                               <th style={{ ...styles.th, textAlign: 'center', background: '#7c3aed' }}>% Tir</th>
-                              <th style={{ ...styles.th, textAlign: 'center' }}>ArrÃªts</th>
-                              <th style={{ ...styles.th, textAlign: 'center' }}>EntraÃ®nements</th>
+                              <th style={{ ...styles.th, textAlign: 'center' }}>Arrêts</th>
+                              <th style={{ ...styles.th, textAlign: 'center' }}>Entraînements</th>
                               <th style={{ ...styles.th, textAlign: 'center' }}>Matchs</th>
                             </tr>
                           </thead>
@@ -6639,14 +6639,14 @@ export default function App() {
               </div>
             )}
 
-            {/* â”€â”€ COMPOSITION â”€â”€ */}
+            {/* ── COMPOSITION ── */}
             {coachTab === 'composition' && (
               <div style={styles.contentCard}>
-                <h2 style={styles.blockTitle}>ðŸ Composition du match</h2>
-                <p style={styles.blockSubtitle}>Placez vos joueurs sur le terrain. La composition est sauvegardÃ©e par match.</p>
+                <h2 style={styles.blockTitle}>🏐 Composition du match</h2>
+                <p style={styles.blockSubtitle}>Placez vos joueurs sur le terrain. La composition est sauvegardée par match.</p>
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 18 }}>
                   <div style={styles.filterBar}>
-                    <label style={styles.inputLabel}>Ã‰quipe</label>
+                    <label style={styles.inputLabel}>Équipe</label>
                     <select value={selectedCoachTeamId} onChange={(e) => setSelectedCoachTeamId(e.target.value)} style={styles.select}>
                       {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
@@ -6657,14 +6657,14 @@ export default function App() {
                       <option value="">Choisir un match</option>
                       {coachMatches.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {getTeamName(m.team_id)} vs {m.opponent || '-'} â€“ {formatDate(m.match_date)}
+                          {getTeamName(m.team_id)} vs {m.opponent || '-'} – {formatDate(m.match_date)}
                         </option>
                       ))}
                     </select>
                   </div>
                 </div>
                 {!selectedMatchId || !selectedCoachTeamId ? (
-                  <div style={styles.emptyState}>SÃ©lectionnez une Ã©quipe et un match pour dÃ©finir la composition.</div>
+                  <div style={styles.emptyState}>Sélectionnez une équipe et un match pour définir la composition.</div>
                 ) : (
                   <MatchComposition
                     matchId={selectedMatchId}
@@ -6677,41 +6677,41 @@ export default function App() {
               </div>
             )}
 
-            {/* â”€â”€ JOUEURS â”€â”€ */}
+            {/* ── JOUEURS ── */}
             {coachTab === 'players' && (
               <div style={styles.contentCard}>
                 <h2 style={styles.blockTitle}>Gestion des joueurs</h2>
-                <p style={styles.blockSubtitle}>{"Modifier, supprimer un joueur et gÃ©rer les liens parent / enfant."}</p>
+                <p style={styles.blockSubtitle}>{"Modifier, supprimer un joueur et gérer les liens parent / enfant."}</p>
 
                 <div style={styles.panelCard}>
                   <h3 style={styles.panelTitle}>{editingPlayerId ? 'Modifier un joueur' : 'Modifier un joueur'}</h3>
                   {editingPlayerId ? (
                     <>
                       <div style={styles.formGrid}>
-                        <div><label style={styles.inputLabel}>{"PrÃ©nom"}</label><input value={playerFormFirstName} onChange={(e) => setPlayerFormFirstName(e.target.value)} style={styles.input} placeholder="PrÃ©nom" /></div>
+                        <div><label style={styles.inputLabel}>{"Prénom"}</label><input value={playerFormFirstName} onChange={(e) => setPlayerFormFirstName(e.target.value)} style={styles.input} placeholder="Prénom" /></div>
                         <div><label style={styles.inputLabel}>Nom</label><input value={playerFormLastName} onChange={(e) => setPlayerFormLastName(e.target.value)} style={styles.input} placeholder="Nom" /></div>
                         <div>
-                          <label style={styles.inputLabel}>{"Ã‰quipe"}</label>
+                          <label style={styles.inputLabel}>{"Équipe"}</label>
                           <select value={playerFormTeamId} onChange={(e) => setPlayerFormTeamId(e.target.value)} style={styles.select}>
                             {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                           </select>
                         </div>
                         <div><label style={styles.inputLabel}>Date de naissance</label><input type="date" value={playerFormBirthDate} onChange={(e) => setPlayerFormBirthDate(e.target.value)} style={styles.input} /></div>
-                        <div><label style={styles.inputLabel}>NÂ° de maillot</label><input type="number" min={1} max={99} value={playerFormJerseyNumber} onChange={(e) => setPlayerFormJerseyNumber(e.target.value)} style={styles.input} placeholder="Ex : 7" /></div>
+                        <div><label style={styles.inputLabel}>N° de maillot</label><input type="number" min={1} max={99} value={playerFormJerseyNumber} onChange={(e) => setPlayerFormJerseyNumber(e.target.value)} style={styles.input} placeholder="Ex : 7" /></div>
                         <div>
-                          <label style={styles.inputLabel}>GarÃ§on / fille</label>
+                          <label style={styles.inputLabel}>Garçon / fille</label>
                           <select value={playerFormGender} onChange={(e) => setPlayerFormGender(e.target.value as 'male' | 'female' | '')} style={styles.select}>
-                            <option value="">â€” Non dÃ©fini â€”</option>
-                            <option value="male">GarÃ§on</option>
+                            <option value="">— Non défini —</option>
+                            <option value="male">Garçon</option>
                             <option value="female">Fille</option>
                           </select>
                         </div>
                         <div>
                           <label style={styles.inputLabel}>Poste</label>
                           <select value={playerFormPosition} onChange={(e) => setPlayerFormPosition(e.target.value)} style={styles.select}>
-                            <option value="">â€” Non dÃ©fini â€”</option>
+                            <option value="">— Non défini —</option>
                             {POSITIONS.map((pos) => (
-                              <option key={pos.code} value={pos.code}>{pos.code} â€” {pos.full}</option>
+                              <option key={pos.code} value={pos.code}>{pos.code} — {pos.full}</option>
                             ))}
                           </select>
                         </div>
@@ -6722,23 +6722,23 @@ export default function App() {
                       </div>
                     </>
                   ) : (
-                    <p style={styles.emptyText}>{"Clique sur Modifier pour Ã©diter un joueur."}</p>
+                    <p style={styles.emptyText}>{"Clique sur Modifier pour éditer un joueur."}</p>
                   )}
                 </div>
 
                 <div style={{ ...styles.panelCard, marginTop: 18 }}>
-                  <h3 style={styles.panelTitle}>{"Lier un enfant Ã  un parent"}</h3>
+                  <h3 style={styles.panelTitle}>{"Lier un enfant à un parent"}</h3>
                   <div style={styles.formGrid}>
                     <div>
                       <label style={styles.inputLabel}>Parent / compte joueur</label>
                       <select value={selectedLinkParentId} onChange={(e) => setSelectedLinkParentId(e.target.value)} style={styles.select}>
-                        {parentUsers.map((p) => <option key={p.id} value={p.id}>{getUserName(p)} {p.role === 'player' ? 'Â· joueur' : 'Â· parent'} {p.email ? `(${p.email})` : ''}</option>)}
+                        {parentUsers.map((p) => <option key={p.id} value={p.id}>{getUserName(p)} {p.role === 'player' ? '· joueur' : '· parent'} {p.email ? `(${p.email})` : ''}</option>)}
                       </select>
                     </div>
                     <div>
                       <label style={styles.inputLabel}>Enfant / joueur</label>
                       <select value={selectedLinkPlayerId} onChange={(e) => setSelectedLinkPlayerId(e.target.value)} style={styles.select}>
-                        {visiblePlayers.map((p) => <option key={p.id} value={p.id}>{getPlayerName(p)} â€“ {getTeamName(p.team_id)}</option>)}
+                        {visiblePlayers.map((p) => <option key={p.id} value={p.id}>{getPlayerName(p)} – {getTeamName(p.team_id)}</option>)}
                       </select>
                     </div>
                   </div>
@@ -6753,7 +6753,7 @@ export default function App() {
                         value={playerSearch}
                         onChange={(e) => setPlayerSearch(e.target.value)}
                         style={styles.input}
-                        placeholder="Nom, prÃ©nom, Ã©quipe, numÃ©ro..."
+                        placeholder="Nom, prénom, équipe, numéro..."
                       />
                     </div>
                     {playerSearch.trim() && (
@@ -6774,7 +6774,7 @@ export default function App() {
                       return haystack.includes(query);
                     });
                     if (visiblePlayers.length === 0) return <div style={styles.emptyState}>Aucun joueur.</div>;
-                    if (filteredPlayers.length === 0) return <div style={styles.emptyState}>Aucun joueur trouvÃ© pour â€œ{playerSearch}â€.</div>;
+                    if (filteredPlayers.length === 0) return <div style={styles.emptyState}>Aucun joueur trouvé pour “{playerSearch}”.</div>;
                     return filteredPlayers.map((player) => {
                       const linkedParents = getLinkedParentsForPlayer(player.id);
                       return (
@@ -6782,8 +6782,8 @@ export default function App() {
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                             <div>
                               <h3 style={{ margin: 0 }}>{getPlayerName(player)}</h3>
-                              <p style={{ margin: '8px 0 0 0', color: '#5b6472' }}>Ã‰quipe : {getTeamName(player.team_id)}</p>
-                              <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>Comptes liÃ©s : {linkedParents.length > 0 ? linkedParents.map((p) => `${getUserName(p)}${p.role === 'player' ? ' (joueur)' : ''}`).join(', ') : 'Aucun compte liÃ©'}</p>
+                              <p style={{ margin: '8px 0 0 0', color: '#5b6472' }}>Équipe : {getTeamName(player.team_id)}</p>
+                              <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>Comptes liés : {linkedParents.length > 0 ? linkedParents.map((p) => `${getUserName(p)}${p.role === 'player' ? ' (joueur)' : ''}`).join(', ') : 'Aucun compte lié'}</p>
                             </div>
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               <button onClick={() => startEditPlayer(player)} style={styles.secondaryButton}>Modifier</button>
@@ -6792,13 +6792,13 @@ export default function App() {
                           </div>
                           {linkedParents.length > 0 && (
                             <div style={{ marginTop: 12 }}>
-                              <div style={styles.miniTitle}>Comptes liÃ©s</div>
+                              <div style={styles.miniTitle}>Comptes liés</div>
                               <div style={{ display: 'grid', gap: 8 }}>
                                 {linkedParents.map((parent) => {
                                   const link = parentLinks.find((l) => l.parent_id === parent.id && l.player_id === player.id);
                                   return (
                                     <div key={parent.id} style={styles.linkRow}>
-                                      <span>{getUserName(parent)}{parent.email ? ` â€“ ${parent.email}` : ''}</span>
+                                      <span>{getUserName(parent)}{parent.email ? ` – ${parent.email}` : ''}</span>
                                       {link && <button onClick={() => removeParentLink(link.id)} style={styles.linkRemoveButton}>Retirer le lien</button>}
                                     </div>
                                   );
@@ -6814,7 +6814,7 @@ export default function App() {
               </div>
             )}
 
-            {/* â”€â”€ UTILISATEURS â”€â”€ */}
+            {/* ── UTILISATEURS ── */}
             {coachTab === 'users' && (
               <div style={styles.contentCard}>
                 <h2 style={styles.blockTitle}>Gestion des utilisateurs</h2>
@@ -6828,20 +6828,20 @@ export default function App() {
                         <select value={selectedManagedParentId} onChange={(e) => setSelectedManagedParentId(e.target.value)} style={styles.select}>
                           {parentUsers.length === 0
                           ? <option value="">Aucun compte</option>
-                          : parentUsers.map((p) => <option key={p.id} value={p.id}>{getUserName(p)} Â· {p.role === 'player' ? 'joueur' : 'parent'}{p.email ? ` â€“ ${p.email}` : ''}</option>)}
+                          : parentUsers.map((p) => <option key={p.id} value={p.id}>{getUserName(p)} · {p.role === 'player' ? 'joueur' : 'parent'}{p.email ? ` – ${p.email}` : ''}</option>)}
                       </select>
                     </div>
-                    <div><label style={styles.inputLabel}>{"PrÃ©nom"}</label><input value={managedParentFirstName} onChange={(e) => setManagedParentFirstName(e.target.value)} style={styles.input} /></div>
+                    <div><label style={styles.inputLabel}>{"Prénom"}</label><input value={managedParentFirstName} onChange={(e) => setManagedParentFirstName(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Nom</label><input value={managedParentLastName} onChange={(e) => setManagedParentLastName(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Email</label><input value={managedParentEmail} onChange={(e) => setManagedParentEmail(e.target.value)} style={styles.input} type="email" /></div>
                     <div>
-                      <label style={styles.inputLabel}>Code PIN (obsolÃ¨te â€” non utilisÃ©)</label>
+                      <label style={styles.inputLabel}>Code PIN (obsolète — non utilisé)</label>
                       <input value={managedParentPin} onChange={(e) => setManagedParentPin(e.target.value.replace(/\D/g, '').slice(0, 4))} style={styles.input} placeholder="4 chiffres" inputMode="numeric" />
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <button onClick={saveManagedParent} style={styles.primaryButton} disabled={savingManagedParent}>{savingManagedParent ? 'Enregistrement...' : 'Enregistrer'}</button>
-                    <button onClick={() => setManagedParentPin(generateFourDigitPin())} style={styles.secondaryOutlineButton}>{"GÃ©nÃ©rer nouveau code"}</button>
+                    <button onClick={() => setManagedParentPin(generateFourDigitPin())} style={styles.secondaryOutlineButton}>{"Générer nouveau code"}</button>
                     {isAdmin && selectedManagedParentId && (() => {
                       const par = users.find(u => u.id === selectedManagedParentId);
                       const isActive = (par as any)?.is_active !== false;
@@ -6849,15 +6849,15 @@ export default function App() {
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           <button onClick={() => toggleParentAccess(selectedManagedParentId, isActive)}
                             style={{ ...styles.smallButton, background: isActive ? '#fef9c3' : '#dcfce7', color: isActive ? '#854d0e' : '#166534' }}>
-                            {isActive ? "ðŸ”’ DÃ©sactiver l'accÃ¨s" : "ðŸ”“ RÃ©activer l'accÃ¨s"}
+                            {isActive ? "🔒 Désactiver l'accès" : "🔓 Réactiver l'accès"}
                           </button>
                           <button onClick={() => deleteParentAndAuth(selectedManagedParentId)}
-                            style={{ ...styles.smallButton, background: '#fee2e2', color: '#991b1b' }}>ðŸ—‘ Supprimer</button>
+                            style={{ ...styles.smallButton, background: '#fee2e2', color: '#991b1b' }}>🗑 Supprimer</button>
                         </div>
                       );
                     })()}
                   </div>
-                  <div style={styles.warningBox}>{"Les parents et joueurs se connectent avec leur email et mot de passe. Le code PIN n'est plus utilisÃ©."}</div>
+                  <div style={styles.warningBox}>{"Les parents et joueurs se connectent avec leur email et mot de passe. Le code PIN n'est plus utilisé."}</div>
                 </div>
 
                 <div style={{ ...styles.panelCard, marginTop: 18 }}>
@@ -6872,8 +6872,8 @@ export default function App() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                               <div>
                                 <h3 style={{ margin: 0 }}>{getPlayerName(player)}</h3>
-                                <p style={{ margin: '8px 0 0 0', color: '#5b6472' }}>Ã‰quipe : {getTeamName(player.team_id)} â€“ CatÃ©gorie : {getTeamCategory(player.team_id)}</p>
-                                <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>Comptes liÃ©s : {linkedParents.length > 0 ? linkedParents.map((p) => `${getUserName(p)}${p.role === 'player' ? ' (joueur)' : ''}`).join(', ') : 'Aucun compte liÃ©'}</p>
+                                <p style={{ margin: '8px 0 0 0', color: '#5b6472' }}>Équipe : {getTeamName(player.team_id)} – Catégorie : {getTeamCategory(player.team_id)}</p>
+                                <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>Comptes liés : {linkedParents.length > 0 ? linkedParents.map((p) => `${getUserName(p)}${p.role === 'player' ? ' (joueur)' : ''}`).join(', ') : 'Aucun compte lié'}</p>
                               </div>
                               <button onClick={() => { setCoachTab('players'); startEditPlayer(player); }} style={styles.secondaryButton}>Modifier</button>
                             </div>
@@ -6885,13 +6885,13 @@ export default function App() {
               </div>
             )}
 
-            {/* â”€â”€ MESSAGES â”€â”€ */}
+            {/* ── MESSAGES ── */}
             {coachTab === 'messages' && (
               <div style={styles.contentCard}>
-                <h2 style={styles.blockTitle}>ðŸ’¬ Messages</h2>
+                <h2 style={styles.blockTitle}>💬 Messages</h2>
                 <p style={styles.blockSubtitle}>Conversations avec les parents. Cliquez sur une conversation pour l'ouvrir.</p>
 
-                {/* Modale lecture/rÃ©ponse */}
+                {/* Modale lecture/réponse */}
                 {selectedConvId && (() => {
                   const conv = conversations.find((c) => c.id === selectedConvId);
                   const par = conv?.parent_id ? users.find((u) => u.id === conv.parent_id) : null;
@@ -6905,7 +6905,7 @@ export default function App() {
                         <div style={{ padding: '14px 20px', background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', display: 'flex', alignItems: 'center', gap: 14, justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 18 }}>
-                              {par?.first_name?.[0]?.toUpperCase() || (conv?.is_group ? 'ðŸ‘¥' : '?')}
+                              {par?.first_name?.[0]?.toUpperCase() || (conv?.is_group ? '👥' : '?')}
                             </div>
                             <div>
                               <div style={{ fontWeight: 800, color: 'white', fontSize: 15 }}>{convTitle}</div>
@@ -6914,8 +6914,8 @@ export default function App() {
                           </div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <button onClick={() => deleteConversation(selectedConvId!)}
-                              style={{ padding: '6px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} title="Supprimer la conversation">ðŸ—‘</button>
-                            <button onClick={() => setSelectedConvId(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', fontWeight: 800, fontSize: 20, cursor: 'pointer', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>âœ•</button>
+                              style={{ padding: '6px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} title="Supprimer la conversation">🗑</button>
+                            <button onClick={() => setSelectedConvId(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', fontWeight: 800, fontSize: 20, cursor: 'pointer', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                           </div>
                         </div>
                         {/* Messages */}
@@ -6930,11 +6930,11 @@ export default function App() {
                               const time = new Date(msg.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                               return (
                                 <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
-                                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 3, fontWeight: 600 }}>{who} Â· {time}</div>
+                                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 3, fontWeight: 600 }}>{who} · {time}</div>
                                   <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, flexDirection: mine ? 'row' : 'row-reverse' }}>
                                     <button onClick={() => { if (window.confirm('Supprimer ce message ?')) deleteMessage(msg.id); }}
                                       style={{ opacity: 0.4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: '2px 4px', color: '#991b1b', flexShrink: 0, lineHeight: 1 }}
-                                      title="Supprimer ce message">ðŸ—‘</button>
+                                      title="Supprimer ce message">🗑</button>
                                     <div style={{ maxWidth: '78%', padding: '10px 15px', borderRadius: mine ? '18px 18px 4px 18px' : '18px 18px 18px 4px', background: mine ? '#0A5FB5' : '#edf2f7', color: mine ? 'white' : '#10233b', fontSize: 15, lineHeight: 1.5, wordBreak: 'break-word' as const, whiteSpace: 'pre-wrap' as const }}>
                                       {msg.content}
                                     </div>
@@ -6943,15 +6943,15 @@ export default function App() {
                               );
                             })}
                         </div>
-                        {/* Zone rÃ©ponse */}
+                        {/* Zone réponse */}
                         <div style={{ padding: '12px 16px', borderTop: '1px solid #d8e5f2', display: 'flex', gap: 10, alignItems: 'flex-end', background: 'white' }}>
                           <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(selectedConvId, 'coach', myId); } }}
-                            placeholder="Votre rÃ©ponse..." rows={2}
+                            placeholder="Votre réponse..." rows={2}
                             style={{ flex: 1, padding: '10px 14px', borderRadius: 16, border: '1px solid #cfd8e3', fontSize: 14, resize: 'none', outline: 'none', fontFamily: 'Arial, sans-serif', lineHeight: 1.4 }} />
                           <button onClick={() => sendMessage(selectedConvId, 'coach', myId)} disabled={sendingMessage || !newMessage.trim()}
                             style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: newMessage.trim() ? '#0A5FB5' : '#ccd8e8', color: 'white', fontSize: 22, cursor: newMessage.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 800 }}>
-                            â†’
+                            →
                           </button>
                         </div>
                       </div>
@@ -6962,16 +6962,16 @@ export default function App() {
                 {/* Formulaire nouvelle conv */}
                 <div style={{ marginBottom: 16 }}>
                   <button onClick={() => setShowNewConvForm((p) => !p)} style={{ ...styles.secondaryButton, marginBottom: showNewConvForm ? 12 : 0 }}>
-                    {showNewConvForm ? 'âœ• Annuler' : '+ Nouvelle conversation'}
+                    {showNewConvForm ? '✕ Annuler' : '+ Nouvelle conversation'}
                   </button>
                   {showNewConvForm && (
                     <div style={{ ...styles.panelCard, background: '#fffbeb', border: '1px solid #fde68a', display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => setNewConvIsGroup(false)} style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: 'none', background: !newConvIsGroup ? '#0A5FB5' : '#e5eef8', color: !newConvIsGroup ? 'white' : '#12304f', fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>PrivÃ©</button>
+                        <button onClick={() => setNewConvIsGroup(false)} style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: 'none', background: !newConvIsGroup ? '#0A5FB5' : '#e5eef8', color: !newConvIsGroup ? 'white' : '#12304f', fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>Privé</button>
                         <button onClick={() => setNewConvIsGroup(true)} style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: 'none', background: newConvIsGroup ? '#0A5FB5' : '#e5eef8', color: newConvIsGroup ? 'white' : '#12304f', fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>Groupe</button>
                       </div>
                       <select value={newConvTeamId} onChange={(e) => setNewConvTeamId(e.target.value)} style={{ ...styles.select, minHeight: 44, fontSize: 13 }}>
-                        <option value="">-- Ã‰quipe --</option>
+                        <option value="">-- Équipe --</option>
                         {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
                       {!newConvIsGroup && (
@@ -6981,18 +6981,18 @@ export default function App() {
                         </select>
                       )}
                       <button onClick={() => {
-                        if (!newConvTeamId) { alert('Choisir une Ã©quipe'); return; }
+                        if (!newConvTeamId) { alert('Choisir une équipe'); return; }
                         if (!newConvIsGroup && !newConvParentId) { alert('Choisir un parent'); return; }
                         const t = teams.find((x) => x.id === newConvTeamId);
-                        createConversation(newConvTeamId, newConvIsGroup ? null : newConvParentId, newConvIsGroup, newConvIsGroup ? ('ðŸ‘¥ ' + (t?.name || '')) : null);
-                      }} style={styles.primaryButton}>CrÃ©er</button>
+                        createConversation(newConvTeamId, newConvIsGroup ? null : newConvParentId, newConvIsGroup, newConvIsGroup ? ('👥 ' + (t?.name || '')) : null);
+                      }} style={styles.primaryButton}>Créer</button>
                     </div>
                   )}
                 </div>
 
                 {/* Liste des conversations */}
                 {conversations.length === 0
-                  ? <div style={styles.emptyState}>Aucune conversation. CrÃ©ez-en une avec le bouton ci-dessus.</div>
+                  ? <div style={styles.emptyState}>Aucune conversation. Créez-en une avec le bouton ci-dessus.</div>
                   : <div style={{ display: 'grid', gap: 10 }}>
                     {conversations.map((conv) => {
                       const par = conv.parent_id ? users.find((u) => u.id === conv.parent_id) : null;
@@ -7013,20 +7013,20 @@ export default function App() {
                             <span style={{ position: 'absolute', top: 10, right: 10, background: '#dc2626', borderRadius: '50%', width: 10, height: 10, display: 'block', boxShadow: '0 1px 4px rgba(220,38,38,0.5)' }} />
                           )}
                           <div style={{ position: 'relative', width: 46, height: 46, borderRadius: '50%', background: conv.is_group ? '#fde68a' : '#0A5FB5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: conv.is_group ? 20 : 18, fontWeight: 800, color: conv.is_group ? '#92400e' : 'white', flexShrink: 0 }}>
-                            {conv.is_group ? 'ðŸ‘¥' : (par?.first_name?.[0]?.toUpperCase() || '?')}
+                            {conv.is_group ? '👥' : (par?.first_name?.[0]?.toUpperCase() || '?')}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: hasUnread ? 900 : 800, fontSize: 15, color: hasUnread ? '#0A5FB5' : '#10233b' }}>{convTitle}</div>
-                            <div style={{ fontSize: 12, color: '#5b6472', marginTop: 2 }}>{tm?.name || ''} Â· {lastUpdated}</div>
-                            {hasUnread && <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 800, marginTop: 2 }}>â— Nouveau message</div>}
+                            <div style={{ fontSize: 12, color: '#5b6472', marginTop: 2 }}>{tm?.name || ''} · {lastUpdated}</div>
+                            {hasUnread && <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 800, marginTop: 2 }}>● Nouveau message</div>}
                           </div>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                             <div style={{ ...styles.secondaryButton, fontSize: 13, padding: '8px 14px', pointerEvents: 'none', background: hasUnread ? '#0A5FB5' : undefined, color: hasUnread ? 'white' : undefined }}>
-                              Ouvrir â†’
+                              Ouvrir →
                             </div>
                             <button onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
                               style={{ padding: '8px 10px', borderRadius: 10, border: 'none', background: '#fee2e2', color: '#991b1b', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
-                              title="Supprimer la conversation">ðŸ—‘</button>
+                              title="Supprimer la conversation">🗑</button>
                           </div>
                         </div>
                       );
@@ -7035,26 +7035,26 @@ export default function App() {
               </div>
             )}
 
-            {/* â”€â”€ LICENCES â”€â”€ */}
+            {/* ── LICENCES ── */}
             {coachTab === 'licenses' && (
               <div style={styles.contentCard}>
-                <h2 style={styles.blockTitle}>ðŸªª Suivi des licences</h2>
+                <h2 style={styles.blockTitle}>🪪 Suivi des licences</h2>
                 <p style={styles.blockSubtitle}>
                   {isAdmin
-                    ? 'GÃ©rez le statut de licence de tous les joueurs. Validez aprÃ¨s rÃ©ception du paiement.'
-                    : 'Statut des licences pour vos Ã©quipes.'}
+                    ? 'Gérez le statut de licence de tous les joueurs. Validez après réception du paiement.'
+                    : 'Statut des licences pour vos équipes.'}
                 </p>
 
                 {/* Filtre saison pour licences */}
                 <div style={{ marginBottom: 16, maxWidth: 380, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: 220 }}>
-                    <label style={styles.inputLabel}>ðŸ—“ Saison affichÃ©e</label>
+                    <label style={styles.inputLabel}>🗓 Saison affichée</label>
                     <select value={selectedLicenseSeasonId} onChange={(e) => setSelectedLicenseSeasonId(e.target.value)} style={styles.select}>
                       {seasons.map((s) => {
                         const today = new Date().toISOString().slice(0, 10);
                         const isCurrent = s.start_date <= today && s.end_date >= today;
                         return (
-                          <option key={s.id} value={s.id}>{s.name}{isCurrent ? ' â­ (en cours)' : ''}</option>
+                          <option key={s.id} value={s.id}>{s.name}{isCurrent ? ' ⭐ (en cours)' : ''}</option>
                         );
                       })}
                     </select>
@@ -7066,7 +7066,7 @@ export default function App() {
                       return (
                         <button onClick={() => setSelectedLicenseSeasonId(cur.id)}
                           style={{ marginTop: 24, padding: '10px 14px', borderRadius: 12, border: '1px solid #0A5FB5', background: 'white', color: '#0A5FB5', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
-                          â†© Saison en cours
+                          ↩ Saison en cours
                         </button>
                       );
                     }
@@ -7074,7 +7074,7 @@ export default function App() {
                   })()}
                 </div>
 
-                {/* RÃ©sumÃ© rapide */}
+                {/* Résumé rapide */}
                 {(() => {
                   const effectiveSeasonId = selectedLicenseSeasonId || getCurrentSeason()?.id || null;
                   const myPlayers = isAdmin ? players : players.filter((p) => allowedTeamIds.includes(p.team_id));
@@ -7086,21 +7086,21 @@ export default function App() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
                       <div style={{ background: '#fee2e2', borderRadius: 14, padding: '14px 16px', textAlign: 'center' }}>
                         <div style={{ fontSize: 26, fontWeight: 900, color: '#991b1b' }}>{pending}</div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#991b1b', marginTop: 4 }}>â³ En attente</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#991b1b', marginTop: 4 }}>⏳ En attente</div>
                       </div>
                       <div style={{ background: '#dbeafe', borderRadius: 14, padding: '14px 16px', textAlign: 'center' }}>
                         <div style={{ fontSize: 26, fontWeight: 900, color: '#1e40af' }}>{paid}</div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#1e40af', marginTop: 4 }}>ðŸ’³ PayÃ©es</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#1e40af', marginTop: 4 }}>💳 Payées</div>
                       </div>
                       <div style={{ background: '#dcfce7', borderRadius: 14, padding: '14px 16px', textAlign: 'center' }}>
                         <div style={{ fontSize: 26, fontWeight: 900, color: '#166534' }}>{validated}</div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginTop: 4 }}>âœ… ValidÃ©es</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginTop: 4 }}>✅ Validées</div>
                       </div>
                     </div>
                   );
                 })()}
 
-                {/* Tableau par Ã©quipe */}
+                {/* Tableau par équipe */}
                 {(() => {
                   const myTeams = isAdmin ? teams : visibleTeams;
                   return myTeams.map((team) => {
@@ -7133,7 +7133,7 @@ export default function App() {
                                     <td style={{ padding: '10px 12px', fontWeight: 600 }}>{p.last_name.toUpperCase()} {p.first_name}</td>
                                     <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                                       <span style={badgeStyle}>
-                                        {st === 'validated' ? 'âœ… ValidÃ©e' : st === 'paid' ? 'ðŸ’³ PayÃ©e' : 'â³ En attente'}
+                                        {st === 'validated' ? '✅ Validée' : st === 'paid' ? '💳 Payée' : '⏳ En attente'}
                                       </span>
                                     </td>
                                     {isAdmin && (
@@ -7145,11 +7145,11 @@ export default function App() {
                                           </button>
                                           <button onClick={() => upsertLicenseStatus(p.id, 'paid', effectiveSeasonId || undefined)}
                                             style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: st === 'paid' ? '#2563eb' : '#f3f4f6', color: st === 'paid' ? 'white' : '#374151', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>
-                                            ðŸ’³ PayÃ©e
+                                            💳 Payée
                                           </button>
                                           <button onClick={() => upsertLicenseStatus(p.id, 'validated', effectiveSeasonId || undefined)}
                                             style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: st === 'validated' ? '#16a34a' : '#f3f4f6', color: st === 'validated' ? 'white' : '#374151', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>
-                                            âœ… Valider
+                                            ✅ Valider
                                           </button>
                                         </div>
                                       </td>
@@ -7167,20 +7167,20 @@ export default function App() {
               </div>
             )}
 
-            {/* â”€â”€ MON Ã‰QUIPE â”€â”€ */}
+            {/* ── MON ÉQUIPE ── */}
             {coachTab === 'team' && (
               <div style={styles.contentCard}>
-                <h2 style={styles.blockTitle}>ðŸ‘• Mon Ã©quipe</h2>
+                <h2 style={styles.blockTitle}>👕 Mon équipe</h2>
                 <p style={styles.blockSubtitle}>Vue d'ensemble de vos joueurs. Cliquez sur une carte pour la voir en grand.</p>
 
                 <div style={{ marginBottom: 16 }}>
-                  <label style={styles.inputLabel}>Ã‰quipe</label>
+                  <label style={styles.inputLabel}>Équipe</label>
                   <select value={selectedCoachTeamId} onChange={(e) => setSelectedCoachTeamId(e.target.value)} style={{ ...styles.select, maxWidth: 320 }}>
                     {visibleTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
 
-                {/* â”€â”€ Toggle visibilitÃ© stats pour les parents (coach/admin) â”€â”€ */}
+                {/* ── Toggle visibilité stats pour les parents (coach/admin) ── */}
                 {selectedCoachTeamId && (() => {
                   const currentTeam = teams.find((t) => t.id === selectedCoachTeamId);
                   if (!currentTeam) return null;
@@ -7188,7 +7188,7 @@ export default function App() {
                   const toggle = async () => {
                     const newVal = !hidden;
                     const { error } = await supabase.from('teams').update({ stats_hidden_for_parents: newVal }).eq('id', currentTeam.id);
-                    if (error) { alert('Erreur lors de la mise Ã  jour : ' + error.message); return; }
+                    if (error) { alert('Erreur lors de la mise à jour : ' + error.message); return; }
                     setTeams((prev) => prev.map((t) => t.id === currentTeam.id ? { ...t, stats_hidden_for_parents: newVal } : t));
                   };
                   return (
@@ -7200,7 +7200,7 @@ export default function App() {
                     }}>
                       <div style={{ flex: 1, minWidth: 220 }}>
                         <div style={{ fontWeight: 800, color: hidden ? '#991b1b' : '#166534', fontSize: 14 }}>
-                          {hidden ? 'ðŸ”’ Stats masquÃ©es pour les parents' : 'ðŸ‘ï¸ Stats visibles pour les parents'}
+                          {hidden ? '🔒 Stats masquées pour les parents' : '👁️ Stats visibles pour les parents'}
                         </div>
                         <div style={{ fontSize: 12, color: '#6b7280', marginTop: 3, lineHeight: 1.4 }}>
                           {hidden
@@ -7214,19 +7214,19 @@ export default function App() {
                           background: hidden ? '#16a34a' : '#dc2626', color: 'white',
                           fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap',
                         }}>
-                        {hidden ? 'ðŸ‘ï¸ Rendre visible' : 'ðŸ”’ Masquer'}
+                        {hidden ? '👁️ Rendre visible' : '🔒 Masquer'}
                       </button>
                     </div>
                   );
                 })()}
 
                 {coachTeamPlayers.length === 0
-                  ? <div style={styles.emptyState}>Aucun joueur dans cette Ã©quipe.</div>
+                  ? <div style={styles.emptyState}>Aucun joueur dans cette équipe.</div>
                   : (
                     <div style={{ overflowX: 'auto', padding: '4px 2px' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 22, padding: 4 }}>
                         {(() => {
-                          // Coach/admin â†’ forParent=false, donc tout est visible
+                          // Coach/admin → forParent=false, donc tout est visible
                           const teamCards = buildFifaCardsForTeam(selectedCoachTeamId, false);
                           return teamCards.map((c, idx) => (
                             <div key={c.player.id} style={{ position: 'relative' }}>
@@ -7253,7 +7253,7 @@ export default function App() {
                                     onChange={(e) => setJerseyEditValue(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') saveJerseyNumber(c.player.id); if (e.key === 'Escape') setJerseyEditId(null); }}
                                     autoFocus
-                                    placeholder="NÂ°"
+                                    placeholder="N°"
                                     style={{ ...styles.input, minHeight: 34, padding: '6px 10px', textAlign: 'center', fontWeight: 900 }}
                                   />
                                   <div style={{ display: 'flex', gap: 6 }}>
@@ -7278,14 +7278,14 @@ export default function App() {
                     </div>
                     <div style={{ ...styles.panelCard, flex: 1, minWidth: 120, textAlign: 'center', background: '#f0fdf4' }}>
                       <div style={{ fontSize: 28, fontWeight: 900, color: '#166534' }}>{coachTeamPlayers.filter((p) => p.birth_date).length}</div>
-                      <div style={{ fontSize: 13, color: '#5b6472', fontWeight: 700 }}>Ã‚ge renseignÃ©</div>
+                      <div style={{ fontSize: 13, color: '#5b6472', fontWeight: 700 }}>Âge renseigné</div>
                     </div>
                     {coachTeamPlayers.some((p) => p.birth_date) && (
                       <div style={{ ...styles.panelCard, flex: 1, minWidth: 120, textAlign: 'center', background: '#fefce8' }}>
                         <div style={{ fontSize: 28, fontWeight: 900, color: '#854d0e' }}>
                           {Math.round(coachTeamPlayers.filter((p) => p.birth_date).reduce((sum, p) => sum + (getPlayerAge(p.birth_date) || 0), 0) / coachTeamPlayers.filter((p) => p.birth_date).length)}
                         </div>
-                        <div style={{ fontSize: 13, color: '#5b6472', fontWeight: 700 }}>Ã‚ge moyen</div>
+                        <div style={{ fontSize: 13, color: '#5b6472', fontWeight: 700 }}>Âge moyen</div>
                       </div>
                     )}
                   </div>
@@ -7293,7 +7293,7 @@ export default function App() {
               </div>
             )}
 
-            {/* â”€â”€ MOT DE PASSE COACH â”€â”€ */}
+            {/* ── MOT DE PASSE COACH ── */}
             {coachTab === 'supporter' && (
               <div style={styles.contentCard}>
                 <h2 style={styles.blockTitle}>Supporter</h2>
@@ -7329,12 +7329,12 @@ export default function App() {
 
             {coachTab === 'password' && (
               <div style={styles.contentCard}>
-                <h2 style={styles.blockTitle}>ðŸ”‘ Changer mon mot de passe</h2>
+                <h2 style={styles.blockTitle}>🔑 Changer mon mot de passe</h2>
                 <p style={styles.blockSubtitle}>Modifiez votre mot de passe de connexion.</p>
                 {changePwSuccess ? (
                   <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 16, padding: '20px 24px', textAlign: 'center', maxWidth: 480 }}>
-                    <div style={{ fontSize: 40, marginBottom: 10 }}>âœ…</div>
-                    <div style={{ fontWeight: 800, color: '#166534', fontSize: 16, marginBottom: 8 }}>Mot de passe modifiÃ© !</div>
+                    <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+                    <div style={{ fontWeight: 800, color: '#166534', fontSize: 16, marginBottom: 8 }}>Mot de passe modifié !</div>
                     <button onClick={() => { setChangePwSuccess(false); setNewPassword(''); setNewPassword2(''); }}
                       style={{ marginTop: 8, padding: '10px 24px', borderRadius: 12, border: 'none', background: '#0A5FB5', color: 'white', fontWeight: 800, cursor: 'pointer' }}>
                       OK
@@ -7343,14 +7343,14 @@ export default function App() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 480 }}>
                     <div>
-                      <label style={styles.inputLabel}>Nouveau mot de passe (min. 8 caractÃ¨res)</label>
+                      <label style={styles.inputLabel}>Nouveau mot de passe (min. 8 caractères)</label>
                       <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autoComplete="new-password" style={styles.input} />
+                        placeholder="••••••••" autoComplete="new-password" style={styles.input} />
                     </div>
                     <div>
                       <label style={styles.inputLabel}>Confirmer le mot de passe</label>
                       <input type="password" value={newPassword2} onChange={(e) => setNewPassword2(e.target.value)}
-                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autoComplete="new-password" style={styles.input}
+                        placeholder="••••••••" autoComplete="new-password" style={styles.input}
                         onKeyDown={(e) => e.key === 'Enter' && handleChangePassword()} />
                     </div>
                     {changePwError && (
@@ -7360,40 +7360,40 @@ export default function App() {
                     )}
                     <button onClick={handleChangePassword} disabled={changePwLoading || !newPassword || !newPassword2}
                       style={{ ...styles.primaryButton, opacity: changePwLoading || !newPassword || !newPassword2 ? 0.6 : 1 }}>
-                      {changePwLoading ? 'â³ Enregistrement...' : 'âœ… Enregistrer le nouveau mot de passe'}
+                      {changePwLoading ? '⏳ Enregistrement...' : '✅ Enregistrer le nouveau mot de passe'}
                     </button>
                   </div>
                 )}
               </div>
             )}
 
-            {/* â”€â”€ ACCESSIBILITÃ‰ â”€â”€ */}
+            {/* ── ACCESSIBILITÉ ── */}
             {(((coachTab === 'accessibility' || coachTab === 'admin') && isAdmin) || coachTab === 'events' || coachTab === 'polls') && (
               <div style={styles.contentCard}>
-                <h2 style={styles.blockTitle}>{coachTab === 'events' ? "ðŸŽ‰ Ã‰vÃ©nements" : coachTab === 'polls' ? "ðŸ“Š Sondages" : "âš™ï¸ Administration"}</h2>
-                <p style={styles.blockSubtitle}>{coachTab === 'events' || coachTab === 'polls' ? "CrÃ©ation et suivi pour vos Ã©quipes." : "Gestion complÃ¨te du club."}</p>
+                <h2 style={styles.blockTitle}>{coachTab === 'events' ? "🎉 Événements" : coachTab === 'polls' ? "📊 Sondages" : "⚙️ Administration"}</h2>
+                <p style={styles.blockSubtitle}>{coachTab === 'events' || coachTab === 'polls' ? "Création et suivi pour vos équipes." : "Gestion complète du club."}</p>
 
-                {/* â”€â”€ Sous-onglets â”€â”€ */}
+                {/* ── Sous-onglets ── */}
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 24, borderBottom: '2px solid #e5e7eb', paddingBottom: 0 }}>
                   {([
                     ...(isAdmin ? [
                     ['adminAccess', 'Acces admin'],
-                    ['coaches', 'ðŸ‘¤ Coaches'],
-                    ['trainings', 'ðŸ“… EntraÃ®nements'],
-                    ['matches', 'âš½ Matchs'],
-                    ['players', 'ðŸ‘¥ Joueurs'],
-                    ['roster', 'ðŸ“‹ Effectifs'],
-                    ['accounts', 'ðŸ‘¶ Comptes'],
-                    ['seasons', 'ðŸ—“ Saisons'],
-                    ['settings', 'âš™ï¸ ParamÃ¨tres'],
-                    ['licenses', 'ðŸªª Licences'],
-                    ['registrations', 'ðŸ“ Inscriptions'],
-                    ['events', 'ðŸŽ‰ Ã‰vÃ©nements'],
-                    ['polls', 'ðŸ“Š Sondages'],
-                    ['online', 'ðŸŸ¢ En ligne'],
+                    ['coaches', '👤 Coaches'],
+                    ['trainings', '📅 Entraînements'],
+                    ['matches', '⚽ Matchs'],
+                    ['players', '👥 Joueurs'],
+                    ['roster', '📋 Effectifs'],
+                    ['accounts', '👶 Comptes'],
+                    ['seasons', '🗓 Saisons'],
+                    ['settings', '⚙️ Paramètres'],
+                    ['licenses', '🪪 Licences'],
+                    ['registrations', '📝 Inscriptions'],
+                    ['events', '🎉 Événements'],
+                    ['polls', '📊 Sondages'],
+                    ['online', '🟢 En ligne'],
                   ] : [
-                    ['events', 'ðŸŽ‰ Ã‰vÃ©nements'],
-                    ['polls', 'ðŸ“Š Sondages'],
+                    ['events', '🎉 Événements'],
+                    ['polls', '📊 Sondages'],
                   ]),
                   ] as [typeof adminSubTab, string][]).map(([key, label]) => {
                     const badge = key === 'registrations'
@@ -7408,7 +7408,7 @@ export default function App() {
                   })}
                 </div>
 
-                {/* â”€â”€ COACHES â”€â”€ */}
+                {/* ── COACHES ── */}
                 {adminSubTab === 'adminAccess' && (
                   <div style={{ display: 'grid', gap: 18 }}>
                     <div style={{ ...styles.formCard, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
@@ -7470,29 +7470,29 @@ export default function App() {
 
                 {adminSubTab === 'coaches' && <>
                   <div style={{ ...styles.formCard, background: '#fef2f2', border: '1px solid #fecaca' }}>
-                    <h3 style={{ margin: '0 0 6px 0', color: '#991b1b' }}>AccÃ¨s admin partagÃ©</h3>
-                    <p style={{ margin: '0 0 16px 0', color: '#7f1d1d', fontSize: 14 }}>CrÃ©e un compte administrateur complet, utilisable par plusieurs personnes.</p>
+                    <h3 style={{ margin: '0 0 6px 0', color: '#991b1b' }}>Accès admin partagé</h3>
+                    <p style={{ margin: '0 0 16px 0', color: '#7f1d1d', fontSize: 14 }}>Crée un compte administrateur complet, utilisable par plusieurs personnes.</p>
                     <div style={styles.formGrid}>
                       <div><label style={styles.inputLabel}>Email admin</label><input type="email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} style={styles.input} placeholder="admin@cag.fr" /></div>
                       <div><label style={styles.inputLabel}>Mot de passe</label><input type="password" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} style={styles.input} placeholder="Mot de passe" /></div>
                     </div>
                     <button onClick={addAdminAccess} disabled={savingAdminAccess} style={{ ...styles.primaryButton, background: '#dc2626', marginTop: 10 }}>
-                      {savingAdminAccess ? 'CrÃ©ation...' : 'CrÃ©er accÃ¨s admin'}
+                      {savingAdminAccess ? 'Création...' : 'Créer accès admin'}
                     </button>
                   </div>
                   <div style={{ ...styles.formCard, background: '#fff7ed', border: '1px solid #fed7aa' }}>
-                    <h3 style={{ margin: '0 0 6px 0', color: '#92400e' }}>{editingCoachId ? 'âœï¸ Modifier le coach' : 'ðŸ‘¤ CrÃ©er un compte Coach'}</h3>
-                    <p style={{ margin: '0 0 16px 0', color: '#9a3412', fontSize: 14 }}>{editingCoachId ? 'Modifie les Ã©quipes assignÃ©es.' : 'Le coach recevra un email + mot de passe pour se connecter.'}</p>
+                    <h3 style={{ margin: '0 0 6px 0', color: '#92400e' }}>{editingCoachId ? '✏️ Modifier le coach' : '👤 Créer un compte Coach'}</h3>
+                    <p style={{ margin: '0 0 16px 0', color: '#9a3412', fontSize: 14 }}>{editingCoachId ? 'Modifie les équipes assignées.' : 'Le coach recevra un email + mot de passe pour se connecter.'}</p>
                     <div style={styles.formGrid}>
-                      <div><label style={styles.inputLabel}>{"PrÃ©nom coach"}</label><input value={newCoachFirstName} onChange={(e) => setNewCoachFirstName(e.target.value)} style={styles.input} placeholder="PrÃ©nom" /></div>
+                      <div><label style={styles.inputLabel}>{"Prénom coach"}</label><input value={newCoachFirstName} onChange={(e) => setNewCoachFirstName(e.target.value)} style={styles.input} placeholder="Prénom" /></div>
                       <div><label style={styles.inputLabel}>Nom coach</label><input value={newCoachLastName} onChange={(e) => setNewCoachLastName(e.target.value)} style={styles.input} placeholder="Nom" /></div>
                       {!editingCoachId && <>
                         <div><label style={styles.inputLabel}>Email coach</label><input type="email" value={newCoachEmail} onChange={(e) => setNewCoachEmail(e.target.value)} style={styles.input} placeholder="coach@email.fr" /></div>
-                        <div><label style={styles.inputLabel}>Mot de passe (min. 8 car.)</label><input type="password" value={newCoachPassword} onChange={(e) => setNewCoachPassword(e.target.value)} style={styles.input} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" /></div>
+                        <div><label style={styles.inputLabel}>Mot de passe (min. 8 car.)</label><input type="password" value={newCoachPassword} onChange={(e) => setNewCoachPassword(e.target.value)} style={styles.input} placeholder="••••••••" /></div>
                       </>}
                     </div>
                     <div style={{ marginBottom: 16 }}>
-                      <label style={styles.inputLabel}>{"Ã‰quipes assignÃ©es"}</label>
+                      <label style={styles.inputLabel}>{"Équipes assignées"}</label>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8, marginTop: 8 }}>
                         {teams.map((t) => (
                           <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, border: `2px solid ${newCoachTeamIds.includes(t.id) ? '#0A5FB5' : '#d5dfeb'}`, background: newCoachTeamIds.includes(t.id) ? '#eaf4ff' : '#f8fbff', cursor: 'pointer', fontWeight: 600 }}>
@@ -7503,14 +7503,14 @@ export default function App() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={addCoachAccess} style={styles.primaryButton} disabled={savingCoach}>{savingCoach ? 'â³...' : editingCoachId ? 'ðŸ’¾ Enregistrer' : 'âž• CrÃ©er le coach'}</button>
+                      <button onClick={addCoachAccess} style={styles.primaryButton} disabled={savingCoach}>{savingCoach ? '⏳...' : editingCoachId ? '💾 Enregistrer' : '➕ Créer le coach'}</button>
                       {editingCoachId && <button onClick={() => { setEditingCoachId(''); setNewCoachFirstName(''); setNewCoachLastName(''); setNewCoachEmail(''); setNewCoachPassword(''); setNewCoachTeamIds([]); }} style={styles.secondaryOutlineButton}>Annuler</button>}
                     </div>
                   </div>
                   <div style={{ ...styles.panelCard, marginTop: 18 }}>
                     <h3 style={styles.panelTitle}>Coaches existants</h3>
                     {Object.keys(coachSummary).length === 0
-                      ? <div style={styles.emptyState}>{"Aucun coach crÃ©Ã©."}</div>
+                      ? <div style={styles.emptyState}>{"Aucun coach créé."}</div>
                       : <div style={{ display: 'grid', gap: 10 }}>
                           {Object.entries(coachSummary).map(([coachId, info]) => {
                             const coachEntry = coachAccessList.find((c) => c.id === coachId);
@@ -7520,15 +7520,15 @@ export default function App() {
                                 <div style={{ position: 'relative', flexShrink: 0 }}>
                                   {coachEntry?.photo_url
                                     ? <img src={coachEntry.photo_url} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid #0A5FB5' }} />
-                                    : <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: 'white' }}>{initials || 'ðŸ†'}</div>}
+                                    : <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: 'white' }}>{initials || '🏆'}</div>}
                                   {coachEntry && (<>
-                                    <label htmlFor={`cp-${coachId}`} style={{ position: 'absolute', bottom: -2, right: -2, background: '#0A5FB5', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, cursor: 'pointer' }}>ðŸ“·</label>
+                                    <label htmlFor={`cp-${coachId}`} style={{ position: 'absolute', bottom: -2, right: -2, background: '#0A5FB5', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, cursor: 'pointer' }}>📷</label>
                                     <input id={`cp-${coachId}`} type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadCoachPhoto(coachId, file); e.target.value = ''; }} />
                                   </>)}
                                 </div>
                                 <div style={{ flex: 1 }}>
                                   <div style={{ fontWeight: 800, fontSize: 15, color: '#062C5D' }}>{info.firstName} {info.lastName}</div>
-                                  <div style={{ color: '#5b6472', fontSize: 14, marginTop: 4 }}>Ã‰quipes : {info.teamIds.map(getTeamName).join(', ') || 'Aucune'}</div>
+                                  <div style={{ color: '#5b6472', fontSize: 14, marginTop: 4 }}>Équipes : {info.teamIds.map(getTeamName).join(', ') || 'Aucune'}</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: 8 }}>
                                   <button onClick={() => {
@@ -7537,9 +7537,9 @@ export default function App() {
                                     setNewCoachLastName(info.lastName || '');
                                     setNewCoachTeamIds([...info.teamIds]);
                                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                                  }} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>âœï¸ Modifier</button>
+                                  }} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>✏️ Modifier</button>
                                   <button onClick={() => deleteCoachAccess(coachId, `${info.firstName} ${info.lastName}`)}
-                                    style={styles.linkRemoveButton}>ðŸ—‘ Supprimer</button>
+                                    style={styles.linkRemoveButton}>🗑 Supprimer</button>
                                 </div>
                               </div>
                             );
@@ -7548,14 +7548,14 @@ export default function App() {
                   </div>
                 </>}
 
-                {/* â”€â”€ ENTRAÃŽNEMENTS â”€â”€ */}
+                {/* ── ENTRAÎNEMENTS ── */}
                 {adminSubTab === 'trainings' && <div style={styles.formCard}>
-                  <h3 style={styles.panelTitle}>{"Ajouter un entraÃ®nement rÃ©current"}</h3>
+                  <h3 style={styles.panelTitle}>{"Ajouter un entraînement récurrent"}</h3>
                   <div style={styles.formGrid}>
-                    <div><label style={styles.inputLabel}>{"Ã‰quipe"}</label><select value={newTrainingTeamId} onChange={(e) => setNewTrainingTeamId(e.target.value)} style={styles.select}>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                    <div><label style={styles.inputLabel}>{"Équipe"}</label><select value={newTrainingTeamId} onChange={(e) => setNewTrainingTeamId(e.target.value)} style={styles.select}>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
                     <div><label style={styles.inputLabel}>Titre</label><input value={newTrainingTitle} onChange={(e) => setNewTrainingTitle(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Jour</label><select value={newTrainingWeekday} onChange={(e) => setNewTrainingWeekday(e.target.value)} style={styles.select}><option value="1">Lundi</option><option value="2">Mardi</option><option value="3">Mercredi</option><option value="4">Jeudi</option><option value="5">Vendredi</option><option value="6">Samedi</option><option value="0">Dimanche</option></select></div>
-                    <div><label style={styles.inputLabel}>{"DÃ©but"}</label><input type="time" value={newTrainingStart} onChange={(e) => setNewTrainingStart(e.target.value)} style={styles.input} /></div>
+                    <div><label style={styles.inputLabel}>{"Début"}</label><input type="time" value={newTrainingStart} onChange={(e) => setNewTrainingStart(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Fin</label><input type="time" value={newTrainingEnd} onChange={(e) => setNewTrainingEnd(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Lieu</label><input value={newTrainingLocation} onChange={(e) => setNewTrainingLocation(e.target.value)} style={styles.input} /></div>
                   </div>
@@ -7591,21 +7591,21 @@ export default function App() {
                   </div>
 
                   <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #dbe4ef' }}>
-                    <h3 style={{ ...styles.panelTitle, fontSize: 18 }}>PÃ©riodes de vacances entraÃ®nement</h3>
+                    <h3 style={{ ...styles.panelTitle, fontSize: 18 }}>Périodes de vacances entraînement</h3>
                     <div style={styles.formGrid}>
-                      <div><label style={styles.inputLabel}>Ã‰quipe</label><select value={newBreakTeamId} onChange={(e) => setNewBreakTeamId(e.target.value)} style={styles.select}><option value="">Toutes les Ã©quipes</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                      <div><label style={styles.inputLabel}>Équipe</label><select value={newBreakTeamId} onChange={(e) => setNewBreakTeamId(e.target.value)} style={styles.select}><option value="">Toutes les équipes</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
                       <div><label style={styles.inputLabel}>Titre</label><input value={newBreakTitle} onChange={(e) => setNewBreakTitle(e.target.value)} style={styles.input} placeholder="Vacances scolaires" /></div>
-                      <div><label style={styles.inputLabel}>DÃ©but</label><input type="date" value={newBreakStart} onChange={(e) => setNewBreakStart(e.target.value)} style={styles.input} /></div>
+                      <div><label style={styles.inputLabel}>Début</label><input type="date" value={newBreakStart} onChange={(e) => setNewBreakStart(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Fin</label><input type="date" value={newBreakEnd} onChange={(e) => setNewBreakEnd(e.target.value)} style={styles.input} /></div>
                       <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>Note</label><input value={newBreakReason} onChange={(e) => setNewBreakReason(e.target.value)} style={styles.input} placeholder="Optionnel" /></div>
                     </div>
-                    <button onClick={addTrainingBreak} style={{ ...styles.secondaryButton, background: '#0A5FB5' }}>Ajouter la pÃ©riode</button>
+                    <button onClick={addTrainingBreak} style={{ ...styles.secondaryButton, background: '#0A5FB5' }}>Ajouter la période</button>
                     <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
                       {trainingBreaks.map((b) => (
                         <div key={b.id} style={{ ...styles.linkRow, background: 'white' }}>
                           <div style={{ flex: 1 }}>
                             <strong>{b.title}</strong>
-                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{formatDate(b.start_date)} au {formatDate(b.end_date)} Â· {b.team_id ? getTeamName(b.team_id) : 'Toutes les Ã©quipes'}{b.reason ? ` Â· ${b.reason}` : ''}</div>
+                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{formatDate(b.start_date)} au {formatDate(b.end_date)} · {b.team_id ? getTeamName(b.team_id) : 'Toutes les équipes'}{b.reason ? ` · ${b.reason}` : ''}</div>
                           </div>
                           <button onClick={() => deleteTrainingBreak(b.id)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>Supprimer</button>
                         </div>
@@ -7614,16 +7614,16 @@ export default function App() {
                   </div>
                 </div>}
 
-                {/* â”€â”€ MATCHS â”€â”€ */}
+                {/* ── MATCHS ── */}
                 {adminSubTab === 'matches' && <>
                   <div style={styles.formCard}>
-                    <h3 style={styles.panelTitle}>{editingMatchId ? 'âœï¸ Modifier le match' : 'âž• Ajouter un match'}</h3>
+                    <h3 style={styles.panelTitle}>{editingMatchId ? '✏️ Modifier le match' : '➕ Ajouter un match'}</h3>
                     <div style={styles.formGrid}>
-                      <div><label style={styles.inputLabel}>{"Ã‰quipe"}</label><select value={newMatchTeamId} onChange={(e) => setNewMatchTeamId(e.target.value)} style={styles.select}>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                      <div><label style={styles.inputLabel}>{"Équipe"}</label><select value={newMatchTeamId} onChange={(e) => setNewMatchTeamId(e.target.value)} style={styles.select}>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
                       <div><label style={styles.inputLabel}>Adversaire</label><input value={newMatchOpponent} onChange={(e) => setNewMatchOpponent(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Date & heure</label><input type="datetime-local" value={newMatchDate} onChange={(e) => setNewMatchDate(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Lieu</label><input value={newMatchLocation} onChange={(e) => setNewMatchLocation(e.target.value)} style={styles.input} /></div>
-                      <div><label style={styles.inputLabel}>Type</label><select value={newMatchHomeAway} onChange={(e) => setNewMatchHomeAway(e.target.value as 'home' | 'away')} style={styles.select}><option value="home">Domicile</option><option value="away">{"ExtÃ©rieur"}</option></select></div>
+                      <div><label style={styles.inputLabel}>Type</label><select value={newMatchHomeAway} onChange={(e) => setNewMatchHomeAway(e.target.value as 'home' | 'away')} style={styles.select}><option value="home">Domicile</option><option value="away">{"Extérieur"}</option></select></div>
                     </div>
                     <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
                       <div>
@@ -7669,16 +7669,16 @@ export default function App() {
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={addMatch} style={styles.primaryButton}>{editingMatchId ? 'ðŸ’¾ Enregistrer' : 'Ajouter le match'}</button>
+                      <button onClick={addMatch} style={styles.primaryButton}>{editingMatchId ? '💾 Enregistrer' : 'Ajouter le match'}</button>
                       {editingMatchId && <button onClick={resetMatchForm} style={styles.secondaryOutlineButton}>Annuler</button>}
                     </div>
                   </div>
-                  {/* Liste dÃ©roulante matchs */}
+                  {/* Liste déroulante matchs */}
                   <div style={{ ...styles.panelCard, marginTop: 18 }}>
                     <div onClick={() => setMatchesExpanded(p => !p)}
                       style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}>
-                      <h3 style={{ margin: 0 }}>ðŸ“‹ Matchs existants ({matches.length})</h3>
-                      <span style={{ fontSize: 20, color: '#0A5FB5', fontWeight: 900 }}>{matchesExpanded ? 'â–²' : 'â–¼'}</span>
+                      <h3 style={{ margin: 0 }}>📋 Matchs existants ({matches.length})</h3>
+                      <span style={{ fontSize: 20, color: '#0A5FB5', fontWeight: 900 }}>{matchesExpanded ? '▲' : '▼'}</span>
                     </div>
                     {matchesExpanded && (matches.length === 0
                       ? <div style={{ ...styles.emptyState, marginTop: 12 }}>Aucun match.</div>
@@ -7687,12 +7687,12 @@ export default function App() {
                             <div key={m.id} style={{ ...styles.linkRow, flexWrap: 'wrap' }}>
                               <div style={{ flex: 1 }}>
                                 <strong>{getTeamName(m.team_id)} vs {m.opponent}</strong>
-                                <div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{formatDate(m.match_date)} {formatTime(m.match_date)} Â· {m.location || '-'} Â· {m.home_away === 'home' ? 'Domicile' : 'ExtÃ©rieur'}</div>
-                                {m.score_home !== null && m.score_home !== '' && <div style={{ fontSize: 13, fontWeight: 700, color: '#0A5FB5', marginTop: 2 }}>Score : {m.score_home} â€“ {m.score_away}</div>}
+                                <div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{formatDate(m.match_date)} {formatTime(m.match_date)} · {m.location || '-'} · {m.home_away === 'home' ? 'Domicile' : 'Extérieur'}</div>
+                                {m.score_home !== null && m.score_home !== '' && <div style={{ fontSize: 13, fontWeight: 700, color: '#0A5FB5', marginTop: 2 }}>Score : {m.score_home} – {m.score_away}</div>}
                               </div>
                               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                                 <button onClick={() => startEditMatch(m, true)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>Modifier</button>
-                                <button onClick={() => deleteMatch(m)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>ðŸ—‘</button>
+                                <button onClick={() => deleteMatch(m)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>🗑</button>
                               </div>
                             </div>
                           ))}
@@ -7701,45 +7701,45 @@ export default function App() {
                   </div>
                 </>}
 
-                {/* â”€â”€ JOUEURS â”€â”€ */}
+                {/* ── JOUEURS ── */}
                 {adminSubTab === 'players' && <div style={styles.formCard}>
                   <h3 style={styles.panelTitle}>Ajouter / modifier un joueur</h3>
                   <div style={styles.formGrid}>
-                    <div><label style={styles.inputLabel}>{"PrÃ©nom"}</label><input value={playerFormFirstName} onChange={(e) => setPlayerFormFirstName(e.target.value)} style={styles.input} /></div>
+                    <div><label style={styles.inputLabel}>{"Prénom"}</label><input value={playerFormFirstName} onChange={(e) => setPlayerFormFirstName(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Nom</label><input value={playerFormLastName} onChange={(e) => setPlayerFormLastName(e.target.value)} style={styles.input} /></div>
-                    <div><label style={styles.inputLabel}>{"Ã‰quipe"}</label><select value={playerFormTeamId} onChange={(e) => setPlayerFormTeamId(e.target.value)} style={styles.select}>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
-                    <div><label style={styles.inputLabel}>GarÃ§on / fille</label><select value={playerFormGender} onChange={(e) => setPlayerFormGender(e.target.value as 'male' | 'female' | '')} style={styles.select}><option value="">â€” Non dÃ©fini â€”</option><option value="male">GarÃ§on</option><option value="female">Fille</option></select></div>
+                    <div><label style={styles.inputLabel}>{"Équipe"}</label><select value={playerFormTeamId} onChange={(e) => setPlayerFormTeamId(e.target.value)} style={styles.select}>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                    <div><label style={styles.inputLabel}>Garçon / fille</label><select value={playerFormGender} onChange={(e) => setPlayerFormGender(e.target.value as 'male' | 'female' | '')} style={styles.select}><option value="">— Non défini —</option><option value="male">Garçon</option><option value="female">Fille</option></select></div>
                   </div>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button onClick={savePlayer} style={styles.primaryButton} disabled={savingPlayer}>{savingPlayer ? 'Enregistrement...' : editingPlayerId ? 'Modifier le joueur' : 'Ajouter le joueur'}</button>
-                    <button onClick={resetPlayerForm} style={styles.secondaryOutlineButton}>{"RÃ©initialiser"}</button>
+                    <button onClick={resetPlayerForm} style={styles.secondaryOutlineButton}>{"Réinitialiser"}</button>
                   </div>
                 </div>}
 
-                {/* â”€â”€ EFFECTIFS â”€â”€ */}
+                {/* ── EFFECTIFS ── */}
                 {adminSubTab === 'roster' && <div style={{ display: 'grid', gap: 18 }}>
                   <div style={styles.formCard}>
-                    <h3 style={styles.panelTitle}>RÃ©capitulatif des effectifs</h3>
+                    <h3 style={styles.panelTitle}>Récapitulatif des effectifs</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 16 }}>
                       <div style={{ padding: 14, borderRadius: 12, background: '#eff6ff', border: '1px solid #bfdbfe' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#1d4ed8' }}>Total club</div><div style={{ fontSize: 26, fontWeight: 900, color: '#062C5D' }}>{players.length}</div></div>
-                      <div style={{ padding: 14, borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#166534' }}>GarÃ§ons</div><div style={{ fontSize: 26, fontWeight: 900, color: '#14532d' }}>{players.filter((p) => getPlayerGender(p) === 'male').length}</div></div>
+                      <div style={{ padding: 14, borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#166534' }}>Garçons</div><div style={{ fontSize: 26, fontWeight: 900, color: '#14532d' }}>{players.filter((p) => getPlayerGender(p) === 'male').length}</div></div>
                       <div style={{ padding: 14, borderRadius: 12, background: '#fdf2f8', border: '1px solid #fbcfe8' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#be185d' }}>Filles</div><div style={{ fontSize: 26, fontWeight: 900, color: '#831843' }}>{players.filter((p) => getPlayerGender(p) === 'female').length}</div></div>
-                      <div style={{ padding: 14, borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#64748b' }}>Non renseignÃ©s</div><div style={{ fontSize: 26, fontWeight: 900, color: '#334155' }}>{players.filter((p) => getPlayerGender(p) === 'unknown').length}</div></div>
+                      <div style={{ padding: 14, borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0' }}><div style={{ fontSize: 12, fontWeight: 800, color: '#64748b' }}>Non renseignés</div><div style={{ fontSize: 26, fontWeight: 900, color: '#334155' }}>{players.filter((p) => getPlayerGender(p) === 'unknown').length}</div></div>
                     </div>
                     <div style={{ display: 'grid', gap: 12 }}>
                       {rosterSummary.map(({ team, players: teamPlayers, boys, girls, unknown }) => (
                         <div key={team.id} style={{ padding: 14, borderRadius: 12, border: '1px solid #dbe4ef', background: 'white' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
-                            <div><strong style={{ color: '#062C5D' }}>{team.name}</strong><div style={{ fontSize: 12, color: '#64748b' }}>{team.category || 'CatÃ©gorie'}</div></div>
+                            <div><strong style={{ color: '#062C5D' }}>{team.name}</strong><div style={{ fontSize: 12, color: '#64748b' }}>{team.category || 'Catégorie'}</div></div>
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 12, fontWeight: 800 }}>
                               <span style={{ ...styles.statusBadge, background: '#dbeafe', color: '#1d4ed8' }}>{teamPlayers.length} joueur{teamPlayers.length > 1 ? 's' : ''}</span>
-                              <span style={{ ...styles.statusBadge, ...styles.badgeGreen }}>{boys} garÃ§on{boys > 1 ? 's' : ''}</span>
+                              <span style={{ ...styles.statusBadge, ...styles.badgeGreen }}>{boys} garçon{boys > 1 ? 's' : ''}</span>
                               <span style={{ ...styles.statusBadge, background: '#fce7f3', color: '#be185d' }}>{girls} fille{girls > 1 ? 's' : ''}</span>
-                              {unknown > 0 && <span style={{ ...styles.statusBadge, background: '#f1f5f9', color: '#475569' }}>{unknown} Ã  dÃ©finir</span>}
+                              {unknown > 0 && <span style={{ ...styles.statusBadge, background: '#f1f5f9', color: '#475569' }}>{unknown} à définir</span>}
                             </div>
                           </div>
                           {teamPlayers.length === 0
-                            ? <div style={styles.emptyState}>Aucun joueur dans cette catÃ©gorie.</div>
+                            ? <div style={styles.emptyState}>Aucun joueur dans cette catégorie.</div>
                             : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                               {teamPlayers.map((p) => {
                                 const gender = getPlayerGender(p);
@@ -7756,18 +7756,18 @@ export default function App() {
                   </div>
 
                   <div style={{ ...styles.formCard, background: '#fff7ed', border: '1px solid #fed7aa' }}>
-                    <h3 style={{ margin: '0 0 6px 0', color: '#92400e' }}>Passage de catÃ©gorie</h3>
-                    <p style={{ margin: '0 0 16px 0', color: '#9a3412', fontSize: 14 }}>SÃ©lectionne les joueurs Ã  transfÃ©rer vers la catÃ©gorie supÃ©rieure.</p>
+                    <h3 style={{ margin: '0 0 6px 0', color: '#92400e' }}>Passage de catégorie</h3>
+                    <p style={{ margin: '0 0 16px 0', color: '#9a3412', fontSize: 14 }}>Sélectionne les joueurs à transférer vers la catégorie supérieure.</p>
                     <div style={styles.formGrid}>
-                      <div><label style={styles.inputLabel}>CatÃ©gorie actuelle</label><select value={promotionSourceTeamId} onChange={(e) => { setPromotionSourceTeamId(e.target.value); setPromotionSelectedIds([]); }} style={styles.select}><option value="">Choisir...</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
-                      <div><label style={styles.inputLabel}>Nouvelle catÃ©gorie</label><select value={promotionTargetTeamId} onChange={(e) => setPromotionTargetTeamId(e.target.value)} style={styles.select}><option value="">Choisir...</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
-                      <div><label style={styles.inputLabel}>Filtre</label><select value={promotionGenderFilter} onChange={(e) => { setPromotionGenderFilter(e.target.value as 'all' | 'male' | 'female' | 'unknown'); setPromotionSelectedIds([]); }} style={styles.select}><option value="all">Tous</option><option value="male">GarÃ§ons</option><option value="female">Filles</option><option value="unknown">Non renseignÃ©s</option></select></div>
+                      <div><label style={styles.inputLabel}>Catégorie actuelle</label><select value={promotionSourceTeamId} onChange={(e) => { setPromotionSourceTeamId(e.target.value); setPromotionSelectedIds([]); }} style={styles.select}><option value="">Choisir...</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                      <div><label style={styles.inputLabel}>Nouvelle catégorie</label><select value={promotionTargetTeamId} onChange={(e) => setPromotionTargetTeamId(e.target.value)} style={styles.select}><option value="">Choisir...</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                      <div><label style={styles.inputLabel}>Filtre</label><select value={promotionGenderFilter} onChange={(e) => { setPromotionGenderFilter(e.target.value as 'all' | 'male' | 'female' | 'unknown'); setPromotionSelectedIds([]); }} style={styles.select}><option value="all">Tous</option><option value="male">Garçons</option><option value="female">Filles</option><option value="unknown">Non renseignés</option></select></div>
                     </div>
                     {promotionSourceTeamId && <div style={{ marginTop: 14 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
                         <strong>{promotionCandidates.length} joueur{promotionCandidates.length > 1 ? 's' : ''} disponible{promotionCandidates.length > 1 ? 's' : ''}</strong>
                         <button type="button" onClick={() => setPromotionSelectedIds(promotionSelectedIds.length === promotionCandidates.length ? [] : promotionCandidates.map((p) => p.id))} style={styles.secondaryOutlineButton}>
-                          {promotionSelectedIds.length === promotionCandidates.length ? 'Tout dÃ©cocher' : 'Tout sÃ©lectionner'}
+                          {promotionSelectedIds.length === promotionCandidates.length ? 'Tout décocher' : 'Tout sélectionner'}
                         </button>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
@@ -7779,50 +7779,50 @@ export default function App() {
                         ))}
                       </div>
                       <button onClick={transferSelectedPlayers} disabled={promotionSaving || promotionSelectedIds.length === 0} style={{ ...styles.primaryButton, marginTop: 14, background: '#ea580c', opacity: promotionSaving || promotionSelectedIds.length === 0 ? 0.65 : 1 }}>
-                        {promotionSaving ? 'Transfert...' : `TransfÃ©rer ${promotionSelectedIds.length} joueur(s)`}
+                        {promotionSaving ? 'Transfert...' : `Transférer ${promotionSelectedIds.length} joueur(s)`}
                       </button>
                     </div>}
                   </div>
                 </div>}
 
-                {/* â”€â”€ COMPTES ENFANTS â”€â”€ */}
+                {/* ── COMPTES ENFANTS ── */}
                 {adminSubTab === 'accounts' && <div style={styles.formCard}>
                   <div style={styles.createAccountHeader}>
-                    <div><h3 style={{ margin: 0 }}>Nouveau compte enfant</h3><p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>{"CrÃ©e un enfant et son parent avec un compte email + mot de passe."}</p></div>
-                    <button onClick={() => setShowCreateChildForm((p) => !p)} style={styles.secondaryOutlineButton}>{showCreateChildForm ? 'Fermer' : 'CrÃ©er'}</button>
+                    <div><h3 style={{ margin: 0 }}>Nouveau compte enfant</h3><p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>{"Crée un enfant et son parent avec un compte email + mot de passe."}</p></div>
+                    <button onClick={() => setShowCreateChildForm((p) => !p)} style={styles.secondaryOutlineButton}>{showCreateChildForm ? 'Fermer' : 'Créer'}</button>
                   </div>
                   {showCreateChildForm && <div style={{ marginTop: 18 }}>
                     <div style={styles.formGrid}>
-                      <div><label style={styles.inputLabel}>{"PrÃ©nom enfant"}</label><input value={newChildFirstName} onChange={(e) => setNewChildFirstName(e.target.value)} style={styles.input} /></div>
+                      <div><label style={styles.inputLabel}>{"Prénom enfant"}</label><input value={newChildFirstName} onChange={(e) => setNewChildFirstName(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Nom enfant</label><input value={newChildLastName} onChange={(e) => setNewChildLastName(e.target.value)} style={styles.input} /></div>
-                      <div><label style={styles.inputLabel}>{"Ã‰quipe"}</label><select value={newChildTeamId} onChange={(e) => setNewChildTeamId(e.target.value)} style={styles.select}>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
-                      <div><label style={styles.inputLabel}>GarÃ§on / fille</label><select value={newChildGender} onChange={(e) => setNewChildGender(e.target.value as 'male' | 'female' | '')} style={styles.select}><option value="">â€” Non dÃ©fini â€”</option><option value="male">GarÃ§on</option><option value="female">Fille</option></select></div>
-                      <div><label style={styles.inputLabel}>{"PrÃ©nom parent"}</label><input value={newParentFirstName} onChange={(e) => setNewParentFirstName(e.target.value)} style={styles.input} /></div>
+                      <div><label style={styles.inputLabel}>{"Équipe"}</label><select value={newChildTeamId} onChange={(e) => setNewChildTeamId(e.target.value)} style={styles.select}>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                      <div><label style={styles.inputLabel}>Garçon / fille</label><select value={newChildGender} onChange={(e) => setNewChildGender(e.target.value as 'male' | 'female' | '')} style={styles.select}><option value="">— Non défini —</option><option value="male">Garçon</option><option value="female">Fille</option></select></div>
+                      <div><label style={styles.inputLabel}>{"Prénom parent"}</label><input value={newParentFirstName} onChange={(e) => setNewParentFirstName(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Nom parent</label><input value={newParentLastName} onChange={(e) => setNewParentLastName(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Email parent</label><input value={newParentEmail} onChange={(e) => setNewParentEmail(e.target.value)} style={styles.input} type="email" /></div>
-                      <div><label style={styles.inputLabel}>Mot de passe parent (min. 8 car.)</label><input value={newParentPassword} onChange={(e) => setNewParentPassword(e.target.value)} style={styles.input} type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" /></div>
+                      <div><label style={styles.inputLabel}>Mot de passe parent (min. 8 car.)</label><input value={newParentPassword} onChange={(e) => setNewParentPassword(e.target.value)} style={styles.input} type="password" placeholder="••••••••" /></div>
                     </div>
-                    <button onClick={createChildAccount} style={{ ...styles.primaryButton, width: '100%', opacity: creatingChildAccount ? 0.7 : 1 }} disabled={creatingChildAccount}>{creatingChildAccount ? 'CrÃ©ation...' : 'CrÃ©er le compte enfant'}</button>
+                    <button onClick={createChildAccount} style={{ ...styles.primaryButton, width: '100%', opacity: creatingChildAccount ? 0.7 : 1 }} disabled={creatingChildAccount}>{creatingChildAccount ? 'Création...' : 'Créer le compte enfant'}</button>
                   </div>}
                 </div>}
 
-                {/* â”€â”€ SAISONS â”€â”€ */}
+                {/* ── SAISONS ── */}
                 {adminSubTab === 'seasons' && <div style={{ ...styles.formCard, background: '#f0fdf4', border: '1px solid #86efac' }}>
-                  <h3 style={{ margin: '0 0 6px 0', color: '#14532d' }}>ðŸ—“ Gestion des saisons</h3>
-                  <p style={{ margin: '0 0 16px 0', color: '#166534', fontSize: 14 }}>CrÃ©ez des saisons pour organiser les stats par pÃ©riode.</p>
+                  <h3 style={{ margin: '0 0 6px 0', color: '#14532d' }}>🗓 Gestion des saisons</h3>
+                  <p style={{ margin: '0 0 16px 0', color: '#166534', fontSize: 14 }}>Créez des saisons pour organiser les stats par période.</p>
                   <div style={styles.formGrid}>
-                    <div><label style={styles.inputLabel}>Ã‰quipe</label><select value={newSeasonTeamId} onChange={(e) => setNewSeasonTeamId(e.target.value)} style={styles.select}><option value="">-- Toutes Ã©quipes --</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                    <div><label style={styles.inputLabel}>Équipe</label><select value={newSeasonTeamId} onChange={(e) => setNewSeasonTeamId(e.target.value)} style={styles.select}><option value="">-- Toutes équipes --</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
                     <div><label style={styles.inputLabel}>Nom de la saison</label><input value={newSeasonName} onChange={(e) => setNewSeasonName(e.target.value)} style={styles.input} placeholder="Ex: 2025/2026" /></div>
-                    <div><label style={styles.inputLabel}>Date dÃ©but</label><input type="date" value={newSeasonStart} onChange={(e) => setNewSeasonStart(e.target.value)} style={styles.input} /></div>
+                    <div><label style={styles.inputLabel}>Date début</label><input type="date" value={newSeasonStart} onChange={(e) => setNewSeasonStart(e.target.value)} style={styles.input} /></div>
                     <div><label style={styles.inputLabel}>Date fin</label><input type="date" value={newSeasonEnd} onChange={(e) => setNewSeasonEnd(e.target.value)} style={styles.input} /></div>
                   </div>
-                  <button onClick={addSeason} style={{ ...styles.primaryButton, background: '#16a34a' }} disabled={savingSeason}>{savingSeason ? 'CrÃ©ation...' : '+ CrÃ©er la saison'}</button>
+                  <button onClick={addSeason} style={{ ...styles.primaryButton, background: '#16a34a' }} disabled={savingSeason}>{savingSeason ? 'Création...' : '+ Créer la saison'}</button>
                   {seasons.length > 0 && <div style={{ marginTop: 16 }}>
                     <div style={styles.miniTitle}>Saisons existantes</div>
                     <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
                       {seasons.map((s) => (
                         <div key={s.id} style={{ ...styles.linkRow, background: '#f0fdf4', border: '1px solid #86efac' }}>
-                          <div><strong style={{ color: '#14532d' }}>{s.name}</strong><div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{s.start_date} â†’ {s.end_date} Â· {s.team_id ? (teams.find(t => t.id === s.team_id)?.name || 'Ã‰quipe inconnue') : 'Toutes Ã©quipes'}</div></div>
+                          <div><strong style={{ color: '#14532d' }}>{s.name}</strong><div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{s.start_date} → {s.end_date} · {s.team_id ? (teams.find(t => t.id === s.team_id)?.name || 'Équipe inconnue') : 'Toutes équipes'}</div></div>
                         </div>
                       ))}
                     </div>
@@ -7907,40 +7907,40 @@ export default function App() {
                   </div>
                 )}
 
-                {/* â”€â”€ PARAMÃˆTRES â”€â”€ */}
+                {/* ── PARAMÈTRES ── */}
                 {adminSubTab === 'settings' && <>
                   <div style={{ ...styles.formCard, background: '#f0f4ff', border: '1px solid #c7d2fe' }}>
-                    <h3 style={{ margin: '0 0 6px 0', color: '#3730a3' }}>âš™ï¸ ParamÃ¨tres de l'application</h3>
-                    <p style={{ margin: '0 0 16px 0', color: '#4338ca', fontSize: 14 }}>URL de l'app et liens championnat affichÃ©s aux parents.</p>
+                    <h3 style={{ margin: '0 0 6px 0', color: '#3730a3' }}>⚙️ Paramètres de l'application</h3>
+                    <p style={{ margin: '0 0 16px 0', color: '#4338ca', fontSize: 14 }}>URL de l'app et liens championnat affichés aux parents.</p>
                     <div style={styles.formGrid}>
-                      <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>ðŸ”— URL de l'application</label><input value={appSettings.app_url} onChange={(e) => setAppSettings((p) => ({ ...p, app_url: e.target.value }))} style={styles.input} placeholder="https://..." /></div>
-                      <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>ðŸ“§ Email admin</label><input type="email" value={appSettings.admin_email} onChange={(e) => setAppSettings((p) => ({ ...p, admin_email: e.target.value }))} style={styles.input} placeholder="admin@cagorcy.fr" /></div>
+                      <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>🔗 URL de l'application</label><input value={appSettings.app_url} onChange={(e) => setAppSettings((p) => ({ ...p, app_url: e.target.value }))} style={styles.input} placeholder="https://..." /></div>
+                      <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>📧 Email admin</label><input type="email" value={appSettings.admin_email} onChange={(e) => setAppSettings((p) => ({ ...p, admin_email: e.target.value }))} style={styles.input} placeholder="admin@cagorcy.fr" /></div>
                       <div style={{ gridColumn: '1 / -1' }}>
-                        <label style={styles.inputLabel}>ðŸ“¬ Emails qui reÃ§oivent les nouvelles inscriptions</label>
+                        <label style={styles.inputLabel}>📬 Emails qui reçoivent les nouvelles inscriptions</label>
                         <textarea
                           value={appSettings.registration_notification_emails}
                           onChange={(e) => setAppSettings((p) => ({ ...p, registration_notification_emails: e.target.value }))}
                           style={{ ...styles.input, minHeight: 88, resize: 'vertical' }}
                           placeholder="president@cag.fr&#10;secretariat@cag.fr&#10;admin@cag.fr"
                         />
-                        <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: 12 }}>Une adresse par ligne, ou sÃ©parÃ©es par virgule/point-virgule. Si vide, l'email admin ci-dessus sera utilisÃ©.</p>
+                        <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: 12 }}>Une adresse par ligne, ou séparées par virgule/point-virgule. Si vide, l'email admin ci-dessus sera utilisé.</p>
                       </div>
-                      {([['championship_u9','ðŸ† U9'],['championship_u11_garcon','ðŸ† U11 GarÃ§on'],['championship_u11_fille','ðŸ† U11 Fille'],['championship_u13_garcon','ðŸ† U13 GarÃ§on'],['championship_u13_fille','ðŸ† U13 Fille'],['championship_u15','ðŸ† U15'],['championship_u17','ðŸ† U17'],['championship_u18','ðŸ† U18'],['championship_senior','ðŸ† Senior GarÃ§on'],['championship_senior_fille','ðŸ† Senior Fille']] as [keyof AppSettings, string][]).map(([key, label]) => (<div key={key}><label style={styles.inputLabel}>{label}</label><input value={appSettings[key]} onChange={(e) => setAppSettings((p) => ({ ...p, [key]: e.target.value }))} style={styles.input} placeholder="https://..." /></div>))}
+                      {([['championship_u9','🏆 U9'],['championship_u11_garcon','🏆 U11 Garçon'],['championship_u11_fille','🏆 U11 Fille'],['championship_u13_garcon','🏆 U13 Garçon'],['championship_u13_fille','🏆 U13 Fille'],['championship_u15','🏆 U15'],['championship_u17','🏆 U17'],['championship_u18','🏆 U18'],['championship_senior','🏆 Senior Garçon'],['championship_senior_fille','🏆 Senior Fille']] as [keyof AppSettings, string][]).map(([key, label]) => (<div key={key}><label style={styles.inputLabel}>{label}</label><input value={appSettings[key]} onChange={(e) => setAppSettings((p) => ({ ...p, [key]: e.target.value }))} style={styles.input} placeholder="https://..." /></div>))}
                     </div>
-                    <button onClick={saveSettings} style={{ ...styles.primaryButton, background: '#4338ca', marginTop: 8 }} disabled={savingSettings}>{savingSettings ? 'Enregistrement...' : 'ðŸ’¾ Enregistrer les paramÃ¨tres'}</button>
+                    <button onClick={saveSettings} style={{ ...styles.primaryButton, background: '#4338ca', marginTop: 8 }} disabled={savingSettings}>{savingSettings ? 'Enregistrement...' : '💾 Enregistrer les paramètres'}</button>
                   </div>
                   <div style={{ ...styles.formCard, marginTop: 18, background: '#f0fdf4', border: '1px solid #86efac' }}>
-                    <h3 style={{ margin: '0 0 6px 0', color: '#166534' }}>ðŸªª Liens de paiement â€” Licences</h3>
+                    <h3 style={{ margin: '0 0 6px 0', color: '#166534' }}>🪪 Liens de paiement — Licences</h3>
                     <p style={{ margin: '0 0 16px 0', color: '#15803d', fontSize: 14 }}>Liens visibles dans l'espace parent pour payer la licence.</p>
                     <div style={styles.formGrid}>
-                      {([['license_url_u9','U9'],['license_url_u11_garcon','U11 GarÃ§on'],['license_url_u11_fille','U11 Fille'],['license_url_u13_garcon','U13 GarÃ§on'],['license_url_u13_fille','U13 Fille'],['license_url_u15','U15'],['license_url_u17','U17'],['license_url_u18','U18'],['license_url_senior','Senior GarÃ§on'],['license_url_senior_fille','Senior Fille'],['license_url_loisir','Loisir']] as [keyof AppSettings, string][]).map(([key, label]) => (<div key={key}><label style={styles.inputLabel}>ðŸªª {label}</label><input value={appSettings[key]} onChange={(e) => setAppSettings((p) => ({ ...p, [key]: e.target.value }))} style={styles.input} placeholder="https://..." /></div>))}
+                      {([['license_url_u9','U9'],['license_url_u11_garcon','U11 Garçon'],['license_url_u11_fille','U11 Fille'],['license_url_u13_garcon','U13 Garçon'],['license_url_u13_fille','U13 Fille'],['license_url_u15','U15'],['license_url_u17','U17'],['license_url_u18','U18'],['license_url_senior','Senior Garçon'],['license_url_senior_fille','Senior Fille'],['license_url_loisir','Loisir']] as [keyof AppSettings, string][]).map(([key, label]) => (<div key={key}><label style={styles.inputLabel}>🪪 {label}</label><input value={appSettings[key]} onChange={(e) => setAppSettings((p) => ({ ...p, [key]: e.target.value }))} style={styles.input} placeholder="https://..." /></div>))}
                     </div>
-                    <button onClick={saveSettings} style={{ ...styles.primaryButton, background: '#16a34a', marginTop: 8 }} disabled={savingSettings}>{savingSettings ? 'Enregistrement...' : 'ðŸ’¾ Enregistrer les liens'}</button>
+                    <button onClick={saveSettings} style={{ ...styles.primaryButton, background: '#16a34a', marginTop: 8 }} disabled={savingSettings}>{savingSettings ? 'Enregistrement...' : '💾 Enregistrer les liens'}</button>
                   </div>
 
                   {/* Gestion Sponsors */}
                   <div style={{ ...styles.formCard, marginTop: 18, background: '#fef9ff', border: '1px solid #e9d5ff' }}>
-                    <h3 style={{ margin: '0 0 6px 0', color: '#7e22ce' }}>ðŸ† Sponsors du club</h3>
+                    <h3 style={{ margin: '0 0 6px 0', color: '#7e22ce' }}>🏆 Sponsors du club</h3>
                     <p style={{ margin: '0 0 14px 0', color: '#9333ea', fontSize: 14 }}>Les sponsors actifs s'affichent en rotation dans l'espace parent.</p>
                     <div style={styles.formGrid}>
                       <div>
@@ -7973,11 +7973,11 @@ export default function App() {
                             setSponsorName(''); setSponsorWebsite('');
                             const { data } = await supabase.from('sponsors').select('*').eq('active', true).order('display_order');
                             setSponsors(data as Sponsor[] || []);
-                            alert('âœ… Sponsor ajoutÃ© !');
+                            alert('✅ Sponsor ajouté !');
                           } catch (err) { console.error(err); alert('Erreur upload sponsor'); }
                           finally { setUploadingSponsorPhoto(false); }
                         }} style={{ ...styles.input, padding: '10px' }} />
-                        {uploadingSponsorPhoto && <div style={{ color: '#9333ea', fontSize: 13, marginTop: 4 }}>â³ Upload en cours...</div>}
+                        {uploadingSponsorPhoto && <div style={{ color: '#9333ea', fontSize: 13, marginTop: 4 }}>⏳ Upload en cours...</div>}
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 14 }}>
@@ -7991,7 +7991,7 @@ export default function App() {
                           <button onClick={async () => {
                             await supabase.from('sponsors').update({ active: false }).eq('id', s.id);
                             setSponsors((prev) => prev.filter((x) => x.id !== s.id));
-                          }} style={{ border: 'none', background: '#fee2e2', color: '#991b1b', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>ðŸ—‘</button>
+                          }} style={{ border: 'none', background: '#fee2e2', color: '#991b1b', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🗑</button>
                         </div>
                       ))}
                       {sponsors.length === 0 && <div style={{ color: '#9ca3af', fontSize: 14, fontStyle: 'italic' }}>Aucun sponsor actif.</div>}
@@ -7999,15 +7999,15 @@ export default function App() {
                   </div>
                 </>}
 
-                {/* â”€â”€ LICENCES â”€â”€ */}
+                {/* ── LICENCES ── */}
                 {adminSubTab === 'licenses' && <div style={{ ...styles.formCard, background: '#fefce8', border: '1px solid #fde047' }}>
-                  <h3 style={{ margin: '0 0 6px 0', color: '#854d0e' }}>ðŸ“‹ Suivi des licences</h3>
-                  <p style={{ margin: '0 0 12px 0', color: '#92400e', fontSize: 14 }}>Validez manuellement aprÃ¨s rÃ©ception du paiement.</p>
+                  <h3 style={{ margin: '0 0 6px 0', color: '#854d0e' }}>📋 Suivi des licences</h3>
+                  <p style={{ margin: '0 0 12px 0', color: '#92400e', fontSize: 14 }}>Validez manuellement après réception du paiement.</p>
 
-                  {/* SÃ©lecteur de saison dans le panneau admin */}
+                  {/* Sélecteur de saison dans le panneau admin */}
                   {seasons.length > 0 && (
                     <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <label style={{ fontWeight: 700, fontSize: 13, color: '#92400e' }}>ðŸ—“ Saison :</label>
+                      <label style={{ fontWeight: 700, fontSize: 13, color: '#92400e' }}>🗓 Saison :</label>
                       <select
                         value={selectedLicenseSeasonId}
                         onChange={(e) => setSelectedLicenseSeasonId(e.target.value)}
@@ -8015,11 +8015,11 @@ export default function App() {
                         {seasons.map((s) => {
                           const today = new Date().toISOString().slice(0, 10);
                           const isCurrent = s.start_date <= today && s.end_date >= today;
-                          return <option key={s.id} value={s.id}>{s.name}{isCurrent ? ' â­' : ''}</option>;
+                          return <option key={s.id} value={s.id}>{s.name}{isCurrent ? ' ⭐' : ''}</option>;
                         })}
                       </select>
                       {!selectedLicenseSeasonId && (
-                        <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 700 }}>âš  SÃ©lectionnez une saison pour pouvoir modifier les statuts</span>
+                        <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 700 }}>⚠ Sélectionnez une saison pour pouvoir modifier les statuts</span>
                       )}
                     </div>
                   )}
@@ -8028,7 +8028,7 @@ export default function App() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                       <thead><tr style={{ background: '#fef9c3' }}>
                         <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: '#78350f', borderBottom: '2px solid #fde047' }}>Joueur</th>
-                        <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: '#78350f', borderBottom: '2px solid #fde047' }}>Ã‰quipe</th>
+                        <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: '#78350f', borderBottom: '2px solid #fde047' }}>Équipe</th>
                         <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 700, color: '#78350f', borderBottom: '2px solid #fde047' }}>Statut</th>
                         <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 700, color: '#78350f', borderBottom: '2px solid #fde047' }}>Actions</th>
                       </tr></thead>
@@ -8042,12 +8042,12 @@ export default function App() {
                             <tr key={p.id} style={{ borderBottom: '1px solid #fde68a' }}>
                               <td style={{ padding: '10px 12px' }}>{p.last_name.toUpperCase()} {p.first_name}</td>
                               <td style={{ padding: '10px 12px', color: '#5b6472' }}>{getTeamName(p.team_id)}</td>
-                              <td style={{ padding: '10px 12px', textAlign: 'center' }}><span style={bs}>{st === 'validated' ? 'âœ… ValidÃ©e' : st === 'paid' ? 'ðŸ’³ PayÃ©e' : 'â³ En attente'}</span></td>
+                              <td style={{ padding: '10px 12px', textAlign: 'center' }}><span style={bs}>{st === 'validated' ? '✅ Validée' : st === 'paid' ? '💳 Payée' : '⏳ En attente'}</span></td>
                               <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                                 <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
                                   <button onClick={() => upsertLicenseStatus(p.id, 'pending', effectiveSeasonId || undefined)} style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: st === 'pending' ? '#dc2626' : '#f3f4f6', color: st === 'pending' ? 'white' : '#374151', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>En attente</button>
-                                  <button onClick={() => upsertLicenseStatus(p.id, 'paid', effectiveSeasonId || undefined)} style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: st === 'paid' ? '#2563eb' : '#f3f4f6', color: st === 'paid' ? 'white' : '#374151', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>PayÃ©e</button>
-                                  <button onClick={() => upsertLicenseStatus(p.id, 'validated', effectiveSeasonId || undefined)} style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: st === 'validated' ? '#16a34a' : '#f3f4f6', color: st === 'validated' ? 'white' : '#374151', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>âœ… Valider</button>
+                                  <button onClick={() => upsertLicenseStatus(p.id, 'paid', effectiveSeasonId || undefined)} style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: st === 'paid' ? '#2563eb' : '#f3f4f6', color: st === 'paid' ? 'white' : '#374151', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>Payée</button>
+                                  <button onClick={() => upsertLicenseStatus(p.id, 'validated', effectiveSeasonId || undefined)} style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: st === 'validated' ? '#16a34a' : '#f3f4f6', color: st === 'validated' ? 'white' : '#374151', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>✅ Valider</button>
                                 </div>
                               </td>
                             </tr>
@@ -8058,7 +8058,7 @@ export default function App() {
                   </div>
                 </div>}
 
-                {/* â”€â”€ INSCRIPTIONS â”€â”€ */}
+                {/* ── INSCRIPTIONS ── */}
                 {adminSubTab === 'registrations' && <>
                   {(() => {
                     const pending = registrations.filter((r) => r.status === 'pending');
@@ -8066,16 +8066,16 @@ export default function App() {
                     const rejected = registrations.filter((r) => r.status === 'rejected');
                     return (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
-                        <div style={{ background: '#fef9c3', borderRadius: 14, padding: '14px 16px', textAlign: 'center', border: '1px solid #fde047' }}><div style={{ fontSize: 28, fontWeight: 900, color: '#854d0e' }}>{pending.length}</div><div style={{ fontSize: 12, fontWeight: 700, color: '#854d0e', marginTop: 4 }}>â³ En attente</div></div>
-                        <div style={{ background: '#dcfce7', borderRadius: 14, padding: '14px 16px', textAlign: 'center', border: '1px solid #86efac' }}><div style={{ fontSize: 28, fontWeight: 900, color: '#166534' }}>{approved.length}</div><div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginTop: 4 }}>âœ… AutorisÃ©s</div></div>
-                        <div style={{ background: '#fee2e2', borderRadius: 14, padding: '14px 16px', textAlign: 'center', border: '1px solid #fca5a5' }}><div style={{ fontSize: 28, fontWeight: 900, color: '#991b1b' }}>{rejected.length}</div><div style={{ fontSize: 12, fontWeight: 700, color: '#991b1b', marginTop: 4 }}>âŒ RefusÃ©s</div></div>
+                        <div style={{ background: '#fef9c3', borderRadius: 14, padding: '14px 16px', textAlign: 'center', border: '1px solid #fde047' }}><div style={{ fontSize: 28, fontWeight: 900, color: '#854d0e' }}>{pending.length}</div><div style={{ fontSize: 12, fontWeight: 700, color: '#854d0e', marginTop: 4 }}>⏳ En attente</div></div>
+                        <div style={{ background: '#dcfce7', borderRadius: 14, padding: '14px 16px', textAlign: 'center', border: '1px solid #86efac' }}><div style={{ fontSize: 28, fontWeight: 900, color: '#166534' }}>{approved.length}</div><div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginTop: 4 }}>✅ Autorisés</div></div>
+                        <div style={{ background: '#fee2e2', borderRadius: 14, padding: '14px 16px', textAlign: 'center', border: '1px solid #fca5a5' }}><div style={{ fontSize: 28, fontWeight: 900, color: '#991b1b' }}>{rejected.length}</div><div style={{ fontSize: 12, fontWeight: 700, color: '#991b1b', marginTop: 4 }}>❌ Refusés</div></div>
                       </div>
                     );
                   })()}
                   {['pending', 'approved', 'rejected'].map((status) => {
                     const list = registrations.filter((r) => r.status === status);
                     if (list.length === 0) return null;
-                    const statusLabel = status === 'pending' ? 'â³ En attente' : status === 'approved' ? 'âœ… AutorisÃ©s' : 'âŒ RefusÃ©s';
+                    const statusLabel = status === 'pending' ? '⏳ En attente' : status === 'approved' ? '✅ Autorisés' : '❌ Refusés';
                     const statusColor = status === 'pending' ? '#854d0e' : status === 'approved' ? '#166534' : '#991b1b';
                     const statusBg = status === 'pending' ? '#fefce8' : status === 'approved' ? '#f0fdf4' : '#fff5f5';
                     return (
@@ -8091,15 +8091,15 @@ export default function App() {
                               <div key={reg.id} style={{ background: 'white', borderRadius: 14, padding: 16, border: `1px solid ${status === 'pending' ? '#fde047' : status === 'approved' ? '#86efac' : '#fca5a5'}` }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
                                   <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 900, fontSize: 16, color: '#062C5D' }}>{reg.type === 'parent' ? 'ðŸ‘ª' : 'ðŸ…'} {reg.parent_first_name} {reg.parent_last_name}</div>
-                                    <div style={{ fontSize: 13, color: '#5b6472', marginTop: 4 }}>ðŸ“§ {reg.email || "Pas d'email"}</div>
-                                    <div style={{ fontSize: 13, color: '#374151', marginTop: 4 }}>ðŸ‘¶ {childrenNames} â€” {teamName}</div>
-                                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{reg.type === 'parent' ? 'Inscription parent' : 'Inscription directe'} Â· {date}</div>
+                                    <div style={{ fontWeight: 900, fontSize: 16, color: '#062C5D' }}>{reg.type === 'parent' ? '👪' : '🏅'} {reg.parent_first_name} {reg.parent_last_name}</div>
+                                    <div style={{ fontSize: 13, color: '#5b6472', marginTop: 4 }}>📧 {reg.email || "Pas d'email"}</div>
+                                    <div style={{ fontSize: 13, color: '#374151', marginTop: 4 }}>👶 {childrenNames} — {teamName}</div>
+                                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{reg.type === 'parent' ? 'Inscription parent' : 'Inscription directe'} · {date}</div>
                                   </div>
                                   {status === 'pending' && (
                                     <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                                      <button onClick={() => approveRegistration(reg)} style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: '#16a34a', color: 'white', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>âœ… Autoriser</button>
-                                      <button onClick={() => rejectRegistration(reg)} style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: '#dc2626', color: 'white', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>âŒ Refuser</button>
+                                      <button onClick={() => approveRegistration(reg)} style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: '#16a34a', color: 'white', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>✅ Autoriser</button>
+                                      <button onClick={() => rejectRegistration(reg)} style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: '#dc2626', color: 'white', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>❌ Refuser</button>
                                     </div>
                                   )}
                                 </div>
@@ -8113,34 +8113,34 @@ export default function App() {
                   {registrations.length === 0 && <div style={styles.emptyState}>Aucune demande d'inscription pour le moment.</div>}
                 </>}
 
-                {/* â”€â”€ Ã‰VÃ‰NEMENTS â”€â”€ */}
+                {/* ── ÉVÉNEMENTS ── */}
                 {adminSubTab === 'events' && <>
                   <div style={styles.formCard}>
-                    <h3 style={styles.panelTitle}>{editingEventId ? 'âœï¸ Modifier l\'Ã©vÃ©nement' : 'âž• CrÃ©er un Ã©vÃ©nement'}</h3>
+                    <h3 style={styles.panelTitle}>{editingEventId ? '✏️ Modifier l\'événement' : '➕ Créer un événement'}</h3>
                     <div style={styles.formGrid}>
-                      <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>Titre</label><input value={newEventTitle} onChange={(e) => setNewEventTitle(e.target.value)} style={styles.input} placeholder="Ex: AssemblÃ©e gÃ©nÃ©rale, Sortie Walibi..." /></div>
-                      <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>Description</label><textarea value={newEventDesc} onChange={(e) => setNewEventDesc(e.target.value)} style={{ ...styles.input, minHeight: 80, resize: 'vertical' }} placeholder="DÃ©tails, informations supplÃ©mentaires..." /></div>
-                      <div><label style={styles.inputLabel}>Date & heure dÃ©but</label><input type="datetime-local" value={newEventDate} onChange={(e) => setNewEventDate(e.target.value)} style={styles.input} /></div>
+                      <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>Titre</label><input value={newEventTitle} onChange={(e) => setNewEventTitle(e.target.value)} style={styles.input} placeholder="Ex: Assemblée générale, Sortie Walibi..." /></div>
+                      <div style={{ gridColumn: '1 / -1' }}><label style={styles.inputLabel}>Description</label><textarea value={newEventDesc} onChange={(e) => setNewEventDesc(e.target.value)} style={{ ...styles.input, minHeight: 80, resize: 'vertical' }} placeholder="Détails, informations supplémentaires..." /></div>
+                      <div><label style={styles.inputLabel}>Date & heure début</label><input type="datetime-local" value={newEventDate} onChange={(e) => setNewEventDate(e.target.value)} style={styles.input} /></div>
                       <div><label style={styles.inputLabel}>Date & heure fin (optionnel)</label><input type="datetime-local" value={newEventEndDate} onChange={(e) => setNewEventEndDate(e.target.value)} style={styles.input} /></div>
-                      <div><label style={styles.inputLabel}>Lieu</label><input value={newEventLocation} onChange={(e) => setNewEventLocation(e.target.value)} style={styles.input} placeholder="Lieu de l'Ã©vÃ©nement" /></div>
+                      <div><label style={styles.inputLabel}>Lieu</label><input value={newEventLocation} onChange={(e) => setNewEventLocation(e.target.value)} style={styles.input} placeholder="Lieu de l'événement" /></div>
                       <div>
                         <label style={styles.inputLabel}>Type</label>
                         <select value={newEventType} onChange={(e) => setNewEventType(e.target.value)} style={styles.select}>
-                          <option value="event">ðŸ“… Ã‰vÃ©nement</option>
-                          <option value="assembly">ðŸ›ï¸ AssemblÃ©e gÃ©nÃ©rale</option>
-                          <option value="outing">ðŸŽ¢ Sortie</option>
-                          <option value="tournament">ðŸ† Tournoi</option>
-                          <option value="other">ðŸ“Œ Autre</option>
+                          <option value="event">📅 Événement</option>
+                          <option value="assembly">🏛️ Assemblée générale</option>
+                          <option value="outing">🎢 Sortie</option>
+                          <option value="tournament">🏆 Tournoi</option>
+                          <option value="other">📌 Autre</option>
                         </select>
                       </div>
                       <div style={{ gridColumn: '1 / -1' }}>
-                        <label style={styles.inputLabel}>ðŸ’³ Lien de paiement (optionnel)</label>
+                        <label style={styles.inputLabel}>💳 Lien de paiement (optionnel)</label>
                         <input value={newEventPaymentLink} onChange={(e) => setNewEventPaymentLink(e.target.value)} style={styles.input} placeholder="https://... (HelloAsso, PayPal, etc.)" />
-                        <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#94a3b8' }}>Si renseignÃ©, un bouton de paiement sera affichÃ© aux parents.</p>
+                        <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#94a3b8' }}>Si renseigné, un bouton de paiement sera affiché aux parents.</p>
                       </div>
                     </div>
                     <div style={{ marginBottom: 16 }}>
-                      <label style={styles.inputLabel}>CatÃ©gories concernÃ©es (vide = {isAdmin ? 'toutes' : 'vos Ã©quipes'})</label>
+                      <label style={styles.inputLabel}>Catégories concernées (vide = {isAdmin ? 'toutes' : 'vos équipes'})</label>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, marginTop: 8 }}>
                         {eventPollTeams.map((t) => (
                           <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, border: `2px solid ${newEventTeamIds.includes(t.id) ? '#0A5FB5' : '#d5dfeb'}`, background: newEventTeamIds.includes(t.id) ? '#eaf4ff' : '#f8fbff', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
@@ -8149,38 +8149,38 @@ export default function App() {
                           </label>
                         ))}
                       </div>
-                      {newEventTeamIds.length === 0 && <p style={{ margin: '8px 0 0 0', fontSize: 12, color: '#94a3b8' }}>Aucune sÃ©lection = visible par {isAdmin ? 'tous' : 'vos Ã©quipes'}</p>}
+                      {newEventTeamIds.length === 0 && <p style={{ margin: '8px 0 0 0', fontSize: 12, color: '#94a3b8' }}>Aucune sélection = visible par {isAdmin ? 'tous' : 'vos équipes'}</p>}
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={saveEvent} style={styles.primaryButton} disabled={savingEvent}>{savingEvent ? 'Enregistrement...' : editingEventId ? 'ðŸ’¾ Modifier' : 'âž• CrÃ©er l\'Ã©vÃ©nement'}</button>
+                      <button onClick={saveEvent} style={styles.primaryButton} disabled={savingEvent}>{savingEvent ? 'Enregistrement...' : editingEventId ? '💾 Modifier' : '➕ Créer l\'événement'}</button>
                       {editingEventId && <button onClick={() => { setEditingEventId(''); setNewEventTitle(''); setNewEventDesc(''); setNewEventDate(''); setNewEventEndDate(''); setNewEventLocation(''); setNewEventType('event'); setNewEventTeamIds([]); setNewEventPaymentLink(''); }} style={styles.secondaryOutlineButton}>Annuler</button>}
                     </div>
                   </div>
 
                   <div style={{ ...styles.panelCard, marginTop: 18 }}>
-                    <h3 style={styles.panelTitle}>ðŸŽ‰ Ã‰vÃ©nements crÃ©Ã©s ({manageableClubEvents.length})</h3>
+                    <h3 style={styles.panelTitle}>🎉 Événements créés ({manageableClubEvents.length})</h3>
                     {manageableClubEvents.length === 0
-                      ? <div style={styles.emptyState}>Aucun Ã©vÃ©nement crÃ©Ã©.</div>
+                      ? <div style={styles.emptyState}>Aucun événement créé.</div>
                       : <div style={{ display: 'grid', gap: 10 }}>
                           {[...manageableClubEvents].sort((a, b) => a.event_date.localeCompare(b.event_date)).map((ev) => {
                             const d = new Date(ev.event_date);
                             const isPast = d < new Date();
                             const counts = getEventCounts(ev.id);
-                            const typeLabel: Record<string, string> = { event: 'ðŸ“…', assembly: 'ðŸ›ï¸', outing: 'ðŸŽ¢', tournament: 'ðŸ†', other: 'ðŸ“Œ' };
+                            const typeLabel: Record<string, string> = { event: '📅', assembly: '🏛️', outing: '🎢', tournament: '🏆', other: '📌' };
                             const teamLabel = ev.team_ids?.length > 0 ? ev.team_ids.map(getTeamName).join(', ') : 'Tous';
                             return (
                               <div key={ev.id} style={{ padding: '14px 16px', borderRadius: 16, background: isPast ? '#f8f9fb' : '#f0f7ff', border: `1px solid ${isPast ? '#e2e8f0' : '#bfdbfe'}`, opacity: isPast ? 0.8 : 1 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
                                   <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 900, fontSize: 15, color: '#062C5D' }}>{typeLabel[ev.type] || 'ðŸ“…'} {ev.title}</div>
-                                    <div style={{ fontSize: 13, color: '#5b6472', marginTop: 4 }}>{formatDate(ev.event_date)} {formatTime(ev.event_date)}{ev.location ? ` Â· ${ev.location}` : ''}</div>
-                                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>CatÃ©gories : {teamLabel}</div>
+                                    <div style={{ fontWeight: 900, fontSize: 15, color: '#062C5D' }}>{typeLabel[ev.type] || '📅'} {ev.title}</div>
+                                    <div style={{ fontSize: 13, color: '#5b6472', marginTop: 4 }}>{formatDate(ev.event_date)} {formatTime(ev.event_date)}{ev.location ? ` · ${ev.location}` : ''}</div>
+                                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>Catégories : {teamLabel}</div>
                                     {ev.description && <div style={{ fontSize: 13, color: '#374151', marginTop: 6 }}>{ev.description}</div>}
-                                    {ev.payment_link && <div style={{ marginTop: 4 }}><a href={ev.payment_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#0A5FB5', fontWeight: 700 }}>ðŸ’³ Lien de paiement</a></div>}
+                                    {ev.payment_link && <div style={{ marginTop: 4 }}><a href={ev.payment_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#0A5FB5', fontWeight: 700 }}>💳 Lien de paiement</a></div>}
                                     <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 12, fontWeight: 700 }}>
-                                      <span style={{ color: '#16a34a' }}>âœ… {counts.present} prÃ©sents</span>
-                                      <span style={{ color: '#dc2626' }}>âŒ {counts.absent} absents</span>
-                                      <span style={{ color: '#94a3b8' }}>â³ {counts.pending} sans rÃ©ponse</span>
+                                      <span style={{ color: '#16a34a' }}>✅ {counts.present} présents</span>
+                                      <span style={{ color: '#dc2626' }}>❌ {counts.absent} absents</span>
+                                      <span style={{ color: '#94a3b8' }}>⏳ {counts.pending} sans réponse</span>
                                     </div>
                                     {renderEventVoters(ev.id)}
                                   </div>
@@ -8192,37 +8192,37 @@ export default function App() {
                                         tempId: q.id, question: q.question, type: q.type,
                                         choices: q.choices || [], required: q.required,
                                       })));
-                                    }} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 10px', background: '#7c3aed' }} title="Formulaire">ðŸ“</button>
-                                    <button onClick={() => setViewingEventFormResultsId(ev.id === viewingEventFormResultsId ? '' : ev.id)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 10px', background: '#0891b2' }} title="Voir les rÃ©ponses">ðŸ“‹</button>
-                                    <button onClick={() => { setEditingEventId(ev.id); setNewEventTitle(ev.title); setNewEventDesc(ev.description || ''); setNewEventDate(ev.event_date.slice(0, 16)); setNewEventEndDate(ev.end_date?.slice(0, 16) || ''); setNewEventLocation(ev.location || ''); setNewEventType(ev.type); setNewEventTeamIds(ev.team_ids || []); setNewEventPaymentLink(ev.payment_link || ''); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>âœï¸</button>
-                                    <button onClick={() => deleteEvent(ev)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>ðŸ—‘</button>
+                                    }} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 10px', background: '#7c3aed' }} title="Formulaire">📝</button>
+                                    <button onClick={() => setViewingEventFormResultsId(ev.id === viewingEventFormResultsId ? '' : ev.id)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 10px', background: '#0891b2' }} title="Voir les réponses">📋</button>
+                                    <button onClick={() => { setEditingEventId(ev.id); setNewEventTitle(ev.title); setNewEventDesc(ev.description || ''); setNewEventDate(ev.event_date.slice(0, 16)); setNewEventEndDate(ev.end_date?.slice(0, 16) || ''); setNewEventLocation(ev.location || ''); setNewEventType(ev.type); setNewEventTeamIds(ev.team_ids || []); setNewEventPaymentLink(ev.payment_link || ''); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>✏️</button>
+                                    <button onClick={() => deleteEvent(ev)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>🗑</button>
                                   </div>
                                 </div>
                                 {/* Affichage du nb de questions du formulaire */}
                                 {(() => {
                                   const qs = getQuestionsForEvent(ev.id);
                                   if (qs.length === 0) return null;
-                                  return <div style={{ marginTop: 6, fontSize: 12, color: '#7c3aed', fontWeight: 700 }}>ðŸ“ {qs.length} question{qs.length > 1 ? 's' : ''} dans le formulaire</div>;
+                                  return <div style={{ marginTop: 6, fontSize: 12, color: '#7c3aed', fontWeight: 700 }}>📝 {qs.length} question{qs.length > 1 ? 's' : ''} dans le formulaire</div>;
                                 })()}
-                                {/* RÃ©sultats du formulaire pour cet event */}
+                                {/* Résultats du formulaire pour cet event */}
                                 {viewingEventFormResultsId === ev.id && (() => {
                                   const qs = getQuestionsForEvent(ev.id);
                                   if (qs.length === 0) return <div style={{ marginTop: 12, padding: 12, background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 12, fontSize: 13, color: '#92400e' }}>Aucune question dans ce formulaire.</div>;
                                   return (
                                     <div style={{ marginTop: 12, padding: 12, background: 'white', border: '1px solid #bae6fd', borderRadius: 12 }}>
-                                      <div style={{ fontWeight: 800, color: '#0c4a6e', marginBottom: 10 }}>ðŸ“‹ RÃ©ponses au formulaire</div>
+                                      <div style={{ fontWeight: 800, color: '#0c4a6e', marginBottom: 10 }}>📋 Réponses au formulaire</div>
                                       {qs.map((q) => {
                                         const responses = eventFormResponses.filter((r) => r.question_id === q.id);
                                         return (
                                           <div key={q.id} style={{ marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #e0f2fe' }}>
                                             <div style={{ fontWeight: 700, color: '#0c4a6e', fontSize: 13, marginBottom: 6 }}>{q.question} <span style={{ color: '#94a3b8', fontSize: 11 }}>({q.type})</span></div>
                                             {responses.length === 0
-                                              ? <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucune rÃ©ponse</div>
+                                              ? <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucune réponse</div>
                                               : <div style={{ display: 'grid', gap: 4 }}>
                                                   {responses.map((r) => {
                                                     const player = players.find((p) => p.id === r.player_id);
                                                     return <div key={r.id} style={{ fontSize: 12, color: '#374151', padding: '4px 8px', background: '#f0f9ff', borderRadius: 6 }}>
-                                                      <strong>{player ? getPlayerName(player) : '?'}</strong> : {formatEventFormAnswer(r.answer)} {r.responder_label && <span style={{ color: '#94a3b8' }}>â€” par {r.responder_label}</span>}
+                                                      <strong>{player ? getPlayerName(player) : '?'}</strong> : {formatEventFormAnswer(r.answer)} {r.responder_label && <span style={{ color: '#94a3b8' }}>— par {r.responder_label}</span>}
                                                     </div>;
                                                   })}
                                                 </div>}
@@ -8238,27 +8238,27 @@ export default function App() {
                         </div>}
                   </div>
 
-                  {/* â”€â”€ Ã‰dition du formulaire de l'Ã©vÃ©nement â”€â”€ */}
+                  {/* ── Édition du formulaire de l'événement ── */}
                   {editingEventFormId && (() => {
                     const ev = clubEvents.find((e) => e.id === editingEventFormId);
                     return (
                       <div style={{ ...styles.formCard, marginTop: 18, background: '#f5f3ff', border: '1px solid #c4b5fd' }}>
-                        <h3 style={{ ...styles.panelTitle, color: '#5b21b6' }}>ðŸ“ Formulaire pour : {ev?.title}</h3>
-                        <p style={{ margin: '0 0 14px 0', fontSize: 13, color: '#6d28d9' }}>Ajoute des questions auxquelles les parents pourront rÃ©pondre depuis l'Ã©vÃ©nement.</p>
+                        <h3 style={{ ...styles.panelTitle, color: '#5b21b6' }}>📝 Formulaire pour : {ev?.title}</h3>
+                        <p style={{ margin: '0 0 14px 0', fontSize: 13, color: '#6d28d9' }}>Ajoute des questions auxquelles les parents pourront répondre depuis l'événement.</p>
                         <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
                           {draftFormQuestions.map((q, idx) => (
                             <div key={q.tempId} style={{ background: 'white', border: '1px solid #ddd6fe', borderRadius: 12, padding: 12 }}>
                               <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
                                 <span style={{ fontWeight: 800, color: '#5b21b6', fontSize: 13 }}>Q{idx + 1}</span>
                                 <input value={q.question} onChange={(e) => setDraftFormQuestions((p) => p.map((x, i) => i === idx ? { ...x, question: e.target.value } : x))} placeholder="Votre question" style={{ ...styles.input, padding: '8px 12px', minHeight: 38, fontSize: 14, flex: 1 }} />
-                                <button onClick={() => setDraftFormQuestions((p) => p.filter((_, i) => i !== idx))} style={{ ...styles.linkRemoveButton, padding: '6px 10px', fontSize: 12 }}>ðŸ—‘</button>
+                                <button onClick={() => setDraftFormQuestions((p) => p.filter((_, i) => i !== idx))} style={{ ...styles.linkRemoveButton, padding: '6px 10px', fontSize: 12 }}>🗑</button>
                               </div>
                               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                                 <select value={q.type} onChange={(e) => setDraftFormQuestions((p) => p.map((x, i) => i === idx ? { ...x, type: e.target.value as any } : x))} style={{ ...styles.select, padding: '6px 12px', minHeight: 36, fontSize: 13, maxWidth: 180 }}>
                                   <option value="text">Texte libre</option>
                                   <option value="yesno">Oui / Non</option>
                                   <option value="choice">Choix unique</option>
-                                  <option value="multi">Cases Ã  cocher</option>
+                                  <option value="multi">Cases à cocher</option>
                                 </select>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#5b21b6' }}>
                                   <input type="checkbox" checked={q.required} onChange={(e) => setDraftFormQuestions((p) => p.map((x, i) => i === idx ? { ...x, required: e.target.checked } : x))} /> Obligatoire
@@ -8266,11 +8266,11 @@ export default function App() {
                               </div>
                               {(q.type === 'choice' || q.type === 'multi') && (
                                 <div style={{ marginTop: 8 }}>
-                                  <label style={{ fontSize: 12, fontWeight: 700, color: '#5b21b6', display: 'block', marginBottom: 4 }}>Choix proposÃ©s :</label>
+                                  <label style={{ fontSize: 12, fontWeight: 700, color: '#5b21b6', display: 'block', marginBottom: 4 }}>Choix proposés :</label>
                                   {q.choices.map((c, ci) => (
                                     <div key={ci} style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
                                       <input value={c} onChange={(e) => setDraftFormQuestions((p) => p.map((x, i) => i === idx ? { ...x, choices: x.choices.map((cc, cci) => cci === ci ? e.target.value : cc) } : x))} placeholder={`Choix ${ci + 1}`} style={{ ...styles.input, padding: '6px 10px', minHeight: 34, fontSize: 13, flex: 1 }} />
-                                      <button onClick={() => setDraftFormQuestions((p) => p.map((x, i) => i === idx ? { ...x, choices: x.choices.filter((_, cci) => cci !== ci) } : x))} style={{ ...styles.linkRemoveButton, padding: '4px 8px', fontSize: 11 }}>âœ•</button>
+                                      <button onClick={() => setDraftFormQuestions((p) => p.map((x, i) => i === idx ? { ...x, choices: x.choices.filter((_, cci) => cci !== ci) } : x))} style={{ ...styles.linkRemoveButton, padding: '4px 8px', fontSize: 11 }}>✕</button>
                                     </div>
                                   ))}
                                   <button onClick={() => setDraftFormQuestions((p) => p.map((x, i) => i === idx ? { ...x, choices: [...x.choices, ''] } : x))} style={{ ...styles.secondaryOutlineButton, fontSize: 12, padding: '6px 12px', marginTop: 4 }}>+ Ajouter un choix</button>
@@ -8284,7 +8284,7 @@ export default function App() {
                             style={{ ...styles.secondaryOutlineButton, fontSize: 13 }}>+ Ajouter une question</button>
                           <button onClick={() => saveEventForm(editingEventFormId)} disabled={savingEventForm}
                             style={{ ...styles.primaryButton, background: '#7c3aed', fontSize: 13 }}>
-                            {savingEventForm ? '...' : 'ðŸ’¾ Enregistrer le formulaire'}
+                            {savingEventForm ? '...' : '💾 Enregistrer le formulaire'}
                           </button>
                           <button onClick={() => { setEditingEventFormId(''); setDraftFormQuestions([]); }}
                             style={{ ...styles.secondaryOutlineButton, fontSize: 13 }}>Annuler</button>
@@ -8294,11 +8294,11 @@ export default function App() {
                   })()}
                 </>}
 
-                {/* â”€â”€ SONDAGES â”€â”€ */}
+                {/* ── SONDAGES ── */}
                 {adminSubTab === 'polls' && <>
                   <div style={{ ...styles.formCard, background: '#fef3c7', border: '1px solid #fcd34d' }}>
-                    <h3 style={{ ...styles.panelTitle, color: '#92400e' }}>{editingPollId ? 'âœï¸ Modifier le sondage' : 'ðŸ“Š CrÃ©er un sondage'}</h3>
-                    <p style={{ margin: '0 0 14px 0', fontSize: 13, color: '#92400e' }}>Le sondage sera visible par les catÃ©gories sÃ©lectionnÃ©es (parents et joueurs).</p>
+                    <h3 style={{ ...styles.panelTitle, color: '#92400e' }}>{editingPollId ? '✏️ Modifier le sondage' : '📊 Créer un sondage'}</h3>
+                    <p style={{ margin: '0 0 14px 0', fontSize: 13, color: '#92400e' }}>Le sondage sera visible par les catégories sélectionnées (parents et joueurs).</p>
                     <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
                       <div>
                         <label style={styles.inputLabel}>Titre du sondage</label>
@@ -8306,7 +8306,7 @@ export default function App() {
                       </div>
                       <div>
                         <label style={styles.inputLabel}>Description (optionnel)</label>
-                        <textarea value={newPollDescription} onChange={(e) => setNewPollDescription(e.target.value)} style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} placeholder="PrÃ©cisions sur le sondage" />
+                        <textarea value={newPollDescription} onChange={(e) => setNewPollDescription(e.target.value)} style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} placeholder="Précisions sur le sondage" />
                       </div>
                       <div>
                         <label style={styles.inputLabel}>Lien vers un sondage externe (optionnel)</label>
@@ -8319,7 +8319,7 @@ export default function App() {
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                               <input value={q.question} onChange={(e) => setNewPollQuestions((p) => p.map((x, i) => i === qIdx ? { ...x, question: e.target.value } : x))} placeholder={`Question ${qIdx + 1}`} style={{ ...styles.input, flex: 1 }} />
                               {newPollQuestions.length > 1 && (
-                                <button onClick={() => setNewPollQuestions((p) => p.filter((_, i) => i !== qIdx))} style={{ ...styles.linkRemoveButton, padding: '6px 12px' }}>âœ•</button>
+                                <button onClick={() => setNewPollQuestions((p) => p.filter((_, i) => i !== qIdx))} style={{ ...styles.linkRemoveButton, padding: '6px 12px' }}>✕</button>
                               )}
                             </div>
                             <div style={{ display: 'grid', gap: 6 }}>
@@ -8327,7 +8327,7 @@ export default function App() {
                                 <div key={`${q.id}-${optIdx}`} style={{ display: 'flex', gap: 6 }}>
                                   <input value={opt} onChange={(e) => setNewPollQuestions((p) => p.map((x, i) => i === qIdx ? { ...x, options: x.options.map((o, oi) => oi === optIdx ? e.target.value : o) } : x))} placeholder={`Option ${optIdx + 1}`} style={{ ...styles.input, flex: 1 }} />
                                   {q.options.length > 2 && (
-                                    <button onClick={() => setNewPollQuestions((p) => p.map((x, i) => i === qIdx ? { ...x, options: x.options.filter((_, oi) => oi !== optIdx) } : x))} style={{ ...styles.linkRemoveButton, padding: '6px 12px' }}>âœ•</button>
+                                    <button onClick={() => setNewPollQuestions((p) => p.map((x, i) => i === qIdx ? { ...x, options: x.options.filter((_, oi) => oi !== optIdx) } : x))} style={{ ...styles.linkRemoveButton, padding: '6px 12px' }}>✕</button>
                                   )}
                                 </div>
                               ))}
@@ -8343,7 +8343,7 @@ export default function App() {
                         <button onClick={() => setNewPollQuestions((p) => [...p, { id: `q-${Date.now()}`, question: '', options: ['', ''], multiple_choice: false }])} style={{ ...styles.secondaryOutlineButton, fontSize: 13 }}>+ Ajouter une question</button>
                       </div>
                       <div>
-                        <label style={styles.inputLabel}>CatÃ©gories concernÃ©es (vide = {isAdmin ? 'toutes' : 'vos Ã©quipes'})</label>
+                        <label style={styles.inputLabel}>Catégories concernées (vide = {isAdmin ? 'toutes' : 'vos équipes'})</label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, marginTop: 8 }}>
                           {eventPollTeams.map((t) => (
                             <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, border: `2px solid ${newPollTeamIds.includes(t.id) ? '#92400e' : '#fde68a'}`, background: newPollTeamIds.includes(t.id) ? '#fde68a' : '#fffbeb', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
@@ -8355,7 +8355,7 @@ export default function App() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                      <button onClick={addPoll} disabled={savingPoll} style={{ ...styles.primaryButton, background: '#92400e' }}>{savingPoll ? '...' : editingPollId ? 'ðŸ’¾ Enregistrer' : 'âž• Envoyer le sondage'}</button>
+                      <button onClick={addPoll} disabled={savingPoll} style={{ ...styles.primaryButton, background: '#92400e' }}>{savingPoll ? '...' : editingPollId ? '💾 Enregistrer' : '➕ Envoyer le sondage'}</button>
                       {editingPollId && (
                         <button onClick={resetPollForm} style={styles.secondaryOutlineButton}>Annuler</button>
                       )}
@@ -8363,9 +8363,9 @@ export default function App() {
                   </div>
 
                   <div style={{ ...styles.panelCard, marginTop: 18 }}>
-                    <h3 style={styles.panelTitle}>ðŸ“‹ Sondages crÃ©Ã©s ({manageablePolls.length})</h3>
+                    <h3 style={styles.panelTitle}>📋 Sondages créés ({manageablePolls.length})</h3>
                     {manageablePolls.length === 0
-                      ? <div style={styles.emptyState}>Aucun sondage crÃ©Ã©.</div>
+                      ? <div style={styles.emptyState}>Aucun sondage créé.</div>
                       : <div style={{ display: 'grid', gap: 10 }}>
                           {manageablePolls.map((poll) => {
                             const pollQuestions = normalizePollQuestions(poll);
@@ -8379,19 +8379,19 @@ export default function App() {
                                     <div style={{ fontWeight: 900, fontSize: 15, color: '#062C5D' }}>{poll.question}</div>
                                     {poll.description && <div style={{ fontSize: 13, color: '#5b6472', marginTop: 4 }}>{poll.description}</div>}
                                     {poll.external_url && <a href={poll.external_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 800, color: '#0A5FB5' }}>Ouvrir le sondage externe</a>}
-                                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>CatÃ©gories : {targetTeams} Â· {pollQuestions.length} question{pollQuestions.length > 1 ? 's' : ''} Â· {totalVotes} vote{totalVotes > 1 ? 's' : ''}</div>
+                                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>Catégories : {targetTeams} · {pollQuestions.length} question{pollQuestions.length > 1 ? 's' : ''} · {totalVotes} vote{totalVotes > 1 ? 's' : ''}</div>
                                   </div>
                                   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                                    <button onClick={() => setViewingPollResultsId(showResults ? '' : poll.id)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px', background: '#0891b2' }}>{showResults ? 'ðŸ”½' : 'ðŸ“Š'}</button>
-                                    <button onClick={() => togglePollClosed(poll.id, poll.closed)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px', background: poll.closed ? '#16a34a' : '#dc2626' }}>{poll.closed ? 'ðŸ”“' : 'ðŸ”’'}</button>
+                                    <button onClick={() => setViewingPollResultsId(showResults ? '' : poll.id)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px', background: '#0891b2' }}>{showResults ? '🔽' : '📊'}</button>
+                                    <button onClick={() => togglePollClosed(poll.id, poll.closed)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px', background: poll.closed ? '#16a34a' : '#dc2626' }}>{poll.closed ? '🔓' : '🔒'}</button>
                                     <button onClick={() => {
                                       setEditingPollId(poll.id); setNewPollQuestion(poll.question); setNewPollDescription(poll.description || '');
                                       setNewPollExternalUrl(poll.external_url || '');
                                       setNewPollQuestions(normalizePollQuestions(poll).map((q, idx) => ({ ...q, id: q.id || `q-${idx + 1}`, options: q.options.length >= 2 ? q.options : ['', ''] })));
                                       setNewPollOptions(pollOptions.filter((o) => o.poll_id === poll.id).map((o) => o.label)); setNewPollTeamIds(poll.team_ids || []); setNewPollMultiple(poll.multiple_choice);
                                       window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>âœï¸</button>
-                                    <button onClick={() => deletePoll(poll.id)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>ðŸ—‘</button>
+                                    }} style={{ ...styles.secondaryButton, fontSize: 12, padding: '7px 12px' }}>✏️</button>
+                                    <button onClick={() => deletePoll(poll.id)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>🗑</button>
                                   </div>
                                 </div>
                                 {showResults && (
@@ -8435,23 +8435,23 @@ export default function App() {
                   </div>
                 </>}
 
-                {/* â”€â”€ EN LIGNE â”€â”€ */}
+                {/* ── EN LIGNE ── */}
                 {adminSubTab === 'online' && (() => {
                   const counts = getOnlineCounts();
                   const connectionStats = getConnectionStats();
                   return <>
                     {presenceHistoryError && (
                       <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 14, background: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412', fontSize: 13, fontWeight: 700 }}>
-                        Historique Supabase non enregistrÃ© : {presenceHistoryError}
+                        Historique Supabase non enregistré : {presenceHistoryError}
                       </div>
                     )}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(118px,1fr))', gap: 10, marginBottom: 12 }}>
                       {[
-                        { label: 'ðŸŸ¢ En ligne maintenant', value: counts.total, bg: '#dcfce7', color: '#166534' },
-                        { label: 'ðŸ‘ª Parents en ligne', value: counts.parents, bg: '#dbeafe', color: '#1e40af' },
-                        { label: 'ðŸ¤¾ Joueurs en ligne', value: counts.players, bg: '#ede9fe', color: '#5b21b6' },
-                        { label: 'ðŸ† Coachs en ligne', value: counts.coaches, bg: '#fef3c7', color: '#92400e' },
-                        { label: 'âš™ï¸ Admins en ligne', value: counts.admins, bg: '#fee2e2', color: '#991b1b' },
+                        { label: '🟢 En ligne maintenant', value: counts.total, bg: '#dcfce7', color: '#166534' },
+                        { label: '👪 Parents en ligne', value: counts.parents, bg: '#dbeafe', color: '#1e40af' },
+                        { label: '🤾 Joueurs en ligne', value: counts.players, bg: '#ede9fe', color: '#5b21b6' },
+                        { label: '🏆 Coachs en ligne', value: counts.coaches, bg: '#fef3c7', color: '#92400e' },
+                        { label: '⚙️ Admins en ligne', value: counts.admins, bg: '#fee2e2', color: '#991b1b' },
                       ].map((s) => (
                         <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: 12, textAlign: 'center', border: '1px solid rgba(0,0,0,0.04)', minWidth: 0 }}>
                           <div style={{ fontSize: 26, fontWeight: 900, color: s.color }}>{s.value}</div>
@@ -8461,11 +8461,11 @@ export default function App() {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(118px,1fr))', gap: 10, marginBottom: 18 }}>
                       {[
-                        { label: 'ðŸ“Š Connexions totales', value: connectionStats.totals.total, bg: '#f1f5f9', color: '#334155' },
-                        { label: 'ðŸ‘ª Connexions parents', value: connectionStats.totals.parents, bg: '#eff6ff', color: '#1e40af' },
-                        { label: 'ðŸ¤¾ Connexions joueurs', value: connectionStats.totals.players, bg: '#f5f3ff', color: '#5b21b6' },
-                        { label: 'ðŸ† Connexions coachs', value: connectionStats.totals.coaches, bg: '#fffbeb', color: '#92400e' },
-                        { label: 'âš™ï¸ Connexions admins', value: connectionStats.totals.admins, bg: '#fef2f2', color: '#991b1b' },
+                        { label: '📊 Connexions totales', value: connectionStats.totals.total, bg: '#f1f5f9', color: '#334155' },
+                        { label: '👪 Connexions parents', value: connectionStats.totals.parents, bg: '#eff6ff', color: '#1e40af' },
+                        { label: '🤾 Connexions joueurs', value: connectionStats.totals.players, bg: '#f5f3ff', color: '#5b21b6' },
+                        { label: '🏆 Connexions coachs', value: connectionStats.totals.coaches, bg: '#fffbeb', color: '#92400e' },
+                        { label: '⚙️ Connexions admins', value: connectionStats.totals.admins, bg: '#fef2f2', color: '#991b1b' },
                       ].map((s) => (
                         <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: 12, textAlign: 'center', border: '1px solid rgba(0,0,0,0.04)', minWidth: 0 }}>
                           <div style={{ fontSize: 24, fontWeight: 900, color: s.color }}>{s.value}</div>
@@ -8474,7 +8474,7 @@ export default function App() {
                       ))}
                     </div>
                     <div style={{ ...styles.panelCard, marginBottom: 16 }}>
-                      <h3 style={styles.panelTitle}>ðŸ“ˆ Connexions sur 7 jours</h3>
+                      <h3 style={styles.panelTitle}>📈 Connexions sur 7 jours</h3>
                       {connectionStats.daily.length === 0 ? (
                         <div style={styles.emptyState}>Pas encore d'historique de connexion.</div>
                       ) : (
@@ -8492,8 +8492,8 @@ export default function App() {
                       )}
                     </div>
                     <div style={{ ...styles.panelCard, marginBottom: 16 }}>
-                      <h3 style={styles.panelTitle}>ðŸ‘¥ Utilisateurs actuellement connectÃ©s</h3>
-                      <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#94a3b8' }}>ConsidÃ©rÃ© "en ligne" si vu il y a moins de 2 minutes.</p>
+                      <h3 style={styles.panelTitle}>👥 Utilisateurs actuellement connectés</h3>
+                      <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#94a3b8' }}>Considéré "en ligne" si vu il y a moins de 2 minutes.</p>
                       {counts.list.length === 0
                         ? <div style={styles.emptyState}>Personne n'est en ligne pour le moment.</div>
                         : <div style={{ display: 'grid', gap: 6 }}>
@@ -8515,10 +8515,10 @@ export default function App() {
                           </div>}
                     </div>
                     <div style={styles.panelCard}>
-                      <h3 style={styles.panelTitle}>ðŸ•˜ Historique rÃ©cent</h3>
-                      <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#94a3b8' }}>ConservÃ© sur les derniers jours. Si Supabase bloque l'historique, l'app garde un secours local sur cet appareil et affiche l'erreur au-dessus.</p>
+                      <h3 style={styles.panelTitle}>🕘 Historique récent</h3>
+                      <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#94a3b8' }}>Conservé sur les derniers jours. Si Supabase bloque l'historique, l'app garde un secours local sur cet appareil et affiche l'erreur au-dessus.</p>
                       {connectionStats.history.length === 0 ? (
-                        <div style={styles.emptyState}>Aucune activitÃ© rÃ©cente.</div>
+                        <div style={styles.emptyState}>Aucune activité récente.</div>
                       ) : (
                         <div style={{ display: 'grid', gap: 6, maxHeight: 360, overflowY: 'auto', paddingRight: 2 }}>
                           {connectionStats.history.slice(0, 120).map((p, idx) => {
@@ -8545,7 +8545,7 @@ export default function App() {
           </>
         )}
 
-        {/* Modale plein Ã©cran de carte FIFA â€” partagÃ©e parent + coach */}
+        {/* Modale plein écran de carte FIFA — partagée parent + coach */}
         {fullScreenCardData && (
           <FullScreenCard
             cards={fullScreenCardData.cards}
@@ -8555,7 +8555,7 @@ export default function App() {
           />
         )}
 
-        {/* â”€â”€â”€ VUE PARENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─── VUE PARENT ───────────────────────────────────────────────────── */}
         {activeRole === 'parent' && sponsors.length > 0 && (() => {
           const sponsor = sponsors[currentSponsorIdx % sponsors.length];
           return (
@@ -8614,7 +8614,7 @@ export default function App() {
                 >
                   {child.photo_url
                     ? <img src={child.photo_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                    : <span style={{ fontSize: 18 }}>ðŸ‘¤</span>}
+                    : <span style={{ fontSize: 18 }}>👤</span>}
                   <span>{child.first_name || getPlayerName(child)}</span>
                 </button>
               );
@@ -8641,7 +8641,7 @@ export default function App() {
                   boxShadow: parentTab === 'password' ? '0 4px 12px rgba(10,95,181,0.12)' : 'none',
                 }}
               >
-                ðŸ”‘
+                🔑
               </button>
             </div>
 
@@ -8649,11 +8649,11 @@ export default function App() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))', gap: 10, marginBottom: 20 }}>
               {(() => {
                 const tabs: { key: 'home' | 'team' | 'trainings' | 'matches' | 'events' | 'polls' | 'supporter'; label: string }[] = [
-                  { key: 'home', label: 'ðŸ‘ª Mon espace' },
-                  { key: 'team', label: 'ðŸ‘• Mon Ã©quipe' },
-                  { key: 'trainings', label: 'ðŸƒ EntraÃ®nements' },
-                  { key: 'matches', label: 'âš½ Matchs' },
-                  { key: 'events', label: 'ðŸŽ‰ Ã‰vÃ©nements' },
+                  { key: 'home', label: '👪 Mon espace' },
+                  { key: 'team', label: '👕 Mon équipe' },
+                  { key: 'trainings', label: '🏃 Entraînements' },
+                  { key: 'matches', label: '⚽ Matchs' },
+                  { key: 'events', label: '🎉 Événements' },
                 ];
                 // Onglet sondages si au moins un sondage me concerne
                 const myTeamIds = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)).filter(Boolean) as string[])];
@@ -8663,11 +8663,11 @@ export default function App() {
                 }
                 const visiblePolls = getPollsVisibleFor([...new Set(myTeamIds)]);
                 const visibleSupporterMatches = getAllSupporterMatches();
-                if (visiblePolls.length > 0) tabs.push({ key: 'polls', label: 'ðŸ“Š Sondages' });
-                if (visibleSupporterMatches.length > 0) tabs.push({ key: 'supporter', label: 'ðŸ“£ Supporter' });
+                if (visiblePolls.length > 0) tabs.push({ key: 'polls', label: '📊 Sondages' });
+                if (visibleSupporterMatches.length > 0) tabs.push({ key: 'supporter', label: '📣 Supporter' });
                 return tabs.map(({ key: tab, label }) => {
                   const hasUnread = tab === 'home' && getUnreadMessageConversations().length > 0;
-                  // Pastille sondages : nb sondages oÃ¹ je n'ai pas votÃ©
+                  // Pastille sondages : nb sondages où je n'ai pas voté
                   const pollBadge = tab === 'polls' && (() => {
                     const playerId = linkedPlayerId;
                     return visiblePolls.filter((p) => {
@@ -8704,9 +8704,9 @@ export default function App() {
               })()}
             </div>
 
-            {/* â”€â”€ MON Ã‰QUIPE cÃ´tÃ© parent â”€â”€ */}
+            {/* ── MON ÉQUIPE côté parent ── */}
             {parentTab === 'team' && (() => {
-              // RÃ©cupÃ©rer toutes les Ã©quipes des enfants liÃ©s
+              // Récupérer toutes les équipes des enfants liés
               const parentTeamIds = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)))];
               const seasonForFilter = parentSelectedSeasonId;
               return (
@@ -8724,7 +8724,7 @@ export default function App() {
                             title="Voir les grades">?</button>
                         </div>
 
-                        {/* â”€â”€ Stats globales Ã©quipe â”€â”€ */}
+                        {/* ── Stats globales équipe ── */}
                         {(() => {
                           const tmStats = seasonForFilter
                             ? teamPlayers.flatMap((p) => getMatchPlayerStatsForSeason(p.id, seasonForFilter))
@@ -8736,10 +8736,10 @@ export default function App() {
                           return (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(90px,1fr))', gap: 10, marginBottom: 18 }}>
                               {[
-                                { label: 'âš½ Matchs jouÃ©s', value: tmMatchIds, bg: '#dbeafe', color: '#1e40af' },
-                                { label: 'ðŸŽ¯ Buts marquÃ©s', value: tmGoals,    bg: '#dcfce7', color: '#166534' },
-                                { label: 'ðŸ¹ Tirs tentÃ©s',  value: tmShots,    bg: '#ede9fe', color: '#5b21b6' },
-                                { label: 'ðŸ“Š % RÃ©ussite',   value: tmShots > 0 ? `${tmPct}%` : '-', bg: tmPct >= 50 ? '#dcfce7' : '#fef3c7', color: tmPct >= 50 ? '#166534' : '#92400e' },
+                                { label: '⚽ Matchs joués', value: tmMatchIds, bg: '#dbeafe', color: '#1e40af' },
+                                { label: '🎯 Buts marqués', value: tmGoals,    bg: '#dcfce7', color: '#166534' },
+                                { label: '🏹 Tirs tentés',  value: tmShots,    bg: '#ede9fe', color: '#5b21b6' },
+                                { label: '📊 % Réussite',   value: tmShots > 0 ? `${tmPct}%` : '-', bg: tmPct >= 50 ? '#dcfce7' : '#fef3c7', color: tmPct >= 50 ? '#166534' : '#92400e' },
                               ].map((stat) => (
                                 <div key={stat.label} style={{ background: stat.bg, borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: '1px solid rgba(0,0,0,0.05)' }}>
                                   <div style={{ fontSize: 22, fontWeight: 800, color: stat.color }}>{stat.value}</div>
@@ -8761,7 +8761,7 @@ export default function App() {
                               <div style={{ ...styles.panelCard, marginBottom: 14, background: '#fffdf4', border: '1px solid #fde68a' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
                                   <h4 style={{ margin: 0, color: '#062C5D', fontSize: 16 }}>Carte joueur</h4>
-                                  <span style={{ fontSize: 12, color: '#92400e', fontWeight: 800 }}>Clique sur la carte pour voir toute l'Ã©quipe</span>
+                                  <span style={{ fontSize: 12, color: '#92400e', fontWeight: 800 }}>Clique sur la carte pour voir toute l'équipe</span>
                                 </div>
                                 <div style={{ width: 'min(100%, 320px)', margin: '0 auto' }}>
                                   <FifaPlayerCard
@@ -8799,7 +8799,7 @@ export default function App() {
                               </div>
 
                               <div style={{ ...styles.panelCard, marginTop: 10 }}>
-                                <h4 style={{ margin: '0 0 12px 0', color: '#062C5D', fontSize: 16 }}>Liste de l'Ã©quipe</h4>
+                                <h4 style={{ margin: '0 0 12px 0', color: '#062C5D', fontSize: 16 }}>Liste de l'équipe</h4>
                                 <div style={{ display: 'grid', gap: 10 }}>
                                   {teamPlayers
                                     .slice()
@@ -8811,13 +8811,13 @@ export default function App() {
                                         <div key={player.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 14, background: isMyChild ? '#eaf4ff' : 'white', border: isMyChild ? '2px solid #0A5FB5' : '1px solid #d8e5f2' }}>
                                           {player.photo_url
                                             ? <img src={player.photo_url} alt={getPlayerName(player)} style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: '2px solid white', boxShadow: '0 1px 6px rgba(16,35,59,0.16)' }} />
-                                            : <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 15, flexShrink: 0 }}>{initials || 'ðŸ‘¤'}</div>}
+                                            : <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 15, flexShrink: 0 }}>{initials || '👤'}</div>}
                                           <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontWeight: 900, color: '#10233b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                               {player.first_name} {player.last_name?.toUpperCase()}
                                             </div>
                                             <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                                              {player.position || 'Poste non dÃ©fini'}{player.jersey_number != null ? ` Â· #${player.jersey_number}` : ''}
+                                              {player.position || 'Poste non défini'}{player.jersey_number != null ? ` · #${player.jersey_number}` : ''}
                                             </div>
                                           </div>
                                           {isMyChild && <span style={{ fontSize: 11, fontWeight: 900, color: '#0A5FB5', background: 'white', borderRadius: 999, padding: '4px 8px' }}>Mon enfant</span>}
@@ -8836,16 +8836,16 @@ export default function App() {
               );
             })()}
 
-            {/* â”€â”€ MODALE GRADES â”€â”€ */}
+            {/* ── MODALE GRADES ── */}
             {showGradeModal && <GradeModal onClose={() => setShowGradeModal(false)} />}
 
-            {/* â”€â”€ MON PROFIL JOUEUR (si user est aussi joueur) â”€â”€ */}
+            {/* ── MON PROFIL JOUEUR (si user est aussi joueur) ── */}
             {parentTab === 'player' && hasPlayerRole && (() => {
               const me = linkedPlayerId ? players.find((p) => p.id === linkedPlayerId) : null;
               if (!me) {
                 return (
                   <div style={styles.emptyState}>
-                    Aucun profil joueur n'est rattachÃ© Ã  ton compte. Contacte l'administrateur.
+                    Aucun profil joueur n'est rattaché à ton compte. Contacte l'administrateur.
                   </div>
                 );
               }
@@ -8878,20 +8878,20 @@ export default function App() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <h3 style={{ margin: '0 0 4px 0' }}>{getPlayerName(me)}</h3>
-                      <p style={{ margin: 0, color: '#5b6472' }}>Ã‰quipe : <strong>{getPlayerSeasonTeamName(me, parentSelectedSeasonId)}</strong></p>
-                      {me.birth_date && <p style={{ margin: '4px 0 0 0', color: '#5b6472', fontSize: 13 }}>ðŸŽ‚ {getPlayerAge(me.birth_date)} ans</p>}
+                      <p style={{ margin: 0, color: '#5b6472' }}>Équipe : <strong>{getPlayerSeasonTeamName(me, parentSelectedSeasonId)}</strong></p>
+                      {me.birth_date && <p style={{ margin: '4px 0 0 0', color: '#5b6472', fontSize: 13 }}>🎂 {getPlayerAge(me.birth_date)} ans</p>}
                     </div>
                   </div>
 
                   <div style={{ ...styles.panelCard }}>
-                    <h3 style={styles.panelTitle}>ðŸ“Š Mes statistiques</h3>
+                    <h3 style={styles.panelTitle}>📊 Mes statistiques</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10 }}>
                       {[
-                        ['ðŸƒ PrÃ©sences entraÃ®nement', `${trainingPresences} / ${totalTrainings}`],
-                        ['âš½ Matchs jouÃ©s', String(totalMatches)],
-                        ['ðŸŽ¯ Buts', String(totalGoals)],
-                        ['ðŸ¹ Tirs', String(totalShots)],
-                        ['ðŸ§¤ ArrÃªts', String(totalSaves)],
+                        ['🏃 Présences entraînement', `${trainingPresences} / ${totalTrainings}`],
+                        ['⚽ Matchs joués', String(totalMatches)],
+                        ['🎯 Buts', String(totalGoals)],
+                        ['🏹 Tirs', String(totalShots)],
+                        ['🧤 Arrêts', String(totalSaves)],
                       ].map(([lab, val]) => (
                         <div key={lab} style={{ background: '#f0f7ff', borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: '1px solid #bfdbfe' }}>
                           <div style={{ fontSize: 22, fontWeight: 800, color: '#1e40af' }}>{val}</div>
@@ -8902,17 +8902,17 @@ export default function App() {
                   </div>
 
                   <div style={{ ...styles.panelCard }}>
-                    <h3 style={styles.panelTitle}>ðŸ“… Mes prochains matchs</h3>
+                    <h3 style={styles.panelTitle}>📅 Mes prochains matchs</h3>
                     {myMatches.length === 0
-                      ? <div style={styles.emptyStateSmall}>Aucun match prÃ©vu.</div>
+                      ? <div style={styles.emptyStateSmall}>Aucun match prévu.</div>
                       : <div style={{ display: 'grid', gap: 8 }}>
                           {myMatches.map((m) => {
                             const inSquad = (matchSquad[m.id] || []).includes(me.id);
                             return (
                               <div key={m.id} style={{ padding: '12px 14px', borderRadius: 12, background: 'white', border: `1px solid ${inSquad ? '#bfdbfe' : '#dde7f2'}` }}>
                                 <div style={{ fontWeight: 800, color: '#062C5D' }}>vs {m.opponent}</div>
-                                <div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{formatDate(m.match_date)} {formatTime(m.match_date)} Â· {m.location || '-'}</div>
-                                {inSquad && <div style={{ fontSize: 12, color: '#1e40af', fontWeight: 700, marginTop: 4 }}>ðŸ“£ Tu es convoquÃ© !</div>}
+                                <div style={{ fontSize: 13, color: '#5b6472', marginTop: 2 }}>{formatDate(m.match_date)} {formatTime(m.match_date)} · {m.location || '-'}</div>
+                                {inSquad && <div style={{ fontSize: 12, color: '#1e40af', fontWeight: 700, marginTop: 4 }}>📣 Tu es convoqué !</div>}
                               </div>
                             );
                           })}
@@ -8922,7 +8922,7 @@ export default function App() {
               );
             })()}
 
-            {/* â”€â”€ SONDAGES cÃ´tÃ© parent/joueur â”€â”€ */}
+            {/* ── SONDAGES côté parent/joueur ── */}
             {/* Supporter */}
             {parentTab === 'supporter' && (() => {
               const myTeamIds: string[] = [...new Set(parentPlayers.map((p) => getPlayerTeamIdForSeason(p, parentSelectedSeasonId)).filter(Boolean) as string[])];
@@ -9004,7 +9004,7 @@ export default function App() {
                                   </a>
                                 )}
                               </div>
-                              {poll.closed && <span style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800 }}>FERMÃ‰</span>}
+                              {poll.closed && <span style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800 }}>FERMÉ</span>}
                             </div>
                             <div style={{ display: 'grid', gap: 8 }}>
                               {pollQuestions.map((q) => {
@@ -9034,14 +9034,14 @@ export default function App() {
                                           style={{ position: 'relative', textAlign: 'left', padding: '12px 14px', borderRadius: 12, border: `2px solid ${selected ? '#0A5FB5' : '#cfd8e3'}`, background: selected ? '#eaf4ff' : 'white', cursor: poll.closed ? 'not-allowed' : 'pointer', overflow: 'hidden', fontWeight: 700, color: '#10233b' }}>
                                           <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, ${selected ? '#bfdbfe' : '#e0eaf5'} ${pct}%, transparent ${pct}%)`, opacity: selectedInQuestion.length > 0 ? 0.45 : 0, transition: 'opacity 0.2s' }} />
                                           <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                                            <span>{selected ? 'âœ… ' : ''}{o.label}</span>
+                                            <span>{selected ? '✅ ' : ''}{o.label}</span>
                                             {selectedInQuestion.length > 0 && <span style={{ fontSize: 13, color: '#5b6472', fontWeight: 800 }}>{pct}% ({optVotes})</span>}
                                           </div>
                                         </button>
                                       );
                                     })}
                                     <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>
-                                      {qTotal} rÃ©ponse{qTotal > 1 ? 's' : ''}{q.multiple_choice ? ' Â· plusieurs choix possibles' : ''}
+                                      {qTotal} réponse{qTotal > 1 ? 's' : ''}{q.multiple_choice ? ' · plusieurs choix possibles' : ''}
                                     </div>
                                   </div>
                                 );
@@ -9057,29 +9057,29 @@ export default function App() {
               );
             })()}
 
-            {/* â”€â”€ MOT DE PASSE PARENT â”€â”€ */}
+            {/* ── MOT DE PASSE PARENT ── */}
             {parentTab === 'password' && (
               <div style={{ maxWidth: 480 }}>
-                <h3 style={{ margin: '0 0 6px 0', fontSize: 18, color: '#10233b' }}>ðŸ”‘ Changer mon mot de passe</h3>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: 18, color: '#10233b' }}>🔑 Changer mon mot de passe</h3>
                 <p style={{ margin: '0 0 18px 0', color: '#5b6472', fontSize: 14 }}>Modifiez le mot de passe de votre compte.</p>
                 {changePwSuccess ? (
                   <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 16, padding: '20px 24px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 36, marginBottom: 8 }}>âœ…</div>
-                    <div style={{ fontWeight: 800, color: '#166534', fontSize: 15, marginBottom: 8 }}>Mot de passe modifiÃ© !</div>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+                    <div style={{ fontWeight: 800, color: '#166534', fontSize: 15, marginBottom: 8 }}>Mot de passe modifié !</div>
                     <button onClick={() => { setChangePwSuccess(false); setNewPassword(''); setNewPassword2(''); }}
                       style={{ padding: '10px 24px', borderRadius: 12, border: 'none', background: '#0A5FB5', color: 'white', fontWeight: 800, cursor: 'pointer' }}>OK</button>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
-                      <label style={styles.inputLabel}>Nouveau mot de passe (min. 8 caractÃ¨res)</label>
+                      <label style={styles.inputLabel}>Nouveau mot de passe (min. 8 caractères)</label>
                       <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autoComplete="new-password" style={styles.input} />
+                        placeholder="••••••••" autoComplete="new-password" style={styles.input} />
                     </div>
                     <div>
                       <label style={styles.inputLabel}>Confirmer le mot de passe</label>
                       <input type="password" value={newPassword2} onChange={(e) => setNewPassword2(e.target.value)}
-                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autoComplete="new-password" style={styles.input}
+                        placeholder="••••••••" autoComplete="new-password" style={styles.input}
                         onKeyDown={(e) => e.key === 'Enter' && handleChangePassword()} />
                     </div>
                     {changePwError && (
@@ -9089,17 +9089,17 @@ export default function App() {
                     )}
                     <button onClick={handleChangePassword} disabled={changePwLoading || !newPassword || !newPassword2}
                       style={{ ...styles.primaryButton, opacity: changePwLoading || !newPassword || !newPassword2 ? 0.6 : 1 }}>
-                      {changePwLoading ? 'â³ Enregistrement...' : 'âœ… Enregistrer le nouveau mot de passe'}
+                      {changePwLoading ? '⏳ Enregistrement...' : '✅ Enregistrer le nouveau mot de passe'}
                     </button>
                   </div>
                 )}
               </div>
             )}
 
-            {/* â”€â”€ MON ESPACE / ENTRAÃŽNEMENTS / MATCHS / Ã‰VÃ‰NEMENTS â”€â”€ */}
+            {/* ── MON ESPACE / ENTRAÎNEMENTS / MATCHS / ÉVÉNEMENTS ── */}
             {(['home', 'trainings', 'matches', 'events'] as const).includes(parentTab as any) && (
             <>{parentPlayers.length === 0
-              ? <div style={styles.emptyState}>{"Aucun enfant liÃ© Ã  ce compte parent."}</div>
+              ? <div style={styles.emptyState}>{"Aucun enfant lié à ce compte parent."}</div>
               : (
                 <>
                   <div style={{ display: 'grid', gap: 18 }}>
@@ -9131,13 +9131,13 @@ export default function App() {
                                   {`${child.first_name?.[0] || ''}${child.last_name?.[0] || ''}`.toUpperCase()}
                                 </div>
                             }
-                            {/* Badge numÃ©ro de maillot */}
+                            {/* Badge numéro de maillot */}
                             {child.jersey_number != null && (
                               <div style={{ position: 'absolute', bottom: -4, left: -4, width: 26, height: 26, borderRadius: '50%', background: '#062C5D', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }}>
                                 {child.jersey_number}
                               </div>
                             )}
-                            <label htmlFor={`photo-${child.id}`} style={{ position: 'absolute', bottom: -2, right: -2, background: '#0A5FB5', color: 'white', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} title="Changer la photo">ðŸ“·</label>
+                            <label htmlFor={`photo-${child.id}`} style={{ position: 'absolute', bottom: -2, right: -2, background: '#0A5FB5', color: 'white', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} title="Changer la photo">📷</label>
                             <input id={`photo-${child.id}`} type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (!file) return;
@@ -9149,10 +9149,10 @@ export default function App() {
                           </div>
                           <div style={{ flex: 1 }}>
                             <h3 style={{ margin: '0 0 4px 0' }}>{getPlayerName(child)}</h3>
-                            <p style={{ margin: 0, color: '#5b6472' }}>Ã‰quipe : <strong>{getPlayerSeasonTeamName(child, parentSelectedSeasonId)}</strong></p>
-                            {child.birth_date && <p style={{ margin: '4px 0 0 0', color: '#5b6472', fontSize: 13 }}>ðŸŽ‚ {getPlayerAge(child.birth_date)} ans</p>}
-                            {uploadingPhoto && <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#0A5FB5' }}>â³ Upload en cours...</p>}
-                            {/* â”€â”€ Niveau & Ã©toiles â”€â”€ (masquÃ© si l'Ã©quipe a verrouillÃ© les stats) */}
+                            <p style={{ margin: 0, color: '#5b6472' }}>Équipe : <strong>{getPlayerSeasonTeamName(child, parentSelectedSeasonId)}</strong></p>
+                            {child.birth_date && <p style={{ margin: '4px 0 0 0', color: '#5b6472', fontSize: 13 }}>🎂 {getPlayerAge(child.birth_date)} ans</p>}
+                            {uploadingPhoto && <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#0A5FB5' }}>⏳ Upload en cours...</p>}
+                            {/* ── Niveau & étoiles ── (masqué si l'équipe a verrouillé les stats) */}
                             {!childTeam?.stats_hidden_for_parents && (() => {
                               const childPresences = getTrainingPresentCount(child.id, parentSelectedSeasonId);
                               const childGoals = getMatchPlayerStatsForSeason(child.id, parentSelectedSeasonId).reduce((sum, s) => sum + (s.goals || 0), 0);
@@ -9177,7 +9177,7 @@ export default function App() {
                                       {grade.name}
                                     </span>
                                   </div>
-                                  {/* Ã‰toiles */}
+                                  {/* Étoiles */}
                                   <div style={{ display: 'flex', gap: 3 }}>
                                     {[1,2,3,4,5].map((i) => (
                                       <span key={i} style={{
@@ -9185,12 +9185,12 @@ export default function App() {
                                         color: i <= starsInLevel ? (isRainbow ? rainbowColors[i-1] : starColor) : '#d1d5db',
                                         opacity: i <= starsInLevel ? 1 : 0.3,
                                         transition: 'color 0.2s',
-                                      }}>â˜…</span>
+                                      }}>★</span>
                                     ))}
                                   </div>
                                   {/* Mini stats source */}
                                   <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>
-                                    ðŸƒ{childPresences} Â· âš½{childMatchesPlayed} match{childMatchesPlayed > 1 ? 's' : ''} Â· {childGoals} but{childGoals > 1 ? 's' : ''}
+                                    🏃{childPresences} · ⚽{childMatchesPlayed} match{childMatchesPlayed > 1 ? 's' : ''} · {childGoals} but{childGoals > 1 ? 's' : ''}
                                   </span>
                                 </div>
                               );
@@ -9198,14 +9198,14 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* â”€â”€ Personnalisation parent : poste prÃ©fÃ©rÃ© â”€â”€ */}
+                        {/* ── Personnalisation parent : poste préféré ── */}
                         <div style={{ ...styles.panelCard, marginBottom: 16, background: '#fdfcfb', border: '1px solid #e7e5e4' }}>
-                          <h3 style={{ ...styles.panelTitle, marginBottom: 4 }}>ðŸŽ® Carte de {child.first_name}</h3>
+                          <h3 style={{ ...styles.panelTitle, marginBottom: 4 }}>🎮 Carte de {child.first_name}</h3>
                           <p style={{ margin: '0 0 14px 0', fontSize: 12, color: '#6b7280' }}>
-                            Choisis le poste prÃ©fÃ©rÃ© qui s'affichera sur sa carte.
+                            Choisis le poste préféré qui s'affichera sur sa carte.
                           </p>
                           <div>
-                            <label style={styles.inputLabel}>Poste prÃ©fÃ©rÃ©</label>
+                            <label style={styles.inputLabel}>Poste préféré</label>
                             <select
                               value={child.position || ''}
                               onChange={async (e) => {
@@ -9214,15 +9214,15 @@ export default function App() {
                                 setPlayers((prev) => prev.map((x) => x.id === child.id ? { ...x, position: newPos } : x));
                               }}
                               style={{ ...styles.select, maxWidth: 320 }}>
-                              <option value="">â€” Choisir un poste â€”</option>
+                              <option value="">— Choisir un poste —</option>
                               {POSITIONS.map((pos) => (
-                                <option key={pos.code} value={pos.code}>{pos.code} â€” {pos.full}</option>
+                                <option key={pos.code} value={pos.code}>{pos.code} — {pos.full}</option>
                               ))}
                             </select>
                           </div>
                         </div>
 
-                        {/* â”€â”€ Carte Mon Coach â”€â”€ */}
+                        {/* ── Carte Mon Coach ── */}
                         {(() => {
                           const teamCoaches = [...new Map(
                             coachAccessList.filter((c) => c.team_id === childTeamIdForSeason && (c.first_name || c.last_name))
@@ -9231,7 +9231,7 @@ export default function App() {
                           if (teamCoaches.length === 0) return null;
                           return (
                             <div style={{ ...styles.panelCard, marginBottom: 16, background: 'linear-gradient(135deg,#f0f7ff,#eaf4ff)', border: '1px solid #bfdbfe' }}>
-                              <h3 style={{ ...styles.panelTitle, color: '#1e40af', marginBottom: 14 }}>ðŸ† {teamCoaches.length > 1 ? 'Mes coachs' : 'Mon coach'}</h3>
+                              <h3 style={{ ...styles.panelTitle, color: '#1e40af', marginBottom: 14 }}>🏆 {teamCoaches.length > 1 ? 'Mes coachs' : 'Mon coach'}</h3>
                               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                                 {teamCoaches.map((coach) => {
                                   const initials = `${coach.first_name?.[0] || ''}${coach.last_name?.[0] || ''}`.toUpperCase();
@@ -9242,12 +9242,12 @@ export default function App() {
                                         ? <img src={coach.photo_url} alt={`${coach.first_name} ${coach.last_name}`}
                                             style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '3px solid #0A5FB5', boxShadow: '0 2px 8px rgba(10,95,181,0.2)' }} />
                                         : <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 900, color: 'white', boxShadow: '0 2px 8px rgba(10,95,181,0.2)', flexShrink: 0 }}>
-                                            {initials || 'ðŸ†'}
+                                            {initials || '🏆'}
                                           </div>
                                       }
                                       <div>
                                         <div style={{ fontWeight: 900, fontSize: 15, color: '#062C5D' }}>{coach.first_name} {coach.last_name}</div>
-                                        <div style={{ fontSize: 12, color: '#5b6472', marginTop: 2, fontWeight: 600 }}>Coach â€” {childTeam?.name}</div>
+                                        <div style={{ fontSize: 12, color: '#5b6472', marginTop: 2, fontWeight: 600 }}>Coach — {childTeam?.name}</div>
                                       </div>
                                     </div>
                                   );
@@ -9264,17 +9264,17 @@ export default function App() {
                             border: '1px solid #fecaca',
                             display: 'flex', alignItems: 'center', gap: 14,
                           }}>
-                            <div style={{ fontSize: 38, flexShrink: 0 }}>ðŸ”’</div>
+                            <div style={{ fontSize: 38, flexShrink: 0 }}>🔒</div>
                             <div>
-                              <h3 style={{ ...styles.panelTitle, margin: 0, color: '#991b1b' }}>Statistiques masquÃ©es</h3>
+                              <h3 style={{ ...styles.panelTitle, margin: 0, color: '#991b1b' }}>Statistiques masquées</h3>
                               <p style={{ margin: '4px 0 0 0', fontSize: 13, color: '#7f1d1d', lineHeight: 1.4 }}>
-                                Le coach a choisi de ne pas afficher les statistiques individuelles pour cette Ã©quipe. Demande-lui pour plus d'infos.
+                                Le coach a choisi de ne pas afficher les statistiques individuelles pour cette équipe. Demande-lui pour plus d'infos.
                               </p>
                             </div>
                           </div>
                         ) : (
                           <div style={{ ...styles.panelCard, marginBottom: 16 }}>
-                            <h3 style={styles.panelTitle}>{"â­ Statistiques du joueur"}</h3>
+                            <h3 style={styles.panelTitle}>{"⭐ Statistiques du joueur"}</h3>
                             <div style={styles.statsGrid}>
                               {((() => {
                                 const seasonStats = getMatchPlayerStatsForSeason(child.id, parentSelectedSeasonId);
@@ -9282,12 +9282,12 @@ export default function App() {
                                 const goals = seasonStats.reduce((sum, s) => sum + (s.goals || 0), 0);
                                 const shootPct = totalShots > 0 ? Math.round((goals / totalShots) * 100) : null;
                                 return [
-                                  ['EntraÃ®nements', `${getTrainingPresentCount(child.id, parentSelectedSeasonId)} / ${childTeamIdForSeason ? getTrainingTotalCount(childTeamIdForSeason, parentSelectedSeasonId) : 0}`],
+                                  ['Entraînements', `${getTrainingPresentCount(child.id, parentSelectedSeasonId)} / ${childTeamIdForSeason ? getTrainingTotalCount(childTeamIdForSeason, parentSelectedSeasonId) : 0}`],
                                   ['Matchs', `${getMatchPresentCount(child.id, parentSelectedSeasonId)} / ${childTeamIdForSeason ? getMatchTotalCount(childTeamIdForSeason, parentSelectedSeasonId) : 0}`],
                                   ['Buts', goals],
                                   ['Tirs', totalShots],
                                   ['% Tirs', shootPct !== null ? `${shootPct}%` : '-'],
-                                  ['ArrÃªts', seasonStats.reduce((sum, s) => sum + (s.saves || 0), 0)],
+                                  ['Arrêts', seasonStats.reduce((sum, s) => sum + (s.saves || 0), 0)],
                                 ] as [string, string | number][];
                               })()).map(([label, val]) => (
                                 <div key={label} style={styles.statBox}>
@@ -9299,7 +9299,7 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* â”€â”€ Licence â”€â”€ */}
+                        {/* ── Licence ── */}
                         {(() => {
                           const lic = getLicenseStatus(child.id, getCurrentSeason()?.id || null);
                           const st = lic?.status || 'pending';
@@ -9309,13 +9309,13 @@ export default function App() {
                             <div style={{ ...styles.panelCard, background: badgeColor.bg, border: `1px solid ${badgeColor.border}`, marginBottom: 4 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                  <span style={{ fontSize: 28 }}>ðŸªª</span>
+                                  <span style={{ fontSize: 28 }}>🪪</span>
                                   <div>
                                     <div style={{ fontWeight: 800, color: badgeColor.color, fontSize: 15 }}>
-                                      {st === 'validated' ? 'âœ… Licence validÃ©e' : st === 'paid' ? 'ðŸ’³ Paiement reÃ§u â€” en cours de validation' : 'â³ Licence non rÃ©glÃ©e'}
+                                      {st === 'validated' ? '✅ Licence validée' : st === 'paid' ? '💳 Paiement reçu — en cours de validation' : '⏳ Licence non réglée'}
                                     </div>
                                     <div style={{ fontSize: 13, color: badgeColor.color, opacity: 0.8, marginTop: 2 }}>
-                                      {st === 'validated' ? 'Votre licence est confirmÃ©e pour cette saison.' : st === 'paid' ? 'Votre paiement a bien Ã©tÃ© reÃ§u, la validation est en cours.' : 'Cliquez sur le bouton pour rÃ©gler la licence en ligne.'}
+                                      {st === 'validated' ? 'Votre licence est confirmée pour cette saison.' : st === 'paid' ? 'Votre paiement a bien été reçu, la validation est en cours.' : 'Cliquez sur le bouton pour régler la licence en ligne.'}
                                     </div>
                                   </div>
                                 </div>
@@ -9323,7 +9323,7 @@ export default function App() {
                                   licUrl ? (
                                     <a href={licUrl} target="_blank" rel="noopener noreferrer"
                                       style={{ display: 'inline-block', padding: '10px 18px', borderRadius: 12, background: '#0A5FB5', color: 'white', fontWeight: 800, fontSize: 14, textDecoration: 'none' }}>
-                                      ðŸ’³ Payer la licence
+                                      💳 Payer la licence
                                     </a>
                                   ) : (
                                     <div style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic', maxWidth: 160, textAlign: 'center' }}>
@@ -9341,9 +9341,9 @@ export default function App() {
 
                         {parentTab === 'trainings' && (
                         <div style={styles.panelCard}>
-                          <h3 style={styles.panelTitle}>{"2 prochains entraÃ®nements"}</h3>
+                          <h3 style={styles.panelTitle}>{"2 prochains entraînements"}</h3>
                           {childUpcomingTrainings.slice(0, 2).length === 0
-                            ? <p style={styles.emptyText}>{"Aucun entraÃ®nement programmÃ©."}</p>
+                            ? <p style={styles.emptyText}>{"Aucun entraînement programmé."}</p>
                             : <div style={{ display: 'grid', gap: 12 }}>
                               {childUpcomingTrainings.slice(0, 2).map((training) => {
                                 const status = getAttendanceStatus(training.templateId, child.id, training.date);
@@ -9351,19 +9351,19 @@ export default function App() {
                                 return (
                                   <div key={`${training.templateId}-${training.date}-${child.id}`} style={{ ...styles.trainingCard, background: training.cancelled ? '#f8fafc' : 'white', border: training.cancelled ? '1px solid #fecaca' : styles.trainingCard.border }}>
                                     <div style={{ flex: 1 }}>
-                                      <h4 style={{ margin: '0 0 6px 0' }}>{training.title || 'EntraÃ®nement'}</h4>
-                                      <p style={{ margin: 0, color: '#5b6472' }}>{formatDate(training.date)} â€“ {getWeekdayLabel(training.weekday)} â€“ {training.startTime}â€“{training.endTime}</p>
+                                      <h4 style={{ margin: '0 0 6px 0' }}>{training.title || 'Entraînement'}</h4>
+                                      <p style={{ margin: 0, color: '#5b6472' }}>{formatDate(training.date)} – {getWeekdayLabel(training.weekday)} – {training.startTime}–{training.endTime}</p>
                                       <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>{training.location || '-'}</p>
                                       {training.cancelled ? (
                                         <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 12, background: '#fee2e2', color: '#991b1b', fontWeight: 900 }}>
-                                          EntraÃ®nement annulÃ©{training.cancellationReason ? ` Â· ${training.cancellationReason}` : ''}
+                                          Entraînement annulé{training.cancellationReason ? ` · ${training.cancellationReason}` : ''}
                                         </div>
                                       ) : (
                                         <div style={{ ...styles.attendanceRow, marginTop: 10, marginBottom: 0 }}>
-                                          <span>PrÃ©sents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans rÃ©ponse : {counts.unknown}</span>
+                                          <span>Présents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans réponse : {counts.unknown}</span>
                                         </div>
                                       )}
-                                      {/* Liste des joueurs prÃ©sents Ã  l'entraÃ®nement */}
+                                      {/* Liste des joueurs présents à l'entraînement */}
                                       {!training.cancelled && counts.present > 0 && (() => {
                                         const presentPlayers = players.filter((p) =>
                                           p.team_id === training.teamId &&
@@ -9372,7 +9372,7 @@ export default function App() {
                                         if (presentPlayers.length === 0) return null;
                                         return (
                                           <div style={{ marginTop: 12, padding: '10px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #86efac' }}>
-                                            <div style={{ fontWeight: 700, fontSize: 13, color: '#166534', marginBottom: 6 }}>âœ… Joueurs prÃ©sents ({presentPlayers.length})</div>
+                                            <div style={{ fontWeight: 700, fontSize: 13, color: '#166534', marginBottom: 6 }}>✅ Joueurs présents ({presentPlayers.length})</div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                               {presentPlayers.map((p) => (
                                                 <span key={p.id} style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#dcfce7', color: '#166534' }}>
@@ -9385,9 +9385,9 @@ export default function App() {
                                       })()}
                                     </div>
                                     {!training.cancelled && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                      <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>{"PrÃ©sent"}</button>
+                                      <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>{"Présent"}</button>
                                       <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>Absent</button>
-                                      <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'unknown' as any)} style={{ ...styles.statusButton, background: status === 'unknown' ? '#64748b' : '#eef2f7', color: status === 'unknown' ? 'white' : '#526071' }}>Sans rÃ©ponse</button>
+                                      <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'unknown' as any)} style={{ ...styles.statusButton, background: status === 'unknown' ? '#64748b' : '#eef2f7', color: status === 'unknown' ? 'white' : '#526071' }}>Sans réponse</button>
                                     </div>}
                                   </div>
                                 );
@@ -9400,7 +9400,7 @@ export default function App() {
                         <div style={{ ...styles.panelCard, marginTop: 16 }}>
                           <h3 style={styles.panelTitle}>Matchs & tournois</h3>
                           {childMatches.length === 0 && childTournaments.length === 0
-                            ? <p style={styles.emptyText}>{"Aucun match ou tournoi programmÃ©."}</p>
+                            ? <p style={styles.emptyText}>{"Aucun match ou tournoi programmé."}</p>
                             : <div style={{ display: 'grid', gap: 12 }}>
                               {childMatches.map((match) => {
                                 const squad = getSquadForMatch(match.id);
@@ -9416,26 +9416,26 @@ export default function App() {
                                         vs {match.opponent || '-'}
                                         {isGuestMatch && guestMatchTeam && (
                                           <span style={{ marginLeft: 8, fontSize: 12, color: '#7c3aed', fontWeight: 700, background: '#f3e8ff', padding: '2px 8px', borderRadius: 999 }}>
-                                            ðŸ”„ InvitÃ© {guestMatchTeam.name}
+                                            🔄 Invité {guestMatchTeam.name}
                                           </span>
                                         )}
                                       </h4>
-                                      <p style={{ margin: 0, color: '#5b6472' }}>{formatDate(match.match_date)} {formatTime(match.match_date)} â€“ {match.location || '-'}</p>
-                                      <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>{match.home_away === 'home' ? 'Domicile' : 'ExtÃ©rieur'}</p>
+                                      <p style={{ margin: 0, color: '#5b6472' }}>{formatDate(match.match_date)} {formatTime(match.match_date)} – {match.location || '-'}</p>
+                                      <p style={{ margin: '6px 0 0 0', color: '#5b6472' }}>{match.home_away === 'home' ? 'Domicile' : 'Extérieur'}</p>
                                       {match.score_home !== null && match.score_home !== undefined && match.score_home !== '' && (
-                                        <p style={{ margin: '6px 0 0 0', fontWeight: 800, color: '#0A5FB5', fontSize: 16 }}>Score : {match.score_home} â€“ {match.score_away}</p>
+                                        <p style={{ margin: '6px 0 0 0', fontWeight: 800, color: '#0A5FB5', fontSize: 16 }}>Score : {match.score_home} – {match.score_away}</p>
                                       )}
                                       <div style={{ ...styles.attendanceRow, marginTop: 10, marginBottom: 0 }}>
-                                        <span>PrÃ©sents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans rÃ©ponse : {counts.unknown}</span>
+                                        <span>Présents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans réponse : {counts.unknown}</span>
                                       </div>
                                       {/* Bouton voir composition */}
                                       {isSquadDefined(match.id) && squad.length > 0 && (
                                         <ParentCompositionButton matchId={match.id} teamId={match.team_id} players={players} squadIds={squad} />
                                       )}
-                                      {/* Liste des joueurs convoquÃ©s */}
+                                      {/* Liste des joueurs convoqués */}
                                       {isSquadDefined(match.id) && squad.length > 0 && (
                                         <div style={{ marginTop: 12, padding: '10px 14px', background: '#eaf4ff', borderRadius: 10, border: '1px solid #bfdbfe' }}>
-                                          <div style={{ fontWeight: 700, fontSize: 13, color: '#1e40af', marginBottom: 6 }}>ðŸ“£ Joueurs convoquÃ©s ({squad.length})</div>
+                                          <div style={{ fontWeight: 700, fontSize: 13, color: '#1e40af', marginBottom: 6 }}>📣 Joueurs convoqués ({squad.length})</div>
                                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                             {squad.map((pid) => {
                                               const p = players.find((x) => x.id === pid);
@@ -9453,18 +9453,18 @@ export default function App() {
                                     </div>
                                     {!isSquadDefined(match.id)
                                       ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12 }}>
-                                        <span style={{ fontSize: 22 }}>â³</span>
+                                        <span style={{ fontSize: 22 }}>⏳</span>
                                         <span style={{ fontSize: 13, fontWeight: 700, color: '#92400e', textAlign: 'center' }}>Convocation pas encore disponible</span>
                                       </div>
                                       : !isConvoked
                                       ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 14px', background: '#f1f5f9', borderRadius: 12 }}>
-                                        <span style={{ fontSize: 26 }}>{"ðŸ˜´"}</span>
+                                        <span style={{ fontSize: 26 }}>{"😴"}</span>
                                         <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Repos</span>
                                       </div>
                                       : <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                        <button onClick={() => saveMatchAttendance(match.id, child.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>{"PrÃ©sent"}</button>
+                                        <button onClick={() => saveMatchAttendance(match.id, child.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>{"Présent"}</button>
                                         <button onClick={() => saveMatchAttendance(match.id, child.id, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>Absent</button>
-                                        <button onClick={() => saveMatchAttendance(match.id, child.id, 'unknown')} style={{ ...styles.statusButton, background: status === 'unknown' ? '#64748b' : '#eef2f7', color: status === 'unknown' ? 'white' : '#526071' }}>Sans rÃ©ponse</button>
+                                        <button onClick={() => saveMatchAttendance(match.id, child.id, 'unknown')} style={{ ...styles.statusButton, background: status === 'unknown' ? '#64748b' : '#eef2f7', color: status === 'unknown' ? 'white' : '#526071' }}>Sans réponse</button>
                                       </div>}
                                   </div>
                                 );
@@ -9475,18 +9475,18 @@ export default function App() {
                                 return (
                                   <div key={`tournament-${ev.id}-${child.id}`} style={{ ...styles.trainingCard, background: '#fffbeb', border: '1px solid #fde68a' }}>
                                     <div style={{ flex: 1 }}>
-                                      <h4 style={{ margin: '0 0 6px 0', color: '#92400e' }}>ðŸ† {ev.title}</h4>
-                                      <p style={{ margin: 0, color: '#5b6472' }}>{formatDate(ev.event_date)} {formatTime(ev.event_date)} Â· {ev.location || '-'}</p>
+                                      <h4 style={{ margin: '0 0 6px 0', color: '#92400e' }}>🏆 {ev.title}</h4>
+                                      <p style={{ margin: 0, color: '#5b6472' }}>{formatDate(ev.event_date)} {formatTime(ev.event_date)} · {ev.location || '-'}</p>
                                       {ev.description && <p style={{ margin: '6px 0 0 0', color: '#374151', fontSize: 13 }}>{ev.description}</p>}
                                       <div style={{ ...styles.attendanceRow, marginTop: 10, marginBottom: 0 }}>
-                                        <span>PrÃ©sents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans rÃ©ponse : {counts.pending}</span>
+                                        <span>Présents : {counts.present}</span><span>Absents : {counts.absent}</span><span>Sans réponse : {counts.pending}</span>
                                       </div>
                                       {renderEventVoters(ev.id)}
                                     </div>
                                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                      <button onClick={() => saveEventAttendance(ev.id, child.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>PrÃ©sent</button>
+                                      <button onClick={() => saveEventAttendance(ev.id, child.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>Présent</button>
                                       <button onClick={() => saveEventAttendance(ev.id, child.id, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>Absent</button>
-                                      <button onClick={() => saveEventAttendance(ev.id, child.id, 'pending')} style={{ ...styles.statusButton, background: status === 'pending' ? '#64748b' : '#eef2f7', color: status === 'pending' ? 'white' : '#526071' }}>Sans rÃ©ponse</button>
+                                      <button onClick={() => saveEventAttendance(ev.id, child.id, 'pending')} style={{ ...styles.statusButton, background: status === 'pending' ? '#64748b' : '#eef2f7', color: status === 'pending' ? 'white' : '#526071' }}>Sans réponse</button>
                                     </div>
                                   </div>
                                 );
@@ -9495,7 +9495,7 @@ export default function App() {
                         </div>
                         )}
 
-                        {/* â”€â”€ Ã‰vÃ©nements du club â”€â”€ */}
+                        {/* ── Événements du club ── */}
                         {parentTab === 'events' && (() => {
                           const childTeamId = childTeamIdForSeason;
                           const relevantEvents = clubEvents.filter((ev) => {
@@ -9504,35 +9504,35 @@ export default function App() {
                             return future && forThisTeam;
                           }).slice(0, 5);
                           if (relevantEvents.length === 0) return null;
-                          const typeLabel: Record<string, string> = { event: 'ðŸ“…', assembly: 'ðŸ›ï¸', outing: 'ðŸŽ¢', tournament: 'ðŸ†', other: 'ðŸ“Œ' };
+                          const typeLabel: Record<string, string> = { event: '📅', assembly: '🏛️', outing: '🎢', tournament: '🏆', other: '📌' };
                           return (
                             <div style={{ ...styles.panelCard, marginTop: 16, background: '#fdf4ff', border: '1px solid #e9d5ff' }}>
-                              <h3 style={{ ...styles.panelTitle, color: '#7c3aed' }}>ðŸŽ‰ Ã‰vÃ©nements du club</h3>
+                              <h3 style={{ ...styles.panelTitle, color: '#7c3aed' }}>🎉 Événements du club</h3>
                               <div style={{ display: 'grid', gap: 10 }}>
                                 {relevantEvents.map((ev) => {
                                   const status = getEventAttendanceStatus(ev.id, child.id);
                                   const counts = getEventCounts(ev.id);
                                   return (
                                     <div key={ev.id} style={{ background: 'white', borderRadius: 14, padding: 14, border: '1px solid #e9d5ff' }}>
-                                      <div style={{ fontWeight: 800, fontSize: 14, color: '#5b21b6' }}>{typeLabel[ev.type] || 'ðŸ“…'} {ev.title}</div>
-                                      <div style={{ fontSize: 13, color: '#5b6472', marginTop: 3 }}>{formatDate(ev.event_date)} {formatTime(ev.event_date)}{ev.location ? ` Â· ${ev.location}` : ''}</div>
+                                      <div style={{ fontWeight: 800, fontSize: 14, color: '#5b21b6' }}>{typeLabel[ev.type] || '📅'} {ev.title}</div>
+                                      <div style={{ fontSize: 13, color: '#5b6472', marginTop: 3 }}>{formatDate(ev.event_date)} {formatTime(ev.event_date)}{ev.location ? ` · ${ev.location}` : ''}</div>
                                       {ev.description && <div style={{ fontSize: 13, color: '#374151', marginTop: 4 }}>{ev.description}</div>}
                                       {ev.payment_link && (
                                         <div style={{ marginTop: 8 }}>
                                           <a href={ev.payment_link} target="_blank" rel="noopener noreferrer"
                                             style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 10, background: '#7c3aed', color: 'white', fontWeight: 800, fontSize: 13, textDecoration: 'none' }}>
-                                            ðŸ’³ Payer en ligne
+                                            💳 Payer en ligne
                                           </a>
                                         </div>
                                       )}
-                                      <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>âœ… {counts.present} Â· âŒ {counts.absent} Â· â³ {counts.pending}</div>
+                                      <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>✅ {counts.present} · ❌ {counts.absent} · ⏳ {counts.pending}</div>
                                       {renderEventVoters(ev.id)}
                                       <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                                        <button onClick={() => saveEventAttendance(ev.id, child.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#7c3aed' : '#f3e8ff', color: status === 'present' ? 'white' : '#7c3aed' }}>âœ… PrÃ©sent</button>
-                                        <button onClick={() => saveEventAttendance(ev.id, child.id, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>âŒ Absent</button>
-                                        <button onClick={() => saveEventAttendance(ev.id, child.id, 'pending')} style={{ ...styles.statusButton, background: status === 'pending' ? '#64748b' : '#eef2f7', color: status === 'pending' ? 'white' : '#526071' }}>â³ Sans rÃ©ponse</button>
+                                        <button onClick={() => saveEventAttendance(ev.id, child.id, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#7c3aed' : '#f3e8ff', color: status === 'present' ? 'white' : '#7c3aed' }}>✅ Présent</button>
+                                        <button onClick={() => saveEventAttendance(ev.id, child.id, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>❌ Absent</button>
+                                        <button onClick={() => saveEventAttendance(ev.id, child.id, 'pending')} style={{ ...styles.statusButton, background: status === 'pending' ? '#64748b' : '#eef2f7', color: status === 'pending' ? 'white' : '#526071' }}>⏳ Sans réponse</button>
                                       </div>
-                                      {/* â”€â”€ Formulaire de l'Ã©vÃ©nement â”€â”€ */}
+                                      {/* ── Formulaire de l'événement ── */}
                                       {(() => {
                                         const formQuestions = getQuestionsForEvent(ev.id);
                                         if (formQuestions.length === 0) return null;
@@ -9540,7 +9540,7 @@ export default function App() {
                                         const responderLabel = me ? `${me.first_name || ''} ${me.last_name || ''}`.trim() : 'Parent';
                                         return (
                                           <div style={{ marginTop: 12, padding: 12, background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 12 }}>
-                                            <div style={{ fontWeight: 800, color: '#5b21b6', fontSize: 13, marginBottom: 10 }}>ðŸ“ Formulaire Ã  remplir pour {child.first_name}</div>
+                                            <div style={{ fontWeight: 800, color: '#5b21b6', fontSize: 13, marginBottom: 10 }}>📝 Formulaire à remplir pour {child.first_name}</div>
                                             <div style={{ display: 'grid', gap: 10 }}>
                                               {formQuestions.map((q) => {
                                                 const existing = getResponseForQuestion(q.id, child.id);
@@ -9554,7 +9554,7 @@ export default function App() {
                                                     {q.type === 'text' && (
                                                       <input value={value}
                                                         onChange={(e) => submitEventFormResponse(ev.id, q.id, child.id, e.target.value, selectedParentId || null, responderLabel)}
-                                                        style={{ ...styles.input, padding: '8px 12px', minHeight: 38, fontSize: 14 }} placeholder="Votre rÃ©ponse..." />
+                                                        style={{ ...styles.input, padding: '8px 12px', minHeight: 38, fontSize: 14 }} placeholder="Votre réponse..." />
                                                     )}
                                                     {q.type === 'yesno' && (
                                                       <div style={{ display: 'flex', gap: 8 }}>
@@ -9596,7 +9596,7 @@ export default function App() {
                                                       </div>
                                                     )}
                                                     {existing && existing.responder_label && existing.responder_label !== responderLabel && (
-                                                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, fontStyle: 'italic' }}>RÃ©pondu par {existing.responder_label}</div>
+                                                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, fontStyle: 'italic' }}>Répondu par {existing.responder_label}</div>
                                                     )}
                                                   </div>
                                                 );
@@ -9625,15 +9625,15 @@ export default function App() {
                             cat.includes('u15') ? appSettings.championship_u15 :
                             cat.includes('u17') ? appSettings.championship_u17 :
                             cat.includes('u18') ? appSettings.championship_u18 :
-                            cat.includes('senior') && (cat.includes('fill') || cat.includes('fÃ©min') || cat.includes('femin')) ? appSettings.championship_senior_fille :
+                            cat.includes('senior') && (cat.includes('fill') || cat.includes('fémin') || cat.includes('femin')) ? appSettings.championship_senior_fille :
                             cat.includes('senior') ? appSettings.championship_senior : '';
                           if (!link) return null;
                           return (
                             <div style={{ ...styles.panelCard, marginTop: 16, background: '#fef9c3', border: '1px solid #fde047' }}>
-                              <h3 style={{ ...styles.panelTitle, color: '#854d0e' }}>ðŸ† Classement du championnat</h3>
+                              <h3 style={{ ...styles.panelTitle, color: '#854d0e' }}>🏆 Classement du championnat</h3>
                               <a href={link} target="_blank" rel="noopener noreferrer"
                                 style={{ display: 'inline-block', padding: '12px 20px', background: '#ca8a04', color: 'white', borderRadius: 12, fontWeight: 800, fontSize: 15, textDecoration: 'none' }}>
-                                ðŸ“Š Voir le classement
+                                📊 Voir le classement
                               </a>
                             </div>
                           );
@@ -9655,7 +9655,7 @@ export default function App() {
                   {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
                 <span style={{ fontSize: 12, color: '#5b6472' }}>
-                  L'Ã©quipe affichÃ©e suit les affectations prÃ©parÃ©es pour la saison choisie.
+                  L'équipe affichée suit les affectations préparées pour la saison choisie.
                 </span>
               </div>
             )}
@@ -9663,7 +9663,7 @@ export default function App() {
         )}
       </div>
 
-        {/* Parent messages modal â€” full conversation panel */}
+        {/* Parent messages modal — full conversation panel */}
         {activeRole === 'parent' && showParentMessages && (() => {
           const myPlayerIds = parentLinks.filter((l) => l.parent_id === selectedParentId).map((l) => l.player_id);
           const myTeamIdsSet = new Set(players.filter((p) => myPlayerIds.includes(p.id) && p.team_id).map((p) => p.team_id as string));
@@ -9676,17 +9676,17 @@ export default function App() {
               <div style={{ background: 'white', borderRadius: 24, width: '100%', maxWidth: 700, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.25)' }}>
                 {/* Modal header */}
                 <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ color: 'white', fontWeight: 900, fontSize: 17 }}>ðŸ’¬ Mes messages</div>
-                  <button onClick={() => { setShowParentMessages(false); setSelectedConvId(null); }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', fontWeight: 800, fontSize: 18, cursor: 'pointer', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>âœ•</button>
+                  <div style={{ color: 'white', fontWeight: 900, fontSize: 17 }}>💬 Mes messages</div>
+                  <button onClick={() => { setShowParentMessages(false); setSelectedConvId(null); }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', fontWeight: 800, fontSize: 18, cursor: 'pointer', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 </div>
 
                 {activeConv ? (
-                  /* â”€â”€ Open conversation view â”€â”€ */
+                  /* ── Open conversation view ── */
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <div style={{ padding: '10px 16px', borderBottom: '1px solid #d8e5f2', background: '#f0f7ff', display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <button onClick={() => { setSelectedConvId(null); setParentConvId(null); }} style={{ background: 'none', border: 'none', color: '#0A5FB5', fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>â† Retour</button>
-                      <strong style={{ flex: 1 }}>{activeConv.is_group ? (activeConv.title || `ðŸ‘¥ Canal ${teams.find((t) => t.id === activeConv.team_id)?.name || 'Groupe'}`) : activeConv.title ? `ðŸ‘¤ ${activeConv.title}` : `${teams.find((t) => t.id === activeConv.team_id)?.name || ''} â€” Staff`}</strong>
-                      <button onClick={() => deleteConversation(activeConvId!)} style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: '#fee2e2', color: '#991b1b', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>ðŸ—‘ Supprimer</button>
+                      <button onClick={() => { setSelectedConvId(null); setParentConvId(null); }} style={{ background: 'none', border: 'none', color: '#0A5FB5', fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>← Retour</button>
+                      <strong style={{ flex: 1 }}>{activeConv.is_group ? (activeConv.title || `👥 Canal ${teams.find((t) => t.id === activeConv.team_id)?.name || 'Groupe'}`) : activeConv.title ? `👤 ${activeConv.title}` : `${teams.find((t) => t.id === activeConv.team_id)?.name || ''} — Staff`}</strong>
+                      <button onClick={() => deleteConversation(activeConvId!)} style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: '#fee2e2', color: '#991b1b', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>🗑 Supprimer</button>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 8, background: '#fafcff' }}>
                       {messages.length === 0
@@ -9699,9 +9699,9 @@ export default function App() {
                           })();
                           return (
                             <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
-                              <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>{senderLabel} Â· {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
+                              <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>{senderLabel} · {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
                               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, flexDirection: mine ? 'row' : 'row-reverse' }}>
-                                {mine && <button onClick={() => { if (window.confirm('Supprimer ?')) deleteMessage(msg.id); }} style={{ opacity: 0.4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: '1px 3px', color: '#991b1b' }} title="Supprimer">ðŸ—‘</button>}
+                                {mine && <button onClick={() => { if (window.confirm('Supprimer ?')) deleteMessage(msg.id); }} style={{ opacity: 0.4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: '1px 3px', color: '#991b1b' }} title="Supprimer">🗑</button>}
                                 <div style={{ maxWidth: '72%', padding: '9px 13px', borderRadius: mine ? '16px 16px 3px 16px' : '16px 16px 16px 3px', background: mine ? '#0A5FB5' : '#edf2f7', color: mine ? 'white' : '#10233b', fontSize: 14, lineHeight: 1.45, wordBreak: 'break-word' as const }}>{msg.content}</div>
                               </div>
                             </div>
@@ -9714,15 +9714,15 @@ export default function App() {
                         placeholder="Message..." rows={1}
                         style={{ flex: 1, padding: '9px 13px', borderRadius: 18, border: '1px solid #cfd8e3', fontSize: 14, resize: 'none', outline: 'none', fontFamily: 'Arial, sans-serif', lineHeight: 1.4 }} />
                       <button onClick={() => { if (activeConvId) sendMessage(activeConvId, 'parent', selectedParentId); }} disabled={sendingMessage || !newMessage.trim()}
-                        style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: newMessage.trim() ? '#0A5FB5' : '#ccd8e8', color: 'white', fontSize: 20, cursor: newMessage.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 800 }}>â†’</button>
+                        style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: newMessage.trim() ? '#0A5FB5' : '#ccd8e8', color: 'white', fontSize: 20, cursor: newMessage.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 800 }}>→</button>
                     </div>
                   </div>
                 ) : (
-                  /* â”€â”€ Conversation list + new conv form â”€â”€ */
+                  /* ── Conversation list + new conv form ── */
                   <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {/* New conversation */}
                     <div style={{ background: '#f0f7ff', borderRadius: 16, padding: 14, border: '1px solid #bfdbfe' }}>
-                      <div style={{ fontWeight: 800, color: '#1e40af', marginBottom: 12, fontSize: 14 }}>+ DÃ©marrer une conversation</div>
+                      <div style={{ fontWeight: 800, color: '#1e40af', marginBottom: 12, fontSize: 14 }}>+ Démarrer une conversation</div>
 
                       {myTeamIds.map((tid: string) => {
                         const team = teams.find((t) => t.id === tid);
@@ -9738,11 +9738,11 @@ export default function App() {
                               {groupConv ? (
                                 <button onClick={() => { setSelectedConvId(groupConv.id); markConversationsRead([groupConv.id]); loadMessages(groupConv.id); }}
                                   style={{ padding: '7px 14px', borderRadius: 10, border: '1px solid #93c5fd', background: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', color: '#1e40af' }}>
-                                  ðŸ‘¥ Canal {team.name}
+                                  👥 Canal {team.name}
                                 </button>
                               ) : null}
 
-                              {/* Conversation privÃ©e par coach â€” une conv distincte par coach via title = coachName */}
+                              {/* Conversation privée par coach — une conv distincte par coach via title = coachName */}
                               {teamCoaches.length > 0
                                 ? teamCoaches.map((coach) => {
                                   const coachName = `${coach.first_name || ''} ${coach.last_name || ''}`.trim();
@@ -9776,14 +9776,14 @@ export default function App() {
                                       await loadConversationsForParent(selectedParentId);
                                     }}
                                       style={{ padding: '7px 14px', borderRadius: 10, border: alreadyExists ? '2px solid #4338ca' : '1px solid #c7d2fe', background: alreadyExists ? '#eef2ff' : 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', color: '#4338ca' }}>
-                                      ðŸ‘¤ {coachName || 'Coach'}
+                                      👤 {coachName || 'Coach'}
                                     </button>
                                   );
                                 })
                                 : (
                                   <button onClick={() => openParentConversationForTeam(selectedParentId, tid)}
                                     style={{ padding: '7px 14px', borderRadius: 10, border: '1px solid #93c5fd', background: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', color: '#1e40af' }}>
-                                    ðŸ’¬ Staff {team.name}
+                                    💬 Staff {team.name}
                                   </button>
                                 )}
                             </div>
@@ -9795,23 +9795,23 @@ export default function App() {
                     {/* Conversations list */}
                     <div style={{ fontWeight: 700, color: '#374151', fontSize: 13, marginTop: 4 }}>Mes conversations :</div>
                     {parentConversations.length === 0 ? (
-                      <div style={styles.emptyState}>Aucune conversation. Commencez par contacter votre Ã©quipe ci-dessus.</div>
+                      <div style={styles.emptyState}>Aucune conversation. Commencez par contacter votre équipe ci-dessus.</div>
                     ) : parentConversations.map((conv) => {
                       const tm = teams.find((t) => t.id === conv.team_id);
                       const lastUpdated = new Date(conv.updated_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                       const lastRead = lastReadConvTimestamps[conv.id];
                       const hasUnread = lastRead && new Date(conv.updated_at) > new Date(lastRead);
                       let title = '';
-                      let icon = 'ðŸ’¬';
+                      let icon = '💬';
                       if (conv.is_group) {
-                        title = conv.title || `ðŸ‘¥ Canal ${tm?.name || 'Groupe'}`;
-                        icon = 'ðŸ‘¥';
+                        title = conv.title || `👥 Canal ${tm?.name || 'Groupe'}`;
+                        icon = '👥';
                       } else if (conv.title) {
-                        title = `ðŸ‘¤ ${conv.title}`;
-                        icon = 'ðŸ‘¤';
+                        title = `👤 ${conv.title}`;
+                        icon = '👤';
                       } else {
-                        title = `${tm?.name || ''} â€” Staff`;
-                        icon = 'ðŸ’¬';
+                        title = `${tm?.name || ''} — Staff`;
+                        icon = '💬';
                       }
                       return (
                         <div key={conv.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: hasUnread ? '2px solid #0A5FB5' : '1px solid #d8e5f2', background: hasUnread ? '#eaf4ff' : '#f8fbff', cursor: 'pointer', position: 'relative' }}
@@ -9820,11 +9820,11 @@ export default function App() {
                           <div style={{ width: 40, height: 40, borderRadius: '50%', background: conv.is_group ? '#fde68a' : '#0A5FB5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: conv.is_group ? '#92400e' : 'white', flexShrink: 0 }}>{icon}</div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: hasUnread ? 900 : 700, color: hasUnread ? '#0A5FB5' : '#10233b', fontSize: 14 }}>{title}</div>
-                            <div style={{ fontSize: 12, color: '#5b6472', marginTop: 2 }}>{tm?.name || ''} Â· {lastUpdated}</div>
-                            {hasUnread && <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 800, marginTop: 2 }}>â— Nouveau message</div>}
+                            <div style={{ fontSize: 12, color: '#5b6472', marginTop: 2 }}>{tm?.name || ''} · {lastUpdated}</div>
+                            {hasUnread && <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 800, marginTop: 2 }}>● Nouveau message</div>}
                           </div>
                           <button onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
-                            style={{ padding: '6px 8px', borderRadius: 8, border: 'none', background: '#fee2e2', color: '#991b1b', fontWeight: 700, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>ðŸ—‘</button>
+                            style={{ padding: '6px 8px', borderRadius: 8, border: 'none', background: '#fee2e2', color: '#991b1b', fontWeight: 700, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>🗑</button>
                         </div>
                       );
                     })}
@@ -9838,7 +9838,7 @@ export default function App() {
   );
 }
 
-// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
   page: { minHeight: '100vh', background: 'linear-gradient(180deg, #edf4ff 0%, #dbeaff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Arial, sans-serif' },
   appPage: { minHeight: '100vh', background: '#edf4ff', padding: 20, fontFamily: 'Arial, sans-serif', overflowX: 'hidden', boxSizing: 'border-box' },
