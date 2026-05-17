@@ -3155,12 +3155,24 @@ export default function App() {
         ? buildSupporterSummary(match, newMatchFdmActions)
         : (newMatchSupporterSummary.trim() || buildSupporterSummary(match, newMatchFdmActions));
       const importedStats = buildImportedStatsRows(match, newMatchFdmActions);
+      const detectedScore = getFinalScoreFromActions(newMatchFdmActions, match.home_away);
       const { error } = await supabase.from('matches').update({
         fdm_url: url || newMatchFdmFileName || null,
         supporter_summary: summary,
         fdm_actions_text: newMatchFdmActions.trim() || null,
+        ...(detectedScore ? { score_home: detectedScore.team, score_away: detectedScore.opponent } : {}),
       }).eq('id', match.id);
       if (error) throw error;
+      if (detectedScore) {
+        setMatchResults((prev) => ({
+          ...prev,
+          [match.id]: {
+            ...prev[match.id],
+            score_home: String(detectedScore.team),
+            score_away: String(detectedScore.opponent),
+          },
+        }));
+      }
       if (importedStats.length > 0) {
         const { error: clearStatsError } = await supabase.from('match_player_stats').delete().eq('match_id', match.id);
         if (clearStatsError) throw clearStatsError;
@@ -5812,7 +5824,7 @@ export default function App() {
                   accessibility: '⚙️ Administration', admin: '⚙️ Administration',
                   events: '🎉 Événements',
                   polls: '📊 Sondages',
-                  supporter: 'Supporter',
+                  supporter: '📣 Supporter',
                 };
                 // Badges de notification
                 let badgeCount = 0;
@@ -7348,10 +7360,10 @@ export default function App() {
             )}
 
             {/* ── ACCESSIBILITÉ ── */}
-            {(((coachTab === 'accessibility' || coachTab === 'admin') && isAdmin) || (!isAdmin && (coachTab === 'events' || coachTab === 'polls'))) && (
+            {(((coachTab === 'accessibility' || coachTab === 'admin') && isAdmin) || coachTab === 'events' || coachTab === 'polls') && (
               <div style={styles.contentCard}>
-                <h2 style={styles.blockTitle}>{isAdmin ? "⚙️ Administration" : coachTab === 'events' ? "🎉 Événements" : "📊 Sondages"}</h2>
-                <p style={styles.blockSubtitle}>{isAdmin ? "Gestion complète du club." : "Création et suivi pour vos équipes."}</p>
+                <h2 style={styles.blockTitle}>{coachTab === 'events' ? "🎉 Événements" : coachTab === 'polls' ? "📊 Sondages" : "⚙️ Administration"}</h2>
+                <p style={styles.blockSubtitle}>{coachTab === 'events' || coachTab === 'polls' ? "Création et suivi pour vos équipes." : "Gestion complète du club."}</p>
 
                 {/* ── Sous-onglets ── */}
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 24, borderBottom: '2px solid #e5e7eb', paddingBottom: 0 }}>
@@ -8644,7 +8656,7 @@ export default function App() {
                 const visiblePolls = getPollsVisibleFor([...new Set(myTeamIds)]);
                 const visibleSupporterMatches = getAllSupporterMatches();
                 if (visiblePolls.length > 0) tabs.push({ key: 'polls', label: '📊 Sondages' });
-                if (visibleSupporterMatches.length > 0) tabs.push({ key: 'supporter', label: 'Supporter' });
+                if (visibleSupporterMatches.length > 0) tabs.push({ key: 'supporter', label: '📣 Supporter' });
                 return tabs.map(({ key: tab, label }) => {
                   const hasUnread = tab === 'home' && getUnreadMessageConversations().length > 0;
                   // Pastille sondages : nb sondages où je n'ai pas voté
