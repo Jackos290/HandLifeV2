@@ -582,6 +582,7 @@ export default function App() {
   const [selectedCoachTeamId, setSelectedCoachTeamId] = useState('');
   const [coachPlayerTeamId, setCoachPlayerTeamId] = useState('');
   const [coachPlayerBirthDate, setCoachPlayerBirthDate] = useState('');
+  const [coachTeamView, setCoachTeamView] = useState<'cards' | 'list'>('cards');
   const [selectedTrainingTemplateId, setSelectedTrainingTemplateId] = useState('');
   const [selectedTrainingDate, setSelectedTrainingDate] = useState('');
   const [selectedMatchId, setSelectedMatchId] = useState('');
@@ -7330,9 +7331,21 @@ export default function App() {
                   );
                 })()}
 
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: 16 }}>
+                  {([
+                    ['cards', '🃏 Cartes'],
+                    ['list', '📋 Liste'],
+                  ] as const).map(([view, label]) => (
+                    <button key={view} onClick={() => setCoachTeamView(view)}
+                      style={{ minHeight: 44, padding: '10px 12px', borderRadius: 12, border: coachTeamView === view ? '2px solid #0A5FB5' : '1px solid #d5dfeb', background: coachTeamView === view ? '#0A5FB5' : 'white', color: coachTeamView === view ? 'white' : '#10233b', fontWeight: 900, cursor: 'pointer' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
                 {coachTeamPlayers.length === 0
                   ? <div style={styles.emptyState}>Aucun joueur dans cette équipe.</div>
-                  : (
+                  : coachTeamView === 'cards' ? (
                     <div style={{ overflowX: 'auto', padding: '4px 2px' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 22, padding: 4 }}>
                         {(() => {
@@ -7376,6 +7389,58 @@ export default function App() {
                           ));
                         })()}
                       </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      {[...coachTeamPlayers]
+                        .sort((a, b) => getPlayerName(a).localeCompare(getPlayerName(b), 'fr'))
+                        .map((player) => {
+                          const initials = `${player.first_name?.[0] || ''}${player.last_name?.[0] || ''}`.toUpperCase();
+                          const age = player.birth_date ? getPlayerAge(player.birth_date) : null;
+                          const positionLabel = player.position
+                            ? (POSITIONS.find((p) => p.code === player.position)?.full || player.position)
+                            : 'Non defini';
+                          const editing = jerseyEditId === player.id;
+                          return (
+                            <div key={player.id} style={{ display: 'grid', gridTemplateColumns: '56px minmax(0, 1fr)', gap: 12, alignItems: 'center', padding: 12, borderRadius: 16, border: '1px solid #d8e5f2', background: '#f8fbff' }}>
+                              {player.photo_url
+                                ? <img src={player.photo_url} alt={getPlayerName(player)} style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid white', boxShadow: '0 2px 8px rgba(16,35,59,0.14)' }} />
+                                : <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 15 }}>{initials || '👤'}</div>}
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontWeight: 900, color: '#10233b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.last_name?.toUpperCase()} {player.first_name}</div>
+                                <div style={{ marginTop: 3, color: '#64748b', fontSize: 12, fontWeight: 700 }}>{player.birth_date || 'Date de naissance non renseignee'}</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginTop: 9 }}>
+                                  <div>
+                                    <div style={{ fontSize: 10, color: '#64748b', fontWeight: 900, textTransform: 'uppercase' }}>Age</div>
+                                    <div style={{ fontWeight: 900, color: '#10233b' }}>{age != null ? `${age} ans` : '-'}</div>
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: 10, color: '#64748b', fontWeight: 900, textTransform: 'uppercase' }}>Poste</div>
+                                    <div style={{ fontWeight: 900, color: '#10233b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{positionLabel}</div>
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: 10, color: '#64748b', fontWeight: 900, textTransform: 'uppercase' }}>Numero</div>
+                                    {editing ? (
+                                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                        <input type="number" min={1} max={99} value={jerseyEditValue}
+                                          onChange={(e) => setJerseyEditValue(e.target.value)}
+                                          onKeyDown={(e) => { if (e.key === 'Enter') saveJerseyNumber(player.id); if (e.key === 'Escape') setJerseyEditId(null); }}
+                                          autoFocus
+                                          style={{ ...styles.input, minHeight: 32, padding: '5px 7px', width: 58, textAlign: 'center', fontWeight: 900 }} />
+                                        <button onClick={() => saveJerseyNumber(player.id)} style={{ border: 'none', borderRadius: 9, background: '#16a34a', color: 'white', fontWeight: 900, cursor: 'pointer', height: 32, padding: '0 8px' }}>OK</button>
+                                      </div>
+                                    ) : (
+                                      <button onClick={() => startJerseyEdit(player)}
+                                        style={{ minWidth: 50, height: 32, borderRadius: 10, border: '1px solid #bfdbfe', background: 'white', color: '#0A5FB5', fontWeight: 900, cursor: 'pointer' }}>
+                                        {player.jersey_number != null ? `#${player.jersey_number}` : '+'}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                     </div>
                   )}
 
