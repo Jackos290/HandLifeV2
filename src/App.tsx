@@ -48,6 +48,7 @@ type SupporterLike = {
   match_id: string;
   actor_type: 'parent' | 'player' | 'coach';
   actor_id: string;
+  reaction_type?: 'bravo' | 'force' | null;
   created_at?: string;
 };
 
@@ -1116,14 +1117,14 @@ export default function App() {
     return null;
   }
 
-  function getSupporterLikeCount(matchId: string) {
-    return supporterLikes.filter((like) => like.match_id === matchId).length;
+  function getSupporterLikeCount(matchId: string, reactionType?: 'bravo' | 'force') {
+    return supporterLikes.filter((like) => like.match_id === matchId && (!reactionType || (like.reaction_type || 'bravo') === reactionType)).length;
   }
 
-  function hasLikedSupporterMatch(matchId: string) {
+  function hasLikedSupporterMatch(matchId: string, reactionType: 'bravo' | 'force') {
     const actor = getSupporterLikeActor();
     if (!actor) return false;
-    return supporterLikes.some((like) => like.match_id === matchId && like.actor_type === actor.actor_type && like.actor_id === actor.actor_id);
+    return supporterLikes.some((like) => like.match_id === matchId && (like.reaction_type || 'bravo') === reactionType && like.actor_type === actor.actor_type && like.actor_id === actor.actor_id);
   }
 
   async function loadSupporterLikes() {
@@ -1137,7 +1138,7 @@ export default function App() {
     setSupporterLikes((data || []) as SupporterLike[]);
   }
 
-  async function toggleSupporterLike(matchId: string) {
+  async function toggleSupporterLike(matchId: string, reactionType: 'bravo' | 'force') {
     const actor = getSupporterLikeActor();
     if (!actor) {
       alert("Connecte-toi comme parent, joueur ou coach pour aimer un resume.");
@@ -1147,7 +1148,7 @@ export default function App() {
       alert("Erreur : execute le SQL supabase-supporter-likes.sql dans Supabase pour activer les pouces supporter.");
       return;
     }
-    const existing = supporterLikes.find((like) => like.match_id === matchId && like.actor_type === actor.actor_type && like.actor_id === actor.actor_id);
+    const existing = supporterLikes.find((like) => like.match_id === matchId && (like.reaction_type || 'bravo') === reactionType && like.actor_type === actor.actor_type && like.actor_id === actor.actor_id);
     if (existing) {
       const { error } = await supabase.from('supporter_likes').delete().eq('id', existing.id);
       if (error) {
@@ -1157,7 +1158,7 @@ export default function App() {
       setSupporterLikes((prev) => prev.filter((like) => like.id !== existing.id));
       return;
     }
-    const { data, error } = await supabase.from('supporter_likes').insert({ match_id: matchId, actor_type: actor.actor_type, actor_id: actor.actor_id }).select().single();
+    const { data, error } = await supabase.from('supporter_likes').insert({ match_id: matchId, actor_type: actor.actor_type, actor_id: actor.actor_id, reaction_type: reactionType }).select().single();
     if (error) {
       alert("Erreur : verifie que le SQL supabase-supporter-likes.sql a bien ete execute.");
       setSupporterLikesReady(false);
@@ -1167,15 +1168,26 @@ export default function App() {
   }
 
   function renderSupporterLikeButton(match: MatchItem) {
-    const liked = hasLikedSupporterMatch(match.id);
-    const count = getSupporterLikeCount(match.id);
+    const reactions: { type: 'bravo' | 'force'; icon: string; label: string; color: string; bg: string }[] = [
+      { type: 'bravo', icon: '👏', label: "Bravo l'equipe", color: '#b45309', bg: '#fff7ed' },
+      { type: 'force', icon: '💙', label: 'Force Gorcy', color: '#0A5FB5', bg: '#eaf4ff' },
+    ];
     return (
-      <button onClick={() => toggleSupporterLike(match.id)}
-        title={liked ? "Retirer mon pouce" : "J'aime ce resume"}
-        style={{ border: liked ? '2px solid #0A5FB5' : '1px solid #dbe6f2', background: liked ? '#eaf4ff' : 'white', color: liked ? '#0A5FB5' : '#334155', borderRadius: 999, padding: '8px 13px', fontWeight: 900, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, boxShadow: liked ? '0 6px 16px rgba(10,95,181,0.16)' : 'none' }}>
-        <span style={{ fontSize: 16 }}>{liked ? '👍' : '👍🏻'}</span>
-        <span>{count}</span>
-      </button>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        {reactions.map((reaction) => {
+          const liked = hasLikedSupporterMatch(match.id, reaction.type);
+          const count = getSupporterLikeCount(match.id, reaction.type);
+          return (
+            <button key={reaction.type} onClick={() => toggleSupporterLike(match.id, reaction.type)}
+              title={liked ? 'Retirer ma reaction' : reaction.label}
+              style={{ border: liked ? `2px solid ${reaction.color}` : '1px solid #dbe6f2', background: liked ? reaction.bg : 'white', color: liked ? reaction.color : '#334155', borderRadius: 999, padding: '8px 13px', fontWeight: 900, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, boxShadow: liked ? '0 6px 16px rgba(10,95,181,0.14)' : 'none' }}>
+              <span style={{ fontSize: 16 }}>{reaction.icon}</span>
+              <span>{reaction.label}</span>
+              <span>{count}</span>
+            </button>
+          );
+        })}
+      </div>
     );
   }
 
