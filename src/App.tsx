@@ -9,6 +9,19 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 const POWER_CARD_IMAGES = import.meta.glob('../carte/*.{png,jpg,jpeg,webp}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
+const TRAINING_EXERCISE_LIBRARY = [
+  ['Échauffement', 'Course progressive + mobilité', 10], ['Échauffement', 'Jeu du chasseur', 8], ['Échauffement', 'Montées de genoux + appuis', 8], ['Échauffement', 'Réveil articulaire avec ballon', 10], ['Échauffement', 'Relais coordination', 8],
+  ['Dribble', 'Slalom main forte / main faible', 10], ['Dribble', '1 contre 1 couloir', 12], ['Dribble', 'Dribble sous pression', 10], ['Dribble', 'Changement de rythme', 8], ['Dribble', 'Protection de balle', 10],
+  ['Passe', 'Passe et va', 10], ['Passe', 'Passe en mouvement', 12], ['Passe', 'Carré de passes rapides', 10], ['Passe', 'Passe longue relance', 8], ['Passe', 'Passe sous pression défenseur', 12],
+  ['Tir', 'Tir en suspension', 12], ['Tir', 'Tir après croisé', 12], ['Tir', 'Tir aile gauche / droite', 10], ['Tir', 'Tir pivot après bloc', 10], ['Tir', 'Duel tireur gardien', 12],
+  ['Défense', 'Position de base + déplacements', 10], ['Défense', '1 contre 1 défensif', 12], ['Défense', 'Aide et fermeture', 12], ['Défense', 'Interception ligne de passe', 10], ['Défense', 'Bloc / contre', 10],
+  ['Gardien', 'Réflexes bas / haut', 10], ['Gardien', 'Placement sur tir aile', 10], ['Gardien', 'Relance rapide', 8], ['Gardien', 'Lecture du bras tireur', 10], ['Gardien', 'Duel 6 mètres', 12],
+  ['Collectif', 'Montée de balle à 3', 12], ['Collectif', 'Croisé arrière / demi-centre', 12], ['Collectif', 'Enclenchement simple', 15], ['Collectif', 'Jeu avec pivot', 12], ['Collectif', 'Fixer-donner', 10],
+  ['Match', 'Match à thème 3 passes minimum', 12], ['Match', 'Match surnombre', 12], ['Match', 'Match défense imposée', 15], ['Match', 'Match transition rapide', 12], ['Match', 'Tournoi court', 15],
+  ['Physique', 'Gainage ludique', 8], ['Physique', 'Appuis échelle', 8], ['Physique', 'Vitesse réaction', 8], ['Physique', 'Renforcement jambes', 10], ['Physique', 'Circuit explosivité', 12],
+  ['Retour au calme', 'Étirements guidés', 6], ['Retour au calme', 'Débrief collectif', 5], ['Retour au calme', 'Respiration + hydratation', 5], ['Retour au calme', 'Penalty plaisir', 8], ['Retour au calme', 'Challenge fair-play', 6],
+].map(([category, title, duration], index) => ({ id: `exo-${index + 1}`, category: String(category), title: String(title), duration: Number(duration) }));
+
 type Team = {
   id: string;
   name: string;
@@ -140,6 +153,25 @@ type TrainingAttendance = {
   player_id: string;
   training_date: string;
   status: 'present' | 'absent' | 'unknown';
+};
+
+type TrainingSessionItem = {
+  id: string;
+  training_template_id: string;
+  training_date: string;
+  category: string;
+  title: string;
+  duration_minutes: number;
+  notes?: string | null;
+  sort_order: number;
+  created_at?: string;
+};
+
+type TrainingExercise = {
+  id: string;
+  category: string;
+  title: string;
+  duration: number;
 };
 
 type TrainingCancellation = {
@@ -560,6 +592,8 @@ export default function App() {
   const [parentLinks, setParentLinks] = useState<ParentPlayerLink[]>([]);
   const [trainingTemplates, setTrainingTemplates] = useState<TrainingTemplate[]>([]);
   const [trainingAttendance, setTrainingAttendance] = useState<TrainingAttendance[]>([]);
+  const [trainingSessionItems, setTrainingSessionItems] = useState<TrainingSessionItem[]>([]);
+  const [trainingExerciseLibrary, setTrainingExerciseLibrary] = useState<TrainingExercise[]>(TRAINING_EXERCISE_LIBRARY);
   const [trainingCancellations, setTrainingCancellations] = useState<TrainingCancellation[]>([]);
   const [trainingBreaks, setTrainingBreaks] = useState<TrainingBreak[]>([]);
   const [coachAccessList, setCoachAccessList] = useState<CoachAccess[]>([]);
@@ -596,6 +630,12 @@ export default function App() {
   const [coachTeamView, setCoachTeamView] = useState<'cards' | 'list'>('cards');
   const [selectedTrainingTemplateId, setSelectedTrainingTemplateId] = useState('');
   const [selectedTrainingDate, setSelectedTrainingDate] = useState('');
+  const [editingSessionKey, setEditingSessionKey] = useState('');
+  const [viewingSessionKey, setViewingSessionKey] = useState('');
+  const [sessionExerciseTitle, setSessionExerciseTitle] = useState('');
+  const [sessionExerciseCategory, setSessionExerciseCategory] = useState('Échauffement');
+  const [sessionExerciseDuration, setSessionExerciseDuration] = useState('10');
+  const [sessionExerciseNotes, setSessionExerciseNotes] = useState('');
   const [selectedMatchId, setSelectedMatchId] = useState('');
   const [matchSubTab, setMatchSubTab] = useState<'planning' | 'convocation'>('planning');
   const [matchDetailTab, setMatchDetailTab] = useState<'convocation' | 'presence' | 'stats'>('convocation');
@@ -1138,6 +1178,20 @@ export default function App() {
     setSupporterLikes((data || []) as SupporterLike[]);
   }
 
+  async function loadTrainingExerciseLibrary() {
+    const { data, error } = await supabase.from('training_exercise_library').select('*').order('category', { ascending: true }).order('title', { ascending: true });
+    if (error || !data || data.length === 0) {
+      setTrainingExerciseLibrary(TRAINING_EXERCISE_LIBRARY);
+      return;
+    }
+    setTrainingExerciseLibrary((data || []).map((row: any) => ({
+      id: row.id,
+      category: row.category,
+      title: row.title,
+      duration: Number(row.duration_minutes || row.duration || 0),
+    })));
+  }
+
   async function toggleSupporterLike(matchId: string, reactionType: 'bravo' | 'force') {
     const actor = getSupporterLikeActor();
     if (!actor) {
@@ -1187,6 +1241,94 @@ export default function App() {
             </button>
           );
         })}
+      </div>
+    );
+  }
+
+  function renderTrainingSessionPlan(template: TrainingTemplate, date: string, editable: boolean) {
+    const items = getTrainingSessionItems(template.id, date);
+    const total = getTrainingDurationMinutes(template);
+    const used = getTrainingSessionUsedMinutes(template.id, date);
+    const remaining = Math.max(0, total - used);
+    const categories = [...new Set(trainingExerciseLibrary.map((e) => e.category))];
+    const filteredLibrary = trainingExerciseLibrary.filter((e) => e.category === sessionExerciseCategory);
+    return (
+      <div style={{ display: 'grid', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10 }}>
+          {[
+            ['Duree', `${total} min`, '#dbeafe', '#1e40af'],
+            ['Planifie', `${used} min`, used > total ? '#fee2e2' : '#dcfce7', used > total ? '#991b1b' : '#166534'],
+            ['Restant', `${remaining} min`, remaining === 0 ? '#fef3c7' : '#f8fafc', '#92400e'],
+          ].map(([label, value, bg, color]) => (
+            <div key={label} style={{ background: bg, color, borderRadius: 14, padding: 12, textAlign: 'center', fontWeight: 900 }}>
+              <div style={{ fontSize: 22 }}>{value}</div>
+              <div style={{ fontSize: 11, marginTop: 3 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {items.length === 0 ? (
+          <div style={styles.emptyState}>Aucune seance ajoutee pour cet entrainement.</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {items.map((item, idx) => (
+              <div key={item.id} style={{ ...styles.linkRow, alignItems: 'flex-start', background: 'white', border: '1px solid #dbe6f2' }}>
+                <div style={{ width: 34, height: 34, borderRadius: 10, background: '#0A5FB5', color: 'white', display: 'grid', placeItems: 'center', fontWeight: 900, flexShrink: 0 }}>{idx + 1}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <strong>{item.title}</strong>
+                    <span style={{ ...styles.statusBadge, background: '#eaf4ff', color: '#0A5FB5' }}>{item.category}</span>
+                    <span style={{ ...styles.statusBadge, background: '#fff7ed', color: '#92400e' }}>{item.duration_minutes} min</span>
+                  </div>
+                  {item.notes && <div style={{ marginTop: 5, color: '#64748b', fontSize: 13 }}>{item.notes}</div>}
+                </div>
+                {editable && <button onClick={() => deleteTrainingSessionExercise(item)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>Supprimer</button>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {editable && (
+          <div style={{ ...styles.formCard, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
+            <h4 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Ajouter un exercice</h4>
+            <div style={styles.formGrid}>
+              <div>
+                <label style={styles.inputLabel}>Categorie</label>
+                <select value={sessionExerciseCategory} onChange={(e) => setSessionExerciseCategory(e.target.value)} style={styles.select}>
+                  {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={styles.inputLabel}>Exercice manuel</label>
+                <input value={sessionExerciseTitle} onChange={(e) => setSessionExerciseTitle(e.target.value)} style={styles.input} placeholder="Ex : Duel tireur gardien" />
+              </div>
+              <div>
+                <label style={styles.inputLabel}>Temps (min)</label>
+                <input type="number" min={1} value={sessionExerciseDuration} onChange={(e) => setSessionExerciseDuration(e.target.value)} style={styles.input} />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={styles.inputLabel}>Consignes</label>
+                <input value={sessionExerciseNotes} onChange={(e) => setSessionExerciseNotes(e.target.value)} style={styles.input} placeholder="Optionnel" />
+              </div>
+            </div>
+            <button onClick={() => addTrainingSessionExercise(template, date)} style={styles.primaryButton}>Ajouter mon exercice</button>
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontWeight: 900, color: '#062C5D', marginBottom: 8 }}>Bibliotheque ({sessionExerciseCategory})</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 8, maxHeight: 260, overflow: 'auto' }}>
+                {filteredLibrary.map((exercise) => {
+                  const disabled = exercise.duration > remaining;
+                  return (
+                    <button key={exercise.id} disabled={disabled} onClick={() => addTrainingSessionExercise(template, date, exercise)}
+                      style={{ textAlign: 'left', border: '1px solid #dbe6f2', borderRadius: 12, padding: 10, background: disabled ? '#f1f5f9' : 'white', color: disabled ? '#94a3b8' : '#10233b', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: 800 }}>
+                      <div>{exercise.title}</div>
+                      <div style={{ marginTop: 4, fontSize: 12, color: disabled ? '#94a3b8' : '#0A5FB5' }}>{exercise.duration} min</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1479,6 +1621,8 @@ export default function App() {
         () => { loadDataSilent(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'training_breaks' },
         () => { loadDataSilent(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'training_session_items' },
+        () => { loadDataSilent(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_squads' },
         () => { loadDataSilent(); })
       .subscribe();
@@ -1622,7 +1766,7 @@ export default function App() {
     // Refresh sans flash — ne passe pas loading à true
     const [
       teamsRes, playersRes, matchesRes, matchAttRes, statsRes,
-      usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes, adminDelegatesRes,
+      usersRes, linksRes, templatesRes, attendanceRes, sessionItemsRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes, adminDelegatesRes,
     ] = await Promise.all([
       supabase.from('teams').select('*').order('name', { ascending: true }),
       supabase.from('players').select('*').order('last_name', { ascending: true }),
@@ -1633,6 +1777,7 @@ export default function App() {
       supabase.from('parent_player').select('*'),
       supabase.from('training_templates').select('*').order('weekday', { ascending: true }),
       supabase.from('training_attendance').select('*'),
+      supabase.from('training_session_items').select('*').order('sort_order', { ascending: true }),
       supabase.from('match_player_stats').select('*'),
       supabase.from('coaches').select('id, code, first_name, last_name, photo_url'),
       supabase.from('coach_teams').select('*'),
@@ -1651,6 +1796,8 @@ export default function App() {
     setParentLinks(linksRes.data || []);
     setTrainingTemplates(templatesRes.data || []);
     setTrainingAttendance(attendanceRes.data || []);
+    if (sessionItemsRes.error) setTrainingSessionItems([]);
+    else setTrainingSessionItems((sessionItemsRes.data || []) as TrainingSessionItem[]);
     setTrainingCancellations(trainingCancelRes.data || []);
     setTrainingBreaks(trainingBreakRes.data || []);
     setAdminDelegates((adminDelegatesRes.data || []) as AdminDelegate[]);
@@ -1679,6 +1826,7 @@ export default function App() {
     }
     setCoachAccessList(coachRows);
     await loadSupporterLikes();
+    await loadTrainingExerciseLibrary();
   }
 
   async function loadData() {
@@ -1686,7 +1834,7 @@ export default function App() {
     try {
     const [
       teamsRes, playersRes, matchesRes, matchAttRes, statsRes,
-      usersRes, linksRes, templatesRes, attendanceRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes, adminDelegatesRes,
+      usersRes, linksRes, templatesRes, attendanceRes, sessionItemsRes, matchStatsRes, coachesRes, coachTeamsRes, squadsRes, trainingCancelRes, trainingBreakRes, adminDelegatesRes,
     ] = await Promise.all([
       supabase.from('teams').select('*').order('name', { ascending: true }),
       supabase.from('players').select('*').order('last_name', { ascending: true }),
@@ -1697,6 +1845,7 @@ export default function App() {
       supabase.from('parent_player').select('*'),
       supabase.from('training_templates').select('*').order('weekday', { ascending: true }),
       supabase.from('training_attendance').select('*'),
+      supabase.from('training_session_items').select('*').order('sort_order', { ascending: true }),
       supabase.from('match_player_stats').select('*'),
       supabase.from('coaches').select('id, code, first_name, last_name, photo_url'),
       supabase.from('coach_teams').select('*'),
@@ -1716,6 +1865,8 @@ export default function App() {
     setParentLinks(linksRes.data || []);
     setTrainingTemplates(templatesRes.data || []);
     setTrainingAttendance(attendanceRes.data || []);
+    if (sessionItemsRes.error) setTrainingSessionItems([]);
+    else setTrainingSessionItems((sessionItemsRes.data || []) as TrainingSessionItem[]);
     setTrainingCancellations(trainingCancelRes.data || []);
     setTrainingBreaks(trainingBreakRes.data || []);
     setAdminDelegates((adminDelegatesRes.data || []) as AdminDelegate[]);
@@ -1756,6 +1907,7 @@ export default function App() {
     await loadLicenses();
     await loadRegistrations();
     await loadSupporterLikes();
+    await loadTrainingExerciseLibrary();
     setLoading(false);
     } catch(e) {
       console.warn('loadData failed (network blocked?):', e);
@@ -2505,6 +2657,73 @@ export default function App() {
       if (result.length >= count) break;
     }
     return result;
+  }
+  function getTrainingSessionKey(templateId: string, date: string) {
+    return `${templateId}__${date}`;
+  }
+  function splitTrainingSessionKey(key: string) {
+    const [templateId, date] = key.split('__');
+    return { templateId: templateId || '', date: date || '' };
+  }
+  function getTrainingSessionItems(templateId: string, date: string) {
+    return trainingSessionItems
+      .filter((item) => item.training_template_id === templateId && item.training_date === date)
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  }
+  function getTrainingDurationMinutes(template: TrainingTemplate) {
+    const [sh, sm] = (template.start_time || '00:00').split(':').map(Number);
+    const [eh, em] = (template.end_time || '00:00').split(':').map(Number);
+    const start = (sh || 0) * 60 + (sm || 0);
+    let end = (eh || 0) * 60 + (em || 0);
+    if (end < start) end += 24 * 60;
+    return Math.max(0, end - start);
+  }
+  function getTrainingSessionUsedMinutes(templateId: string, date: string) {
+    return getTrainingSessionItems(templateId, date).reduce((sum, item) => sum + (Number(item.duration_minutes) || 0), 0);
+  }
+  function startEditTrainingSession(template: TrainingTemplate, date: string) {
+    setEditingSessionKey(getTrainingSessionKey(template.id, date));
+    setSessionExerciseTitle('');
+    setSessionExerciseCategory('Échauffement');
+    setSessionExerciseDuration('10');
+    setSessionExerciseNotes('');
+  }
+  async function addTrainingSessionExercise(template: TrainingTemplate, date: string, preset?: TrainingExercise) {
+    const title = (preset?.title || sessionExerciseTitle).trim();
+    const category = preset?.category || sessionExerciseCategory || 'Exercice';
+    const duration = Number(preset?.duration || sessionExerciseDuration || 0);
+    if (!title || duration <= 0) { alert('Indique un exercice et une duree.'); return; }
+    const total = getTrainingDurationMinutes(template);
+    const used = getTrainingSessionUsedMinutes(template.id, date);
+    if (used + duration > total) {
+      alert(`La seance dure ${total} min. Il reste ${Math.max(0, total - used)} min, cet exercice depasse.`);
+      return;
+    }
+    const currentItems = getTrainingSessionItems(template.id, date);
+    const payload = {
+      training_template_id: template.id,
+      training_date: date,
+      category,
+      title,
+      duration_minutes: duration,
+      notes: preset ? null : (sessionExerciseNotes.trim() || null),
+      sort_order: currentItems.length,
+    };
+    const { data, error } = await supabase.from('training_session_items').insert(payload).select().single();
+    if (error) {
+      alert('Erreur : execute le SQL supabase-training-sessions.sql dans Supabase.');
+      return;
+    }
+    if (data) setTrainingSessionItems((prev) => [...prev, data as TrainingSessionItem]);
+    if (!preset) {
+      setSessionExerciseTitle('');
+      setSessionExerciseNotes('');
+    }
+  }
+  async function deleteTrainingSessionExercise(item: TrainingSessionItem) {
+    const { error } = await supabase.from('training_session_items').delete().eq('id', item.id);
+    if (error) { alert("Erreur lors de la suppression de l'exercice."); return; }
+    setTrainingSessionItems((prev) => prev.filter((x) => x.id !== item.id));
   }
   function isFutureOrToday(date: string) {
     if (!date) return false;
@@ -6339,10 +6558,21 @@ export default function App() {
                                 style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: cancelled ? '#16a34a' : '#dc2626', color: 'white', fontWeight: 800, fontSize: 14, cursor: cancelingTrainingKey === `${template.id}-${date}` ? 'default' : 'pointer' }}>
                                 {cancelingTrainingKey === `${template.id}-${date}` ? '⏳...' : cancelled ? 'Remettre au planning' : "Annuler l'entraînement"}
                               </button>
+                              <button
+                                onClick={() => editingSessionKey === getTrainingSessionKey(template.id, date) ? setEditingSessionKey('') : startEditTrainingSession(template, date)}
+                                disabled={cancelled}
+                                style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: cancelled ? '#94a3b8' : '#0A5FB5', color: 'white', fontWeight: 800, fontSize: 14, cursor: cancelled ? 'default' : 'pointer' }}>
+                                🧩 Ajouter ma séance
+                              </button>
                               <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>
                                 {cancelled ? 'Les parents voient la séance annulée.' : 'Annulation avec email aux parents'}
                               </span>
                             </div>
+                            {editingSessionKey === getTrainingSessionKey(template.id, date) && (
+                              <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #e5e7eb' }}>
+                                {renderTrainingSessionPlan(template, date, true)}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -10144,6 +10374,10 @@ export default function App() {
                                       <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'present')} style={{ ...styles.statusButton, background: status === 'present' ? '#16a34a' : '#e8f7ee', color: status === 'present' ? 'white' : '#166534' }}>{"Présent"}</button>
                                       <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'absent')} style={{ ...styles.statusButton, background: status === 'absent' ? '#dc2626' : '#fdecec', color: status === 'absent' ? 'white' : '#991b1b' }}>Absent</button>
                                       <button onClick={() => saveAttendance(training.templateId, child.id, training.date, 'unknown' as any)} style={{ ...styles.statusButton, background: status === 'unknown' ? '#64748b' : '#eef2f7', color: status === 'unknown' ? 'white' : '#526071' }}>Sans réponse</button>
+                                      {getTrainingSessionItems(training.templateId, training.date).length > 0 && (
+                                        <button onClick={() => setViewingSessionKey(getTrainingSessionKey(training.templateId, training.date))}
+                                          style={{ ...styles.statusButton, background: '#0A5FB5', color: 'white' }}>🧩 Ma séance</button>
+                                      )}
                                     </div>}
                                   </div>
                                 );
@@ -10491,6 +10725,28 @@ export default function App() {
           </div>
         )}
       </div>
+
+        {viewingSessionKey && (() => {
+          const { templateId, date } = splitTrainingSessionKey(viewingSessionKey);
+          const template = trainingTemplates.find((t) => t.id === templateId);
+          if (!template) return null;
+          return (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(6,44,93,0.62)', zIndex: 1300, display: 'flex', alignItems: 'stretch', justifyContent: 'center', padding: 12 }}>
+              <div style={{ background: '#edf4ff', borderRadius: 24, width: '100%', maxWidth: 760, maxHeight: '96vh', overflow: 'auto', boxShadow: '0 30px 60px rgba(0,0,0,0.25)' }}>
+                <div style={{ position: 'sticky', top: 0, zIndex: 2, padding: 16, background: 'linear-gradient(135deg,#0A5FB5,#062C5D)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: 20 }}>🧩 Ma séance</div>
+                    <div style={{ marginTop: 4, opacity: 0.9, fontWeight: 700, fontSize: 13 }}>{template.title || 'Entrainement'} · {formatDate(date)} · {template.start_time}-{template.end_time}</div>
+                  </div>
+                  <button onClick={() => setViewingSessionKey('')} style={{ width: 40, height: 40, borderRadius: 12, border: 'none', background: 'rgba(255,255,255,0.16)', color: 'white', fontWeight: 900, fontSize: 18, cursor: 'pointer' }}>×</button>
+                </div>
+                <div style={{ padding: 16 }}>
+                  {renderTrainingSessionPlan(template, date, false)}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Parent messages modal — full conversation panel */}
         {activeRole === 'parent' && showParentMessages && (() => {
