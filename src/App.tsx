@@ -43,6 +43,14 @@ type MatchItem = {
   fdm_actions_text?: string | null;
 };
 
+type SupporterLike = {
+  id: string;
+  match_id: string;
+  actor_type: 'parent' | 'player' | 'coach';
+  actor_id: string;
+  created_at?: string;
+};
+
 type CoachAccess = {
   id: string;
   coach_code: string;
@@ -597,6 +605,8 @@ export default function App() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showParentMessages, setShowParentMessages] = useState(false);
   const [supporterReadKeys, setSupporterReadKeys] = useState<string[]>([]);
+  const [supporterLikes, setSupporterLikes] = useState<SupporterLike[]>([]);
+  const [supporterLikesReady, setSupporterLikesReady] = useState(true);
   const [adminSubTab, setAdminSubTab] = useState<'coaches' | 'adminAccess' | 'trainings' | 'matches' | 'players' | 'roster' | 'accounts' | 'seasons' | 'settings' | 'licenses' | 'registrations' | 'events' | 'polls' | 'online'>('coaches');
   const [matchesExpanded, setMatchesExpanded] = useState(false);
   const [clubEvents, setClubEvents] = useState<ClubEvent[]>([]);
@@ -1099,6 +1109,76 @@ export default function App() {
     try { window.localStorage.setItem(getSupporterReadStorageKey(), JSON.stringify(next)); } catch (e) { /* ignore */ }
   }
 
+  function getSupporterLikeActor(): { actor_type: SupporterLike['actor_type']; actor_id: string } | null {
+    if (activeRole === 'coach' && connectedCoachId) return { actor_type: 'coach', actor_id: connectedCoachId };
+    if (selectedParentId) return { actor_type: 'parent', actor_id: selectedParentId };
+    if (linkedPlayerId) return { actor_type: 'player', actor_id: linkedPlayerId };
+    return null;
+  }
+
+  function getSupporterLikeCount(matchId: string) {
+    return supporterLikes.filter((like) => like.match_id === matchId).length;
+  }
+
+  function hasLikedSupporterMatch(matchId: string) {
+    const actor = getSupporterLikeActor();
+    if (!actor) return false;
+    return supporterLikes.some((like) => like.match_id === matchId && like.actor_type === actor.actor_type && like.actor_id === actor.actor_id);
+  }
+
+  async function loadSupporterLikes() {
+    const { data, error } = await supabase.from('supporter_likes').select('*');
+    if (error) {
+      setSupporterLikesReady(false);
+      setSupporterLikes([]);
+      return;
+    }
+    setSupporterLikesReady(true);
+    setSupporterLikes((data || []) as SupporterLike[]);
+  }
+
+  async function toggleSupporterLike(matchId: string) {
+    const actor = getSupporterLikeActor();
+    if (!actor) {
+      alert("Connecte-toi comme parent, joueur ou coach pour aimer un resume.");
+      return;
+    }
+    if (!supporterLikesReady) {
+      alert("Erreur : execute le SQL supabase-supporter-likes.sql dans Supabase pour activer les pouces supporter.");
+      return;
+    }
+    const existing = supporterLikes.find((like) => like.match_id === matchId && like.actor_type === actor.actor_type && like.actor_id === actor.actor_id);
+    if (existing) {
+      const { error } = await supabase.from('supporter_likes').delete().eq('id', existing.id);
+      if (error) {
+        alert("Erreur lors du retrait du pouce.");
+        return;
+      }
+      setSupporterLikes((prev) => prev.filter((like) => like.id !== existing.id));
+      return;
+    }
+    const { data, error } = await supabase.from('supporter_likes').insert({ match_id: matchId, actor_type: actor.actor_type, actor_id: actor.actor_id }).select().single();
+    if (error) {
+      alert("Erreur : verifie que le SQL supabase-supporter-likes.sql a bien ete execute.");
+      setSupporterLikesReady(false);
+      return;
+    }
+    if (data) setSupporterLikes((prev) => [...prev, data as SupporterLike]);
+  }
+
+  function renderSupporterLikeButton(match: MatchItem) {
+    const liked = hasLikedSupporterMatch(match.id);
+    const count = getSupporterLikeCount(match.id);
+    return (
+      <button onClick={() => toggleSupporterLike(match.id)}
+        title={liked ? "Retirer mon pouce" : "J'aime ce resume"}
+        style={{ border: liked ? '2px solid #0A5FB5' : '1px solid #dbe6f2', background: liked ? '#eaf4ff' : 'white', color: liked ? '#0A5FB5' : '#334155', borderRadius: 999, padding: '8px 13px', fontWeight: 900, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, boxShadow: liked ? '0 6px 16px rgba(10,95,181,0.16)' : 'none' }}>
+        <span style={{ fontSize: 16 }}>{liked ? '👍' : '👍🏻'}</span>
+        <span>{count}</span>
+      </button>
+    );
+  }
+
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(getSupporterReadStorageKey());
@@ -1586,6 +1666,7 @@ export default function App() {
       }
     }
     setCoachAccessList(coachRows);
+    await loadSupporterLikes();
   }
 
   async function loadData() {
@@ -1662,6 +1743,7 @@ export default function App() {
 
     await loadLicenses();
     await loadRegistrations();
+    await loadSupporterLikes();
     setLoading(false);
     } catch(e) {
       console.warn('loadData failed (network blocked?):', e);
@@ -7781,6 +7863,9 @@ export default function App() {
                         <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#10233b', fontSize: 14, fontWeight: 650 }}>
                           {match.supporter_summary}
                         </div>
+                        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                          {renderSupporterLikeButton(match)}
+                        </div>
                       </div>
                     ))}
                 </div>
@@ -9611,6 +9696,9 @@ export default function App() {
                             </div>
                             <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#10233b', fontSize: 14, fontWeight: 650 }}>
                               {match.supporter_summary}
+                            </div>
+                            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                              {renderSupporterLikeButton(match)}
                             </div>
                           </div>
                         );
