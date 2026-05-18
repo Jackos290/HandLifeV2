@@ -5856,9 +5856,11 @@ export default function App() {
           {!unlocked && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.34)', color: 'white', fontSize: 36, fontWeight: 1000 }}>🔒</div>
           )}
-          <div style={{ position: 'absolute', left: 10, right: 10, bottom: 10, padding: '8px 10px', borderRadius: 12, background: 'rgba(2,6,23,0.84)', color: selected ? '#facc15' : 'white', fontWeight: 1000, fontSize: 11, textAlign: 'center', letterSpacing: 0.8 }}>
-            {selected ? 'ACTIVE' : unlocked ? 'CARTE DEBLOQUEE' : 'A DEBLOQUER'}
-          </div>
+          {(selected || !unlocked) && (
+            <div style={{ position: 'absolute', right: 8, top: 8, padding: '5px 8px', borderRadius: 999, background: selected ? '#facc15' : 'rgba(2,6,23,0.78)', color: selected ? '#06142a' : 'white', fontWeight: 1000, fontSize: 9, letterSpacing: 0.6, boxShadow: '0 4px 12px rgba(0,0,0,0.22)' }}>
+              {selected ? 'ACTIVE' : 'LOCK'}
+            </div>
+          )}
         </div>
       );
     }
