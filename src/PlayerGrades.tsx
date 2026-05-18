@@ -4,6 +4,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
+const POWER_CARD_IMAGES = import.meta.glob('../carte/*.{png,jpg,jpeg,webp}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+
 export type Grade = {
   name: string;
   lvLabel: string;
@@ -157,6 +159,21 @@ function getPlayerPowers(player: Player) {
     .map((id) => HANDBALL_POWERS.find((p) => p.id === id))
     .filter(Boolean) as typeof HANDBALL_POWERS[number][];
   return powers.length > 0 ? powers.slice(0, 3) : HANDBALL_POWERS.slice(0, 3);
+}
+
+function getPowerCardImageUrl(power: typeof HANDBALL_POWERS[number]) {
+  const cardNumber = HANDBALL_POWERS.findIndex((p) => p.id === power.id) + 1;
+  return Object.entries(POWER_CARD_IMAGES).find(([path]) => {
+    const file = path.split('/').pop()?.toLowerCase() || '';
+    return file === `${cardNumber}.png`
+      || file === `${cardNumber}.jpg`
+      || file === `${cardNumber}.jpeg`
+      || file === `${cardNumber}.webp`
+      || file === `${power.id}.png`
+      || file === `${power.id}.jpg`
+      || file === `${power.id}.jpeg`
+      || file === `${power.id}.webp`;
+  })?.[1] || '';
 }
 
 // ─── Helpers de style partagés (carte FIFA) ──────────────────────────────────
@@ -715,12 +732,24 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
           <PrivateStatsPanel player={p} textColor={textColor} subtleText={subtleText} />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, width: '100%' }}>
-            {powers.map((power) => (
-              <div key={power.id} style={{ minHeight: 60, borderRadius: 13, background: 'linear-gradient(145deg,#17253b,#06142a)', border: '2px solid #d7a53e', color: 'white', display: 'grid', placeItems: 'center', padding: '7px 5px', textAlign: 'center', boxShadow: '0 5px 14px rgba(0,0,0,0.28)' }}>
-                <div style={{ fontSize: 23, lineHeight: 1 }}>{power.icon}</div>
-                <div style={{ fontSize: 10, fontWeight: 900, lineHeight: 1.05, textTransform: 'uppercase' }}>{power.label}</div>
-              </div>
-            ))}
+            {powers.map((power) => {
+              const imageUrl = getPowerCardImageUrl(power);
+              return (
+                <div key={power.id} style={{ aspectRatio: '2 / 3', borderRadius: 13, background: 'linear-gradient(145deg,#17253b,#06142a)', border: '2px solid #d7a53e', color: 'white', overflow: 'hidden', textAlign: 'center', boxShadow: '0 5px 14px rgba(0,0,0,0.28)', position: 'relative' }}>
+                  {imageUrl ? (
+                    <img src={imageUrl} alt={power.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    <div style={{ height: '100%', display: 'grid', placeItems: 'center', padding: '7px 5px' }}>
+                      <div style={{ fontSize: 23, lineHeight: 1 }}>{power.icon}</div>
+                      <div style={{ fontSize: 10, fontWeight: 900, lineHeight: 1.05, textTransform: 'uppercase' }}>{power.label}</div>
+                    </div>
+                  )}
+                  <div style={{ position: 'absolute', left: 4, right: 4, bottom: 4, borderRadius: 8, background: 'rgba(2,6,23,0.72)', color: '#fff7cc', fontSize: 7, fontWeight: 900, lineHeight: 1.05, textTransform: 'uppercase', padding: '3px 2px' }}>
+                    {power.label}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
