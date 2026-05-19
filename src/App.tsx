@@ -10,17 +10,57 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 const POWER_CARD_IMAGES = import.meta.glob('../carte/*.{png,jpg,jpeg,webp}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
 const TRAINING_EXERCISE_LIBRARY = [
-  ['Échauffement', 'Course progressive + mobilité', 10], ['Échauffement', 'Jeu du chasseur', 8], ['Échauffement', 'Montées de genoux + appuis', 8], ['Échauffement', 'Réveil articulaire avec ballon', 10], ['Échauffement', 'Relais coordination', 8],
-  ['Dribble', 'Slalom main forte / main faible', 10], ['Dribble', '1 contre 1 couloir', 12], ['Dribble', 'Dribble sous pression', 10], ['Dribble', 'Changement de rythme', 8], ['Dribble', 'Protection de balle', 10],
-  ['Passe', 'Passe et va', 10], ['Passe', 'Passe en mouvement', 12], ['Passe', 'Carré de passes rapides', 10], ['Passe', 'Passe longue relance', 8], ['Passe', 'Passe sous pression défenseur', 12],
-  ['Tir', 'Tir en suspension', 12], ['Tir', 'Tir après croisé', 12], ['Tir', 'Tir aile gauche / droite', 10], ['Tir', 'Tir pivot après bloc', 10], ['Tir', 'Duel tireur gardien', 12],
-  ['Défense', 'Position de base + déplacements', 10], ['Défense', '1 contre 1 défensif', 12], ['Défense', 'Aide et fermeture', 12], ['Défense', 'Interception ligne de passe', 10], ['Défense', 'Bloc / contre', 10],
-  ['Gardien', 'Réflexes bas / haut', 10], ['Gardien', 'Placement sur tir aile', 10], ['Gardien', 'Relance rapide', 8], ['Gardien', 'Lecture du bras tireur', 10], ['Gardien', 'Duel 6 mètres', 12],
-  ['Collectif', 'Montée de balle à 3', 12], ['Collectif', 'Croisé arrière / demi-centre', 12], ['Collectif', 'Enclenchement simple', 15], ['Collectif', 'Jeu avec pivot', 12], ['Collectif', 'Fixer-donner', 10],
-  ['Match', 'Match à thème 3 passes minimum', 12], ['Match', 'Match surnombre', 12], ['Match', 'Match défense imposée', 15], ['Match', 'Match transition rapide', 12], ['Match', 'Tournoi court', 15],
-  ['Physique', 'Gainage ludique', 8], ['Physique', 'Appuis échelle', 8], ['Physique', 'Vitesse réaction', 8], ['Physique', 'Renforcement jambes', 10], ['Physique', 'Circuit explosivité', 12],
-  ['Retour au calme', 'Étirements guidés', 6], ['Retour au calme', 'Débrief collectif', 5], ['Retour au calme', 'Respiration + hydratation', 5], ['Retour au calme', 'Penalty plaisir', 8], ['Retour au calme', 'Challenge fair-play', 6],
-].map(([category, title, duration], index) => ({ id: `exo-${index + 1}`, category: String(category), title: String(title), duration: Number(duration) }));
+  ['Échauffement', 'Course progressive + mobilité', 10, 'Les joueurs courent en rythme léger puis accélèrent progressivement. Ajouter mobilité chevilles, hanches, épaules et poignets avec ballon en main.'],
+  ['Échauffement', 'Jeu du chasseur', 8, 'Un ou deux chasseurs tentent de toucher les joueurs. Les joueurs se déplacent dans un espace limité avec changements de direction rapides.'],
+  ['Échauffement', 'Montées de genoux + appuis', 8, 'Enchaîner montées de genoux, talons-fesses, pas chassés et petits appuis. Finir par deux accélérations courtes vers le but.'],
+  ['Échauffement', 'Réveil articulaire avec ballon', 10, 'Par deux, passes simples pendant que les joueurs mobilisent épaules, coudes et poignets. Monter progressivement l’intensité.'],
+  ['Échauffement', 'Relais coordination', 8, 'Former deux colonnes. Les joueurs réalisent un parcours d’appuis, récupèrent un ballon puis transmettent au suivant.'],
+  ['Dribble', 'Slalom main forte / main faible', 10, 'Installer des plots. Les joueurs traversent en dribble main forte puis main faible, tête levée, sans regarder le ballon.'],
+  ['Dribble', '1 contre 1 couloir', 12, 'Créer un couloir. L’attaquant doit passer son défenseur en dribble et finir par un tir ou une passe propre.'],
+  ['Dribble', 'Dribble sous pression', 10, 'Un défenseur gêne sans voler brutalement le ballon. L’attaquant protège son dribble avec le corps et change de rythme.'],
+  ['Dribble', 'Changement de rythme', 8, 'Les joueurs dribblent lentement puis accélèrent au signal. Objectif : exploser sur les premiers appuis.'],
+  ['Dribble', 'Protection de balle', 10, 'Par deux, un joueur protège son ballon dans une zone pendant que l’autre met une pression contrôlée.'],
+  ['Passe', 'Passe et va', 10, 'Après chaque passe, le joueur court vers un nouvel espace. Insister sur passe devant le partenaire et appel clair.'],
+  ['Passe', 'Passe en mouvement', 12, 'Les joueurs avancent en binômes ou trinômes sans s’arrêter. Le ballon doit circuler pendant la course.'],
+  ['Passe', 'Carré de passes rapides', 10, 'Quatre plots en carré. Passes rapides dans le sens demandé, puis inversion au signal. Ajouter un défenseur si besoin.'],
+  ['Passe', 'Passe longue relance', 8, 'Depuis le gardien ou un arrière, chercher une passe longue vers un joueur lancé. Travailler précision et timing.'],
+  ['Passe', 'Passe sous pression défenseur', 12, 'Un défenseur gêne la ligne de passe. Les attaquants doivent se démarquer et passer au bon moment.'],
+  ['Tir', 'Tir en suspension', 12, 'Course d’élan, impulsion, armé haut et tir en suspension. Varier les zones de tir et la main utilisée.'],
+  ['Tir', 'Tir après croisé', 12, 'Deux arrières croisent leur course. Le porteur ressort avec vitesse et tire après le croisé.'],
+  ['Tir', 'Tir aile gauche / droite', 10, 'Départs depuis les ailes. Travailler angle de course, impulsion vers le terrain et tir au second poteau.'],
+  ['Tir', 'Tir pivot après bloc', 10, 'Le pivot pose un bloc ou se démarque dans les 6 mètres. Réception courte puis tir rapide.'],
+  ['Tir', 'Duel tireur gardien', 12, 'Un tireur attaque le but face au gardien. Varier impacts, feintes et temps de déclenchement.'],
+  ['Défense', 'Position de base + déplacements', 10, 'Travailler jambes fléchies, bras actifs et déplacements latéraux. Le défenseur garde toujours l’attaquant devant lui.'],
+  ['Défense', '1 contre 1 défensif', 12, 'Dans un couloir, le défenseur doit ralentir puis stopper l’attaquant sans faute. Insister sur placement et distance.'],
+  ['Défense', 'Aide et fermeture', 12, 'Deux défenseurs coopèrent. Si un attaquant déborde, le partenaire vient aider puis referme l’espace.'],
+  ['Défense', 'Interception ligne de passe', 10, 'Le défenseur lit la trajectoire et coupe la ligne de passe. Démarrer sans contact puis augmenter le rythme.'],
+  ['Défense', 'Bloc / contre', 10, 'Sur tir adverse, monter les bras, fermer l’angle et rester équilibré. Travailler le timing du contre.'],
+  ['Gardien', 'Réflexes bas / haut', 10, 'Séries de tirs alternés bas puis haut. Le gardien se replace vite entre chaque ballon.'],
+  ['Gardien', 'Placement sur tir aile', 10, 'Tirs depuis les ailes. Le gardien ferme son angle, avance au bon moment et reste équilibré.'],
+  ['Gardien', 'Relance rapide', 8, 'Après arrêt ou ballon donné, le gardien relance immédiatement vers un joueur lancé. Chercher précision et vitesse.'],
+  ['Gardien', 'Lecture du bras tireur', 10, 'Le gardien observe l’orientation du bras et du corps du tireur pour anticiper l’impact.'],
+  ['Gardien', 'Duel 6 mètres', 12, 'Tirs proches à 6 mètres. Le gardien travaille sortie, présence corporelle et réaction courte.'],
+  ['Collectif', 'Montée de balle à 3', 12, 'Trois joueurs remontent le terrain en passes rapides. Objectif : largeur, vitesse et tir avant repli adverse.'],
+  ['Collectif', 'Croisé arrière / demi-centre', 12, 'Demi-centre et arrière croisent. Le joueur lancé attaque l’intervalle ou fixe pour donner.'],
+  ['Collectif', 'Enclenchement simple', 15, 'Mettre en place une combinaison courte avec départ, fixation, transmission et tir. Répéter des deux côtés.'],
+  ['Collectif', 'Jeu avec pivot', 12, 'Le pivot se place entre deux défenseurs. Les arrières fixent puis cherchent le pivot ou libèrent un tir.'],
+  ['Collectif', 'Fixer-donner', 10, 'L’attaquant fixe un défenseur avant de transmettre. Le partenaire reçoit lancé dans l’espace libéré.'],
+  ['Match', 'Match à thème 3 passes minimum', 12, 'Pendant le match, une équipe doit réaliser trois passes avant de tirer. Favorise patience et démarquage.'],
+  ['Match', 'Match surnombre', 12, 'Créer une situation 4 contre 3 ou 3 contre 2. L’équipe en attaque doit trouver vite le joueur libre.'],
+  ['Match', 'Match défense imposée', 15, 'Match avec système défensif imposé, par exemple 3-3, 2-4 ou défense étagée. Stopper pour corriger les placements.'],
+  ['Match', 'Match transition rapide', 12, 'Après chaque tir ou perte de balle, l’équipe doit se projeter ou se replier immédiatement.'],
+  ['Match', 'Tournoi court', 15, 'Petits matchs de 3 à 5 minutes. Changer vite les équipes et donner un thème simple à chaque rencontre.'],
+  ['Physique', 'Gainage ludique', 8, 'Ateliers courts de gainage avec ballon. Varier planche, côté, relais et défis par équipe.'],
+  ['Physique', 'Appuis échelle', 8, 'Utiliser une échelle ou des plots. Enchaîner petits appuis rapides, coordination et sortie explosive.'],
+  ['Physique', 'Vitesse réaction', 8, 'Au signal visuel ou sonore, les joueurs sprintent, changent de direction ou récupèrent un ballon.'],
+  ['Physique', 'Renforcement jambes', 10, 'Circuit court : squats, fentes, sauts contrôlés et appuis. Adapter l’intensité à l’âge.'],
+  ['Physique', 'Circuit explosivité', 12, 'Ateliers de 20 à 30 secondes : sprint, saut, changement d’appuis, tir final. Récupération courte.'],
+  ['Retour au calme', 'Étirements guidés', 6, 'Étirements simples des jambes, épaules et dos. Respirer calmement et relâcher progressivement.'],
+  ['Retour au calme', 'Débrief collectif', 5, 'Regrouper l’équipe. Chaque joueur partage un point réussi et un point à améliorer.'],
+  ['Retour au calme', 'Respiration + hydratation', 5, 'Retour au calme avec respiration lente, hydratation et discussion rapide sur la séance.'],
+  ['Retour au calme', 'Penalty plaisir', 8, 'Finir par une série de penalties ludique. Garder un rythme léger et valoriser le gardien.'],
+  ['Retour au calme', 'Challenge fair-play', 6, 'Petit défi collectif où l’attitude, l’encouragement et l’écoute comptent autant que le résultat.'],
+].map(([category, title, duration, description], index) => ({ id: `exo-${index + 1}`, category: String(category), title: String(title), duration: Number(duration), description: String(description) }));
 
 type Team = {
   id: string;
@@ -173,6 +213,7 @@ type TrainingExercise = {
   category: string;
   title: string;
   duration: number;
+  description?: string;
 };
 
 type TrainingCancellation = {
@@ -1192,6 +1233,7 @@ export default function App() {
       category: row.category,
       title: row.title,
       duration: Number(row.duration_minutes || row.duration || 0),
+      description: row.description || '',
     })));
   }
 
@@ -1356,6 +1398,7 @@ export default function App() {
                       style={{ textAlign: 'left', border: '1px solid #dbe6f2', borderRadius: 12, padding: 10, background: disabled ? '#f1f5f9' : 'white', color: disabled ? '#94a3b8' : '#10233b', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: 800 }}>
                       <div>{exercise.title}</div>
                       <div style={{ marginTop: 4, fontSize: 12, color: disabled ? '#94a3b8' : '#0A5FB5' }}>{exercise.duration} min</div>
+                      {exercise.description && <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.35, color: disabled ? '#94a3b8' : '#64748b', fontWeight: 700 }}>{exercise.description}</div>}
                     </button>
                   );
                 })}
@@ -2852,6 +2895,7 @@ export default function App() {
     const title = (preset?.title || sessionExerciseTitle).trim();
     const category = preset?.category || sessionExerciseCategory || 'Exercice';
     const duration = Number(preset?.duration || sessionExerciseDuration || 0);
+    const description = (preset?.description || sessionExerciseNotes || '').trim();
     if (!title || duration <= 0) { alert('Indique un exercice et une duree.'); return; }
     const total = getTrainingDurationMinutes(template);
     const used = getTrainingSessionUsedMinutes(template.id, date);
@@ -2867,7 +2911,7 @@ export default function App() {
       category,
       title,
       duration_minutes: duration,
-      notes: preset ? null : (sessionExerciseNotes.trim() || null),
+      notes: description || null,
       sort_order: currentItems.length,
     };
     const { data, error } = await supabase.from('training_session_items').insert(payload).select().single();
@@ -2876,6 +2920,18 @@ export default function App() {
       return;
     }
     if (data) setTrainingSessionItems((prev) => [...prev, data as TrainingSessionItem]);
+    if (!preset) {
+      const libraryId = `custom-${category}-${title}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || `custom-${Date.now()}`;
+      const libraryPayload = { id: libraryId, category, title, duration_minutes: duration, description: description || null };
+      const { data: libraryData } = await supabase.from('training_exercise_library').upsert(libraryPayload, { onConflict: 'id' }).select().single();
+      const savedExercise: TrainingExercise = libraryData
+        ? { id: libraryData.id, category: libraryData.category, title: libraryData.title, duration: Number(libraryData.duration_minutes || duration), description: libraryData.description || description }
+        : { id: libraryId, category, title, duration, description };
+      setTrainingExerciseLibrary((prev) => {
+        const withoutDuplicate = prev.filter((exercise) => exercise.id !== savedExercise.id);
+        return [...withoutDuplicate, savedExercise].sort((a, b) => a.category.localeCompare(b.category, 'fr') || a.title.localeCompare(b.title, 'fr'));
+      });
+    }
     if (!preset) {
       setSessionExerciseTitle('');
       setSessionExerciseNotes('');
