@@ -1237,6 +1237,50 @@ export default function App() {
     })));
   }
 
+  useEffect(() => {
+    if (trainingSessionItems.length === 0) return;
+    const makeLibraryId = (category: string, title: string) => `custom-${category}-${title}`
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80) || `custom-${Date.now()}`;
+    const existingKeys = new Set(trainingExerciseLibrary.map((exercise) => `${exercise.category.trim().toLowerCase()}__${exercise.title.trim().toLowerCase()}`));
+    const missingMap = new Map<string, TrainingExercise>();
+    trainingSessionItems.forEach((item) => {
+      const category = (item.category || '').trim();
+      const title = (item.title || '').trim();
+      if (!category || !title) return;
+      const key = `${category.toLowerCase()}__${title.toLowerCase()}`;
+      if (existingKeys.has(key) || missingMap.has(key)) return;
+      missingMap.set(key, {
+        id: makeLibraryId(category, title),
+        category,
+        title,
+        duration: Number(item.duration_minutes || 0) || 10,
+        description: item.notes || '',
+      });
+    });
+    const missingExercises = Array.from(missingMap.values());
+    if (missingExercises.length === 0) return;
+    setTrainingExerciseLibrary((prev) => {
+      const prevKeys = new Set(prev.map((exercise) => `${exercise.category.trim().toLowerCase()}__${exercise.title.trim().toLowerCase()}`));
+      const additions = missingExercises.filter((exercise) => !prevKeys.has(`${exercise.category.trim().toLowerCase()}__${exercise.title.trim().toLowerCase()}`));
+      if (additions.length === 0) return prev;
+      return [...prev, ...additions].sort((a, b) => a.category.localeCompare(b.category, 'fr') || a.title.localeCompare(b.title, 'fr'));
+    });
+    supabase.from('training_exercise_library').upsert(missingExercises.map((exercise) => ({
+      id: exercise.id,
+      category: exercise.category,
+      title: exercise.title,
+      duration_minutes: exercise.duration,
+      description: exercise.description || null,
+    })), { onConflict: 'id' }).then(({ error }) => {
+      if (error) console.warn('Impossible de synchroniser les exercices crees dans la bibliotheque', error);
+    });
+  }, [trainingSessionItems, trainingExerciseLibrary]);
+
   async function toggleSupporterLike(matchId: string, reactionType: 'bravo' | 'force') {
     const actor = getSupporterLikeActor();
     if (!actor) {
