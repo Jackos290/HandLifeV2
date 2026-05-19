@@ -629,6 +629,8 @@ export default function App() {
   const [coachPlayerTeamId, setCoachPlayerTeamId] = useState('');
   const [coachPlayerBirthDate, setCoachPlayerBirthDate] = useState('');
   const [coachTeamView, setCoachTeamView] = useState<'cards' | 'list'>('cards');
+  const [coachTrainingSubTab, setCoachTrainingSubTab] = useState('');
+  const [coachSavedSessionCategory, setCoachSavedSessionCategory] = useState('all');
   const [selectedTrainingTemplateId, setSelectedTrainingTemplateId] = useState('');
   const [selectedTrainingDate, setSelectedTrainingDate] = useState('');
   const [editingSessionKey, setEditingSessionKey] = useState('');
@@ -1366,7 +1368,16 @@ export default function App() {
   }
 
   function renderCoachSavedTrainingSessions() {
-    const savedSessions = getSavedCoachTrainingSessions();
+    const allSavedSessions = getSavedCoachTrainingSessions();
+    const savedCategories = Array.from(new Set(allSavedSessions.flatMap((session) => session.items.map((item) => item.category)))).sort((a, b) => a.localeCompare(b, 'fr'));
+    const savedSessions = coachSavedSessionCategory === 'all'
+      ? allSavedSessions
+      : allSavedSessions
+          .map((session) => {
+            const items = session.items.filter((item) => item.category === coachSavedSessionCategory);
+            return { ...session, items, total: items.reduce((sum, item) => sum + (Number(item.duration_minutes) || 0), 0) };
+          })
+          .filter((session) => session.items.length > 0);
     const openTarget = editingSessionKey ? splitTrainingSessionKey(editingSessionKey) : { templateId: '', date: '' };
     const openTemplate = openTarget.templateId ? trainingTemplates.find((t) => t.id === openTarget.templateId) : null;
     return (
@@ -1384,6 +1395,20 @@ export default function App() {
             </span>
           )}
         </div>
+        {savedCategories.length > 0 && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+            <button onClick={() => setCoachSavedSessionCategory('all')}
+              style={{ padding: '8px 12px', borderRadius: 999, border: `1px solid ${coachSavedSessionCategory === 'all' ? '#0A5FB5' : '#dbe6f2'}`, background: coachSavedSessionCategory === 'all' ? '#0A5FB5' : 'white', color: coachSavedSessionCategory === 'all' ? 'white' : '#334155', fontWeight: 900, cursor: 'pointer' }}>
+              Tout
+            </button>
+            {savedCategories.map((category) => (
+              <button key={category} onClick={() => setCoachSavedSessionCategory(category)}
+                style={{ padding: '8px 12px', borderRadius: 999, border: `1px solid ${coachSavedSessionCategory === category ? '#0A5FB5' : '#dbe6f2'}`, background: coachSavedSessionCategory === category ? '#0A5FB5' : 'white', color: coachSavedSessionCategory === category ? 'white' : '#334155', fontWeight: 900, cursor: 'pointer' }}>
+                {category}
+              </button>
+            ))}
+          </div>
+        )}
         {savedSessions.length === 0 ? (
           <div style={styles.emptyState}>Aucune seance enregistree pour le moment.</div>
         ) : (
@@ -5616,6 +5641,15 @@ export default function App() {
     ? visibleMatches.filter((m) => m.team_id === selectedCoachTeamId)
     : visibleMatches.filter((m) => visibleTeams.some((t) => t.id === m.team_id));
   const coachTemplates = selectedCoachTeamId ? visibleTemplates.filter((t) => t.team_id === selectedCoachTeamId) : visibleTemplates;
+  const firstCoachTrainingTemplateId = coachTemplates[0]?.id || '';
+  const activeCoachTrainingSubTab = coachTrainingSubTab && (
+    coachTrainingSubTab === 'sessions'
+    || coachTrainingSubTab === 'vacations'
+    || coachTemplates.some((t) => coachTrainingSubTab === `template:${t.id}`)
+  )
+    ? coachTrainingSubTab
+    : (firstCoachTrainingTemplateId ? `template:${firstCoachTrainingTemplateId}` : 'sessions');
+  const activeCoachTrainingTemplateId = activeCoachTrainingSubTab.startsWith('template:') ? activeCoachTrainingSubTab.replace('template:', '') : '';
   const eventPollTeams = isAdmin ? teams : visibleTeams;
   const eventPollTeamIds = eventPollTeams.map((t) => t.id);
   const selectedCoachEventTeamIds = !isAdmin && selectedCoachTeamId ? [selectedCoachTeamId] : eventPollTeamIds;
@@ -5626,6 +5660,7 @@ export default function App() {
   function chooseCoachTeam(teamId: string) {
     setSelectedCoachTeamId(teamId);
     setCrossCategoryTeamId(teamId);
+    setCoachTrainingSubTab('');
     const nextTemplate = visibleTemplates.find((t) => t.team_id === teamId);
     setSelectedTrainingTemplateId(nextTemplate?.id || '');
     if (nextTemplate) {
@@ -6610,7 +6645,7 @@ export default function App() {
             {coachTab === 'trainings' && (
               <div style={styles.contentCard}>
                 <h2 style={styles.blockTitle}>{"Entraînements"}</h2>
-                <p style={styles.blockSubtitle}>{"Les 2 prochaines séances à partir d'aujourd'hui."}</p>
+                <p style={styles.blockSubtitle}>Un bouton par creneau, puis les seances archivees et les vacances.</p>
 
                 {/* Filtre équipe */}
                 <div style={{ ...styles.filterBar, marginBottom: 20 }}>
@@ -6620,11 +6655,33 @@ export default function App() {
                   </select>
                 </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8, marginBottom: 18 }}>
+                  {coachTemplates.map((template) => {
+                    const active = activeCoachTrainingSubTab === `template:${template.id}`;
+                    return (
+                      <button key={template.id} onClick={() => setCoachTrainingSubTab(`template:${template.id}`)}
+                        style={{ minHeight: 48, padding: '10px 12px', borderRadius: 14, border: `2px solid ${active ? '#0A5FB5' : '#d5dfeb'}`, background: active ? '#0A5FB5' : 'white', color: active ? 'white' : '#10233b', fontWeight: 900, cursor: 'pointer', textAlign: 'center' }}>
+                        <div>{getWeekdayLabel(template.weekday)}</div>
+                        <div style={{ fontSize: 11, opacity: 0.8 }}>{template.start_time}-{template.end_time}</div>
+                      </button>
+                    );
+                  })}
+                  <button onClick={() => setCoachTrainingSubTab('sessions')}
+                    style={{ minHeight: 48, padding: '10px 12px', borderRadius: 14, border: `2px solid ${activeCoachTrainingSubTab === 'sessions' ? '#0A5FB5' : '#d5dfeb'}`, background: activeCoachTrainingSubTab === 'sessions' ? '#0A5FB5' : 'white', color: activeCoachTrainingSubTab === 'sessions' ? 'white' : '#10233b', fontWeight: 900, cursor: 'pointer' }}>
+                    Seances
+                  </button>
+                  <button onClick={() => setCoachTrainingSubTab('vacations')}
+                    style={{ minHeight: 48, padding: '10px 12px', borderRadius: 14, border: `2px solid ${activeCoachTrainingSubTab === 'vacations' ? '#0A5FB5' : '#d5dfeb'}`, background: activeCoachTrainingSubTab === 'vacations' ? '#0A5FB5' : 'white', color: activeCoachTrainingSubTab === 'vacations' ? 'white' : '#10233b', fontWeight: 900, cursor: 'pointer' }}>
+                    Vacances
+                  </button>
+                </div>
+
                 {(() => {
+                  if (!activeCoachTrainingTemplateId) return null;
                   // Calculer les 2 prochaines séances toutes templates confondues
                   const today = new Date(); today.setHours(0,0,0,0);
                   const upcoming: { template: TrainingTemplate; date: string; cancelled?: boolean; cancellationReason?: string | null }[] = [];
-                  for (const template of coachTemplates) {
+                  for (const template of coachTemplates.filter((t) => t.id === activeCoachTrainingTemplateId)) {
                     const trainings = getNextTrainingsForTemplate(template, 4, true);
                     for (const training of trainings) {
                       const d = new Date(training.date); d.setHours(0,0,0,0);
@@ -6644,6 +6701,9 @@ export default function App() {
                         const presentPlayers = teamPlayers.filter((p) => getAttendanceStatus(template.id, p.id, date) === 'present');
                         const absentPlayers = teamPlayers.filter((p) => getAttendanceStatus(template.id, p.id, date) === 'absent');
                         const unknownPlayers = teamPlayers.filter((p) => getAttendanceStatus(template.id, p.id, date) === 'unknown');
+                        const sessionKey = getTrainingSessionKey(template.id, date);
+                        const sessionOpen = editingSessionKey === sessionKey;
+                        const hasSessionPlan = getTrainingSessionItems(template.id, date).length > 0;
                         return (
                           <div key={`${template.id}-${date}`} style={styles.teamCard}>
                             {/* Header */}
@@ -6723,18 +6783,19 @@ export default function App() {
                                 {cancelingTrainingKey === `${template.id}-${date}` ? '⏳...' : cancelled ? 'Remettre au planning' : "Annuler l'entraînement"}
                               </button>
                               <button
-                                onClick={() => editingSessionKey === getTrainingSessionKey(template.id, date) ? setEditingSessionKey('') : startEditTrainingSession(template, date)}
+                                onClick={() => sessionOpen ? setEditingSessionKey('') : startEditTrainingSession(template, date)}
                                 disabled={cancelled}
                                 style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: cancelled ? '#94a3b8' : '#0A5FB5', color: 'white', fontWeight: 800, fontSize: 14, cursor: cancelled ? 'default' : 'pointer' }}>
-                                🧩 Ajouter ma séance
+                                {sessionOpen ? 'Fermer la seance' : hasSessionPlan ? 'Modifier la seance' : 'Ajouter ma seance'}
                               </button>
                               <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>
                                 {cancelled ? 'Les parents voient la séance annulée.' : 'Annulation avec email aux parents'}
                               </span>
                             </div>
-                            {editingSessionKey === getTrainingSessionKey(template.id, date) && (
+                            {(sessionOpen || hasSessionPlan) && (
                               <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #e5e7eb' }}>
-                                {renderTrainingSessionPlan(template, date, true)}
+                                <h4 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Seance prevue</h4>
+                                {renderTrainingSessionPlan(template, date, sessionOpen)}
                               </div>
                             )}
                           </div>
@@ -6744,12 +6805,13 @@ export default function App() {
                   );
                 })()}
 
-                {renderCoachSavedTrainingSessions()}
+                {activeCoachTrainingSubTab === 'sessions' && renderCoachSavedTrainingSessions()}
 
+                {activeCoachTrainingTemplateId && (
                 <div style={{ ...styles.panelCard, marginTop: 20, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
                   <h3 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Creneaux recurrents</h3>
                   <div style={{ display: 'grid', gap: 8 }}>
-                    {coachTemplates.map((template) => (
+                    {coachTemplates.filter((template) => template.id === activeCoachTrainingTemplateId).map((template) => (
                       <div key={template.id} style={{ ...styles.linkRow, background: 'white', alignItems: 'center', flexWrap: 'wrap' }}>
                         <div style={{ flex: 1, minWidth: 220 }}>
                           <strong>{template.title || 'Entrainement'} - {getTeamName(template.team_id)}</strong>
@@ -6779,7 +6841,9 @@ export default function App() {
                     </div>
                   )}
                 </div>
+                )}
 
+                {activeCoachTrainingSubTab === 'vacations' && (
                 <div style={{ ...styles.panelCard, marginTop: 20, background: '#f8fafc', border: '1px solid #dbe4ef' }}>
                   <h3 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Périodes de vacances</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
@@ -6801,6 +6865,7 @@ export default function App() {
                     ))}
                   </div>
                 </div>
+                )}
               </div>
             )}
 
