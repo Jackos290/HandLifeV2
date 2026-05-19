@@ -1246,6 +1246,32 @@ export default function App() {
     );
   }
 
+  function renderExerciseNotes(notes?: string | null) {
+    if (!notes) return null;
+    const lines = notes.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (lines.length === 0) return null;
+    return (
+      <div style={{ marginTop: 10, display: 'grid', gap: 7, color: '#334155', fontSize: 13, lineHeight: 1.45, maxWidth: '100%', overflowWrap: 'anywhere' }}>
+        {lines.map((line, index) => {
+          const bullet = line.match(/^[-•*]\s*(.+)$/);
+          const isTitle = /:$/.test(line) && line.length < 45;
+          if (bullet) {
+            return (
+              <div key={index} style={{ display: 'grid', gridTemplateColumns: '16px 1fr', gap: 6, alignItems: 'start', paddingLeft: 4 }}>
+                <span style={{ color: '#0A5FB5', fontWeight: 900 }}>•</span>
+                <span>{bullet[1]}</span>
+              </div>
+            );
+          }
+          if (isTitle) {
+            return <div key={index} style={{ marginTop: index === 0 ? 0 : 4, fontWeight: 900, color: '#062C5D' }}>{line}</div>;
+          }
+          return <div key={index}>{line}</div>;
+        })}
+      </div>
+    );
+  }
+
   function renderTrainingSessionPlan(template: TrainingTemplate, date: string, editable: boolean) {
     const items = getTrainingSessionItems(template.id, date);
     const total = getTrainingDurationMinutes(template);
@@ -1273,15 +1299,15 @@ export default function App() {
         ) : (
           <div style={{ display: 'grid', gap: 8 }}>
             {items.map((item, idx) => (
-              <div key={item.id} style={{ ...styles.linkRow, alignItems: 'flex-start', background: 'white', border: '1px solid #dbe6f2' }}>
+              <div key={item.id} style={{ ...styles.linkRow, alignItems: 'flex-start', background: 'white', border: '1px solid #dbe6f2', overflow: 'hidden' }}>
                 <div style={{ width: 34, height: 34, borderRadius: 10, background: '#0A5FB5', color: 'white', display: 'grid', placeItems: 'center', fontWeight: 900, flexShrink: 0 }}>{idx + 1}</div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <strong>{item.title}</strong>
                     <span style={{ ...styles.statusBadge, background: '#eaf4ff', color: '#0A5FB5' }}>{item.category}</span>
                     <span style={{ ...styles.statusBadge, background: '#fff7ed', color: '#92400e' }}>{item.duration_minutes} min</span>
                   </div>
-                  {item.notes && <div style={{ marginTop: 5, color: '#64748b', fontSize: 13 }}>{item.notes}</div>}
+                  {renderExerciseNotes(item.notes)}
                 </div>
                 {editable && <button onClick={() => deleteTrainingSessionExercise(item)} style={{ ...styles.linkRemoveButton, fontSize: 12 }}>Supprimer</button>}
               </div>
@@ -1309,7 +1335,12 @@ export default function App() {
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={styles.inputLabel}>Consignes</label>
-                <input value={sessionExerciseNotes} onChange={(e) => setSessionExerciseNotes(e.target.value)} style={styles.input} placeholder="Optionnel" />
+                <textarea
+                  value={sessionExerciseNotes}
+                  onChange={(e) => setSessionExerciseNotes(e.target.value)}
+                  style={{ ...styles.input, minHeight: 130, resize: 'vertical', lineHeight: 1.45, fontFamily: 'inherit' }}
+                  placeholder={"Optionnel\nExemple :\nOrganisation :\n- 2 equipes\n- 1 gardien dans chaque but\n\nObjectifs :\n- Monter vite\n- Enchainer attaque / defense"}
+                />
               </div>
             </div>
             <button onClick={() => addTrainingSessionExercise(template, date)} style={styles.primaryButton}>Ajouter mon exercice</button>
