@@ -159,6 +159,7 @@ type TrainingSessionItem = {
   id: string;
   training_template_id: string;
   training_date: string;
+  coach_id?: string | null;
   category: string;
   title: string;
   duration_minutes: number;
@@ -1327,6 +1328,66 @@ export default function App() {
                 })}
               </div>
             </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderCoachSavedTrainingSessions() {
+    const savedSessions = getSavedCoachTrainingSessions();
+    const openTarget = editingSessionKey ? splitTrainingSessionKey(editingSessionKey) : { templateId: '', date: '' };
+    const openTemplate = openTarget.templateId ? trainingTemplates.find((t) => t.id === openTarget.templateId) : null;
+    return (
+      <div style={{ ...styles.panelCard, marginTop: 20, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+          <div>
+            <h3 style={{ margin: 0, color: '#062C5D' }}>Seances enregistrees</h3>
+            <div style={{ fontSize: 13, color: '#64748b', marginTop: 3 }}>
+              Les seances sont classees par coach. Tu peux les rouvrir ou les copier dans la seance ouverte.
+            </div>
+          </div>
+          {openTemplate && (
+            <span style={{ ...styles.statusBadge, background: '#dbeafe', color: '#1d4ed8' }}>
+              Seance ouverte : {getTeamName(openTemplate.team_id)} - {formatDate(openTarget.date)}
+            </span>
+          )}
+        </div>
+        {savedSessions.length === 0 ? (
+          <div style={styles.emptyState}>Aucune seance enregistree pour le moment.</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {savedSessions.slice(0, 30).map((session) => {
+              const isOpen = editingSessionKey === getTrainingSessionKey(session.templateId, session.date);
+              return (
+                <div key={session.key} style={{ ...styles.linkRow, alignItems: 'flex-start', background: 'white', border: isOpen ? '2px solid #0A5FB5' : '1px solid #dbe6f2' }}>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <strong>{getTeamName(session.template.team_id)} - {formatDate(session.date)}</strong>
+                      <span style={{ ...styles.statusBadge, background: '#eaf4ff', color: '#0A5FB5' }}>{session.total} min</span>
+                      <span style={{ ...styles.statusBadge, background: '#f1f5f9', color: '#475569' }}>{session.items.length} exercice(s)</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                      Coach : {session.coachName} - {session.template.title || 'Entrainement'} - {session.template.start_time}/{session.template.end_time}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#334155', marginTop: 6 }}>
+                      {session.items.slice(0, 4).map((item) => item.title).join(' • ')}
+                      {session.items.length > 4 ? ' • ...' : ''}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <button onClick={() => startEditTrainingSession(session.template, session.date)} style={{ ...styles.secondaryButton, fontSize: 12, padding: '8px 12px' }}>
+                      Ouvrir
+                    </button>
+                    {openTemplate && !isOpen && (
+                      <button onClick={() => copyTrainingSessionToCurrent(session.items, openTemplate, openTarget.date)} style={{ ...styles.primaryButton, fontSize: 12, padding: '8px 12px' }}>
+                        Copier
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -2670,6 +2731,49 @@ export default function App() {
       .filter((item) => item.training_template_id === templateId && item.training_date === date)
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   }
+  function getCoachDisplayName(coachId?: string | null) {
+    if (!coachId) return 'Coach non renseigne';
+    const coach = coachAccessList.find((c) => c.id === coachId && (c.first_name || c.last_name));
+    return coach ? `${coach.first_name || ''} ${coach.last_name || ''}`.trim() : 'Coach';
+  }
+  function getSavedCoachTrainingSessions() {
+    const groups = new Map<string, {
+      key: string;
+      templateId: string;
+      date: string;
+      coachId: string | null;
+      coachName: string;
+      template: TrainingTemplate;
+      items: TrainingSessionItem[];
+      total: number;
+    }>();
+    trainingSessionItems.forEach((item) => {
+      const template = trainingTemplates.find((t) => t.id === item.training_template_id);
+      if (!template) return;
+      if (!isAdmin && allowedTeamIds.length > 0 && !allowedTeamIds.includes(template.team_id)) return;
+      const coachId = item.coach_id || null;
+      const key = `${item.training_template_id}__${item.training_date}__${coachId || 'unknown'}`;
+      const existing = groups.get(key) || {
+        key,
+        templateId: item.training_template_id,
+        date: item.training_date,
+        coachId,
+        coachName: getCoachDisplayName(coachId),
+        template,
+        items: [],
+        total: 0,
+      };
+      existing.items.push(item);
+      existing.total += Number(item.duration_minutes) || 0;
+      groups.set(key, existing);
+    });
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        items: [...group.items].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
+      }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }
   function getTrainingDurationMinutes(template: TrainingTemplate) {
     const [sh, sm] = (template.start_time || '00:00').split(':').map(Number);
     const [eh, em] = (template.end_time || '00:00').split(':').map(Number);
@@ -2703,6 +2807,7 @@ export default function App() {
     const payload = {
       training_template_id: template.id,
       training_date: date,
+      coach_id: connectedCoachId || null,
       category,
       title,
       duration_minutes: duration,
@@ -2724,6 +2829,34 @@ export default function App() {
     const { error } = await supabase.from('training_session_items').delete().eq('id', item.id);
     if (error) { alert("Erreur lors de la suppression de l'exercice."); return; }
     setTrainingSessionItems((prev) => prev.filter((x) => x.id !== item.id));
+  }
+  async function copyTrainingSessionToCurrent(sourceItems: TrainingSessionItem[], targetTemplate: TrainingTemplate, targetDate: string) {
+    const orderedItems = [...sourceItems].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    if (orderedItems.length === 0) return;
+    const total = getTrainingDurationMinutes(targetTemplate);
+    const used = getTrainingSessionUsedMinutes(targetTemplate.id, targetDate);
+    const copyDuration = orderedItems.reduce((sum, item) => sum + (Number(item.duration_minutes) || 0), 0);
+    if (used + copyDuration > total) {
+      alert(`Impossible de copier : la seance ouverte dure ${total} min, il reste ${Math.max(0, total - used)} min.`);
+      return;
+    }
+    const currentItems = getTrainingSessionItems(targetTemplate.id, targetDate);
+    const payload = orderedItems.map((item, idx) => ({
+      training_template_id: targetTemplate.id,
+      training_date: targetDate,
+      coach_id: connectedCoachId || null,
+      category: item.category,
+      title: item.title,
+      duration_minutes: item.duration_minutes,
+      notes: item.notes || null,
+      sort_order: currentItems.length + idx,
+    }));
+    const { data, error } = await supabase.from('training_session_items').insert(payload).select();
+    if (error) {
+      alert('Erreur : execute le SQL supabase-training-sessions.sql dans Supabase.');
+      return;
+    }
+    if (data) setTrainingSessionItems((prev) => [...prev, ...(data as TrainingSessionItem[])]);
   }
   function isFutureOrToday(date: string) {
     if (!date) return false;
@@ -6579,6 +6712,8 @@ export default function App() {
                     </div>
                   );
                 })()}
+
+                {renderCoachSavedTrainingSessions()}
 
                 <div style={{ ...styles.panelCard, marginTop: 20, background: '#f8fbff', border: '1px solid #bfdbfe' }}>
                   <h3 style={{ margin: '0 0 10px 0', color: '#062C5D' }}>Creneaux recurrents</h3>

@@ -5,6 +5,7 @@ create table if not exists public.training_session_items (
   id uuid primary key default gen_random_uuid(),
   training_template_id uuid not null references public.training_templates(id) on delete cascade,
   training_date date not null,
+  coach_id uuid null references public.coaches(id) on delete set null,
   category text not null,
   title text not null,
   duration_minutes integer not null check (duration_minutes > 0),
@@ -12,6 +13,9 @@ create table if not exists public.training_session_items (
   sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
+
+alter table public.training_session_items
+add column if not exists coach_id uuid null references public.coaches(id) on delete set null;
 
 create table if not exists public.training_exercise_library (
   id text primary key,
@@ -78,6 +82,9 @@ on conflict (id) do update set
 
 create index if not exists training_session_items_training_idx
 on public.training_session_items (training_template_id, training_date, sort_order);
+
+create index if not exists training_session_items_coach_idx
+on public.training_session_items (coach_id, training_template_id, training_date);
 
 alter table public.training_session_items enable row level security;
 alter table public.training_exercise_library enable row level security;
