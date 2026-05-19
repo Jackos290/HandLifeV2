@@ -158,7 +158,7 @@ function getPlayerPowers(player: Player) {
   const powers = selected
     .map((id) => HANDBALL_POWERS.find((p) => p.id === id))
     .filter(Boolean) as typeof HANDBALL_POWERS[number][];
-  return powers.length > 0 ? powers.slice(0, 3) : HANDBALL_POWERS.slice(0, 3);
+  return powers.slice(0, 3);
 }
 
 function getPowerCardImageUrl(power: typeof HANDBALL_POWERS[number]) {
@@ -418,11 +418,9 @@ export function FifaPlayerCard({
         </div>
       </div>
 
-      {/* Super pouvoirs / stats */}
+      {/* Super pouvoirs */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 7, position: 'relative', zIndex: 2, padding: '0 2px' }}>
-        {hideStats ? (
-          <PrivateStatsPanel player={p} textColor={textColor} subtleText={subtleText} compact />
-        ) : (
+        {powers.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5, width: '100%' }}>
             {powers.map((power) => (
               <div key={power.id} style={{ minHeight: 43, borderRadius: 9, background: 'linear-gradient(145deg,#17253b,#06142a)', border: '1px solid #d7a53e', color: 'white', display: 'grid', placeItems: 'center', padding: '5px 3px', textAlign: 'center', boxShadow: '0 3px 8px rgba(0,0,0,0.24)' }}>
@@ -431,9 +429,12 @@ export function FifaPlayerCard({
               </div>
             ))}
           </div>
+        ) : (
+          <div style={{ width: '100%', minHeight: 64, borderRadius: 12, border: '1px dashed rgba(215,165,62,0.68)', color: '#10233b', display: 'grid', placeItems: 'center', textAlign: 'center', padding: 8, fontSize: 9, fontWeight: 900, textTransform: 'uppercase' }}>
+            Ajoute tes super pouvoirs
+          </div>
         )}
       </div>
-
       {/* FOOTER : progression */}
       {!hideStats && (
         <div style={{
@@ -704,7 +705,7 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
           <div style={{ width: 58, height: 68, clipPath: 'polygon(50% 0, 100% 22%, 100% 78%, 50% 100%, 0 78%, 0 22%)', background: 'linear-gradient(145deg,#10233b,#06142a)', border: '3px solid #d7a53e', color: '#ffd66b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 900, boxShadow: '0 6px 18px rgba(0,0,0,0.36)' }}>
             {p.jersey_number ?? '-'}
           </div>
-          {!hideStats && <div style={{ color: '#10233b', fontSize: 12, fontWeight: 900 }}>{grade.lvLabel}</div>}
+          <div style={{ color: '#10233b', fontSize: 12, fontWeight: 900 }}>{grade.lvLabel}</div>
           <div title={positionFull} style={{ color: '#10233b', fontSize: 12, fontWeight: 900 }}>{positionLabel}</div>
           {clubLogo && <img src={clubLogo} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', background: 'white', border: '2px solid #d7a53e' }} />}
         </div>
@@ -726,11 +727,9 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
         </div>
       </div>
 
-      {/* STATS */}
+      {/* CARTES POUVOIRS */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10, position: 'relative', zIndex: 2 }}>
-        {hideStats ? (
-          <PrivateStatsPanel player={p} textColor={textColor} subtleText={subtleText} />
-        ) : (
+        {powers.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, width: '100%' }}>
             {powers.map((power) => {
               const imageUrl = getPowerCardImageUrl(power);
@@ -751,23 +750,28 @@ function BigFifaCard({ data, clubLogo }: { data: FifaCardData; clubLogo?: string
               );
             })}
           </div>
+        ) : (
+          <div style={{ width: '100%', minHeight: 116, borderRadius: 18, border: '2px dashed rgba(215,165,62,0.68)', background: 'linear-gradient(135deg, rgba(255,248,220,0.78), rgba(255,255,255,0.32))', color: '#10233b', display: 'grid', placeItems: 'center', textAlign: 'center', padding: 14, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35)' }}>
+            <div>
+              <div style={{ fontSize: 24, marginBottom: 6 }}>✨</div>
+              <div style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.6 }}>Ajoute tes super pouvoirs</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(16,35,59,0.68)', marginTop: 4 }}>Choisis jusqu'à 3 cartes pour personnaliser ta fiche.</div>
+            </div>
+          </div>
         )}
       </div>
-
-      {/* FOOTER : Grade + étoiles */}
-      {!hideStats && (
-        <div style={{
-          marginTop: 10, padding: '9px 14px',
-          border: '2px solid #d7a53e',
-          background: 'linear-gradient(90deg,#06142a,#173457,#06142a)',
-          borderRadius: 18,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          position: 'relative', zIndex: 2,
-        }}>
-          <span style={{ color: '#ffd66b', fontSize: 18 }}>★</span>
-          <span style={{ color: '#ffd66b', fontSize: 12, fontWeight: 900, letterSpacing: 1.2, textTransform: 'uppercase' }}>{grade.name}</span>
-        </div>
-      )}
+      {/* FOOTER : Grade */}
+      <div style={{
+        marginTop: 10, padding: '9px 14px',
+        border: '2px solid #d7a53e',
+        background: 'linear-gradient(90deg,#06142a,#173457,#06142a)',
+        borderRadius: 18,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+        position: 'relative', zIndex: 2,
+      }}>
+        <span style={{ color: '#ffd66b', fontSize: 18 }}>★</span>
+        <span style={{ color: '#ffd66b', fontSize: 12, fontWeight: 900, letterSpacing: 1.2, textTransform: 'uppercase' }}>{grade.name}</span>
+      </div>
     </div>
   );
 }
